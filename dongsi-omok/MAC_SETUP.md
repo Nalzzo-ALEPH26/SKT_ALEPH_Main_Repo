@@ -1,23 +1,56 @@
-# Mac 적용 순서
+# Mac 적용 및 Vercel 배포
 
-1. 다운로드한 ZIP 압축 해제
-2. 안의 `simultaneous-omok` 폴더를 `SKT_ALEPH_Main_Repo/games/` 아래에 복사
-3. 터미널 실행
+## 1. 저장소 위치
 
 ```bash
-cd ~/원하는경로/SKT_ALEPH_Main_Repo/simultaneous-omok
+cd ~/Desktop/SKT_ALEPH_Work/SKT_ALEPH_Main_Repo/dongsi-omok
+```
+
+## 2. 로컬 실행
+
+```bash
 npm install
 npm run dev
 ```
 
-4. `http://localhost:5173` 접속
-5. 방 생성 후 시크릿 창을 열어 같은 방 코드로 참가
-6. 확인 후 저장소 루트로 이동해 commit/push
+브라우저:
+
+```text
+http://localhost:5173
+```
+
+## 3. Git 반영
 
 ```bash
-cd ~/원하는경로/SKT_ALEPH_Main_Repo
+cd ~/Desktop/SKT_ALEPH_Work/SKT_ALEPH_Main_Repo
+git add dongsi-omok
 git status
-git add simultaneous-omok
-git commit -m "feat: add simultaneous omok multiplayer game"
-git push
+git commit -m "feat: add Vercel-ready dongsi omok multiplayer game"
+git push origin main
+```
+
+## 4-A. Vercel Dashboard에서 GitHub 연동 배포
+
+1. Vercel → Add New → Project
+2. `Nalzzo-ALEPH26/SKT_ALEPH_Main_Repo` 선택
+3. Import 화면에서 Root Directory의 Edit 선택
+4. `dongsi-omok` 선택
+5. Framework Preset은 Vite로 확인
+6. Deploy
+
+Vercel은 `dongsi-omok/vercel.json` 설정을 사용합니다.
+
+## 4-B. GitHub 연결 없이 현재 게임 폴더만 배포
+
+```bash
+cd ~/Desktop/SKT_ALEPH_Work/SKT_ALEPH_Main_Repo/dongsi-omok
+npx vercel
+```
+
+처음 실행 시 Vercel 로그인을 진행하고 프로젝트를 생성/연결합니다.
+
+프로덕션:
+
+```bash
+npx vercel --prod
 ```

@@ -1,5 +1,5 @@
 {
-  "name": "simultaneous-omok",
+  "name": "dongsi-omok",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -9,10 +9,8 @@
     "dev:client": "vite --host 0.0.0.0",
     "test": "npm run test:core",
     "test:core": "rm -rf core-dist && tsc -p tsconfig.core.json && node --test tests/*.test.mjs",
-    "build": "npm run test && npm run build:client && npm run build:server",
-    "build:client": "vite build",
-    "build:server": "tsc -p tsconfig.server.json",
-    "start": "node dist-server/index.js"
+    "build": "npm run test && npm run build:client",
+    "build:client": "vite build"
   },
   "dependencies": {
     "cors": "^2.8.5",

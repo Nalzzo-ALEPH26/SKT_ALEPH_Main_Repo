@@ -7,14 +7,14 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/socket.io': {
+      '/api/socket': {
         target: 'http://localhost:3001',
-        ws: true
-      }
-    }
+        ws: true,
+      },
+    },
   },
   build: {
     outDir: '../dist-client',
-    emptyOutDir: true
-  }
+    emptyOutDir: true,
+  },
 });

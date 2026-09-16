@@ -1,10 +1,11 @@
 import { io } from 'socket.io-client';
 
-const serverUrl = import.meta.env.VITE_SOCKET_URL as string | undefined;
-
-export const socket = io(serverUrl || undefined, {
+export const socket = io({
+  path: '/api/socket',
   autoConnect: true,
   transports: ['websocket', 'polling'],
+  reconnection: true,
+  reconnectionAttempts: Infinity,
 });
 
 export function emitAck<T extends Record<string, unknown>>(

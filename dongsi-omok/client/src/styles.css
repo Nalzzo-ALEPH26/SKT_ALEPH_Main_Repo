@@ -314,3 +314,319 @@ button:not(:disabled):hover { border-color: rgba(103, 232, 249, .58); background
   .board-point { --point-size: clamp(21px, 7.5vw, 32px); }
   .stone, .ghost-stone { inset: 14%; }
 }
+
+/* --- Spacecraft / mission-control visual system --- */
+.cockpit-grid {
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 50% -10%, rgba(21, 143, 177, .16), transparent 35%),
+    radial-gradient(circle at 12% 75%, rgba(48, 55, 141, .12), transparent 30%),
+    linear-gradient(180deg, rgba(2, 7, 13, .22), rgba(2, 5, 10, .5));
+}
+.cockpit-grid::before,
+.cockpit-grid::after {
+  content: "";
+  position: fixed;
+  pointer-events: none;
+  z-index: -1;
+}
+.cockpit-grid::before {
+  inset: 0;
+  background:
+    linear-gradient(rgba(97, 221, 245, .018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(97, 221, 245, .018) 1px, transparent 1px);
+  background-size: 36px 36px;
+  mask-image: linear-gradient(to bottom, rgba(0,0,0,.9), transparent 88%);
+}
+.cockpit-grid::after {
+  inset: 0;
+  background: repeating-linear-gradient(180deg, rgba(255,255,255,.012) 0 1px, transparent 1px 5px);
+  opacity: .35;
+}
+.space-stars {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  opacity: .5;
+  background-repeat: repeat;
+}
+.space-stars--a {
+  background-image:
+    radial-gradient(circle, rgba(205, 245, 255, .75) 0 1px, transparent 1.2px),
+    radial-gradient(circle, rgba(117, 226, 255, .55) 0 1px, transparent 1.2px);
+  background-size: 113px 107px, 197px 181px;
+  background-position: 17px 9px, 60px 70px;
+}
+.space-stars--b {
+  opacity: .26;
+  background-image: radial-gradient(circle, rgba(255,255,255,.9) 0 .8px, transparent 1px);
+  background-size: 71px 83px;
+  background-position: 31px 47px;
+}
+.landing {
+  align-items: center;
+  justify-items: center;
+  padding: 24px;
+}
+.mission-console {
+  width: min(980px, 100%);
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(97, 221, 245, .25);
+  border-radius: 24px;
+  padding: 0 28px 28px;
+  background:
+    linear-gradient(145deg, rgba(7, 17, 28, .96), rgba(3, 8, 15, .975)),
+    radial-gradient(circle at 50% 0%, rgba(68, 190, 223, .08), transparent 50%);
+  box-shadow:
+    0 36px 90px rgba(0, 0, 0, .5),
+    inset 0 1px 0 rgba(255,255,255,.04),
+    inset 0 0 80px rgba(18, 111, 137, .025),
+    0 0 52px rgba(34, 211, 238, .045);
+}
+.mission-console::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(103,232,249,.55), transparent 18%, transparent 82%, rgba(103,232,249,.3)) top / 100% 1px no-repeat,
+    linear-gradient(180deg, rgba(103,232,249,.55), transparent 25%) left / 1px 32% no-repeat;
+}
+.hud-strip {
+  margin: 0 -28px;
+  min-height: 42px;
+  padding: 0 18px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid rgba(113, 214, 238, .12);
+  background: rgba(2, 8, 14, .72);
+  color: #638997;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+.hud-strip > :last-child { justify-self: end; }
+.hud-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #8fc7d5;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .14em;
+}
+.system-light {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #5eead4;
+  box-shadow: 0 0 10px rgba(94, 234, 212, .85);
+}
+.mission-heading {
+  padding: 42px 0 30px;
+  border-bottom: 1px solid rgba(111, 200, 221, .11);
+}
+.mission-heading h1 {
+  font-size: clamp(46px, 9vw, 92px);
+  line-height: .86;
+  letter-spacing: -.065em;
+  text-transform: uppercase;
+}
+.mission-heading h1 span {
+  color: #67e8f9;
+  text-shadow: 0 0 30px rgba(103, 232, 249, .18);
+}
+.mission-heading .lead {
+  max-width: 700px;
+  margin-bottom: 0;
+}
+.mission-body {
+  display: grid;
+  grid-template-columns: 1.1fr .9fr;
+  gap: 18px;
+  padding-top: 22px;
+}
+.identity-panel,
+.mission-actions-panel {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid rgba(103, 209, 232, .12);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(7, 21, 31, .78), rgba(3, 12, 20, .8));
+  box-shadow: inset 0 0 28px rgba(33, 160, 192, .025);
+}
+.panel-label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 14px;
+  color: #708f9a;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .16em;
+}
+.panel-label span {
+  color: #67e8f9;
+  font-variant-numeric: tabular-nums;
+}
+.callsign-field span {
+  color: #d8f5fb;
+  font-size: 11px;
+  letter-spacing: .11em;
+}
+.callsign-field input {
+  margin-top: 2px;
+  border-radius: 8px;
+  min-height: 52px;
+  padding: 14px 15px;
+  font-weight: 800;
+  letter-spacing: .03em;
+  background:
+    linear-gradient(180deg, rgba(1, 8, 14, .94), rgba(4, 14, 22, .94));
+  border-color: rgba(101, 224, 246, .28);
+}
+.resume-panel {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 12px;
+  border: 1px solid rgba(94, 234, 212, .15);
+  border-radius: 10px;
+  background: rgba(7, 31, 35, .45);
+}
+.resume-panel small,
+.panel-header small,
+.side-title small,
+.phase-box small,
+.reveal-toast small {
+  display: block;
+  color: #668793;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .14em;
+}
+.resume-panel strong { display: block; margin-top: 2px; color: #a7f3d0; font-size: 12px; letter-spacing: .08em; }
+.mission-button {
+  min-height: 74px;
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+.mission-button small {
+  font-size: 8px;
+  letter-spacing: .16em;
+  opacity: .68;
+}
+.mission-actions-panel .join-row input,
+.mission-actions-panel .join-row button { border-radius: 9px; }
+.console-error {
+  margin: 16px 0 0;
+  padding: 10px 12px;
+  border-left: 2px solid #fb7185;
+  background: rgba(127, 29, 29, .09);
+}
+.telemetry-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1px;
+  margin-top: 20px;
+  overflow: hidden;
+  border: 1px solid rgba(104, 206, 230, .11);
+  border-radius: 12px;
+  background: rgba(104, 206, 230, .09);
+}
+.telemetry-grid > div {
+  padding: 12px;
+  background: rgba(3, 11, 19, .94);
+}
+.telemetry-grid small { display: block; margin-bottom: 4px; color: #587683; font-size: 8px; font-weight: 900; letter-spacing: .14em; }
+.telemetry-grid strong { color: #cceff7; font-size: 11px; letter-spacing: .05em; }
+.command-bar {
+  padding: 10px 12px;
+  border: 1px solid rgba(108, 207, 231, .11);
+  border-radius: 14px;
+  background: rgba(3, 11, 18, .78);
+  box-shadow: inset 0 0 30px rgba(34,211,238,.018);
+}
+.command-brand {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.command-brand .hud-status {
+  padding-right: 18px;
+  border-right: 1px solid rgba(102, 198, 220, .12);
+}
+.phase-box {
+  display: grid;
+  grid-template-columns: auto auto;
+  column-gap: 12px;
+  row-gap: 1px;
+}
+.phase-box small { grid-column: 1 / -1; }
+.panel-header {
+  min-height: 38px;
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid rgba(105, 199, 221, .08);
+}
+.panel-header strong { display: block; color: #d9f5fb; font-size: 13px; letter-spacing: .08em; }
+.panel-header > span { color: #5f8793; font-size: 10px; font-weight: 900; letter-spacing: .12em; }
+.tactical-panel,
+.crew-panel {
+  position: relative;
+  overflow: hidden;
+}
+.tactical-panel::before,
+.crew-panel::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 18px;
+  width: 76px;
+  height: 1px;
+  background: #67e8f9;
+  box-shadow: 0 0 12px rgba(103,232,249,.44);
+}
+.side-title > div { min-width: 0; }
+.side-title h2 { margin-top: 2px; }
+.crew-panel .player-card {
+  border-radius: 8px;
+  background: linear-gradient(90deg, rgba(8, 25, 35, .9), rgba(4, 14, 23, .88));
+}
+.crew-panel .player-card b { letter-spacing: .08em; }
+
+@media (max-width: 760px) {
+  .hud-strip { grid-template-columns: 1fr auto; }
+  .hud-strip > :nth-child(2) { display: none; }
+  .mission-body { grid-template-columns: 1fr; }
+  .telemetry-grid { grid-template-columns: repeat(2, 1fr); }
+  .telemetry-grid > div:last-child { grid-column: 1 / -1; }
+  .command-brand .hud-status { display: none; }
+}
+
+@media (max-width: 560px) {
+  .landing { padding: 12px; }
+  .mission-console { padding: 0 14px 16px; border-radius: 16px; }
+  .hud-strip { margin: 0 -14px; padding: 0 12px; min-height: 36px; }
+  .mission-heading { padding: 28px 0 22px; }
+  .mission-heading h1 { font-size: clamp(44px, 17vw, 70px); }
+  .identity-panel, .mission-actions-panel { padding: 14px; border-radius: 12px; }
+  .resume-panel { align-items: stretch; flex-direction: column; }
+  .telemetry-grid > div { padding: 10px; }
+  .command-bar { margin-bottom: 8px; }
+}
