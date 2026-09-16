@@ -1,0 +1,16 @@
+import ts from 'typescript';import fs from 'node:fs';import assert from 'node:assert/strict';
+const raw=fs.readFileSync('app/page.tsx','utf8');const start=raw.indexOf('export default function Home()'),end=raw.indexOf('const seconds=room?');
+const source=raw.slice(start,end).replace('export default function Home()','function Home()')+'return {acceptRoom,choose,queueDraft,local,queued};} return Home();';
+const js=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ES2022}}).outputText;
+const useState=v=>[v,()=>{}],useRef=v=>({current:v}),useEffect=()=>{};
+const pending=[];const fetch=(_url,options)=>new Promise(resolve=>pending.push({body:JSON.parse(options.body),resolve}));
+const h=new Function('useState','useRef','useEffect','fetch',js)(useState,useRef,useEffect,fetch);
+const base={code:'TEST',me:'a',phase:'select',round:1,size:7,deadline:Date.now()+15000,now:Date.now(),players:[{id:'a',active:true,submitted:false,positions:[],draft:[]}]};
+const reply=(request,cells,submitted=false)=>request.resolve(Response.json({room:{...base,now:Date.now(),players:[{...base.players[0],draft:cells,submitted}]}}));
+const settle=async()=>{for(let i=0;i<10;i++)await new Promise(r=>setImmediate(r));};
+h.acceptRoom(base);h.choose(0);h.choose(1);assert.deepEqual(h.local.current.cells,[0,1]);assert.equal(pending.length,1);
+reply(pending[0],[0]);await settle();assert.deepEqual(h.local.current.cells,[0,1]);assert.equal(pending.length,2);assert.deepEqual(pending[1].body.cells,[0,1]);
+h.choose(2);h.acceptRoom({...base,now:Date.now()});assert.deepEqual(h.local.current.cells,[0,1,2]);reply(pending[1],[0,1]);await settle();assert.deepEqual(pending[2].body.cells,[0,1,2]);reply(pending[2],[0,1,2]);await settle();assert.equal(h.local.current.seq,h.local.current.acked);
+h.queueDraft(h.local.current.cells,true);assert(h.local.current.locked);reply(pending[3],[0,1,2],true);await settle();assert(h.local.current.locked);
+h.acceptRoom({...base,round:2,players:[{...base.players[0],positions:[0],draft:[0]}]});h.choose(0);assert.deepEqual(h.local.current.cells,[0]);
+console.log('PASS client: instant consecutive clicks during pending save, latest-write coalescing, stale-response protection, submission lock, anchor guard');
