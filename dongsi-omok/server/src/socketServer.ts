@@ -6,7 +6,7 @@ import {
   allPlayersReady,
   createRoom,
   joinRoom,
-  placeInitialStone,
+  placeInitialStones,
   removeLobbyPlayer,
   resolveRound,
   setPlayerConnected,
@@ -115,12 +115,11 @@ export function createSocketServer(): SocketServerBundle {
       });
     });
 
-    socket.on('initial:place', (payload: { position?: Position }, ack?: Ack) => {
+    socket.on('initial:place-batch', (payload: { positions?: Position[] }, ack?: Ack) => {
       handle(ack, () => {
         const { room, playerId } = roomForSocket(socket.id);
-        if (!payload?.position) throw new Error('POSITION_REQUIRED');
         const previousPhase = room.phase;
-        placeInitialStone(room, playerId, payload.position, Date.now());
+        placeInitialStones(room, playerId, payload?.positions ?? [], Date.now());
         broadcastRoom(room);
         if (previousPhase === 'INITIAL_PLACEMENT' && room.phase === 'PLANNING') {
           scheduleRoundTimer(room);

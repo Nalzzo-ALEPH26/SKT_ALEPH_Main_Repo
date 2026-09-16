@@ -23,3 +23,9 @@ test('landing page restores the spacecraft mission-control HUD language and layo
   assert.match(styles, /\.cockpit-grid/);
   assert.match(styles, /\.system-light/);
 });
+
+test('pressing Enter in the room code field joins the room', () => {
+  assert.match(appSource, /onKeyDown=\{\(event\) => \{/);
+  assert.match(appSource, /event\.key === 'Enter'/);
+  assert.match(appSource, /void join\(\)/);
+});

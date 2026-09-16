@@ -104,6 +104,32 @@ export function placeInitialStone(
   }
 }
 
+export function placeInitialStones(
+  room: Room,
+  playerId: PlayerId,
+  positions: Position[],
+  now = Date.now(),
+): void {
+  if (room.phase !== 'INITIAL_PLACEMENT') throw new Error('INVALID_PHASE');
+  const currentPlayerId = currentInitialPlayerId(room);
+  if (currentPlayerId !== playerId) throw new Error('NOT_YOUR_TURN');
+  if (positions.length !== INITIAL_STONES_PER_PLAYER) throw new Error('INITIAL_SELECTION_COUNT');
+
+  // Validate the complete opening move before mutating the board so a rejected
+  // coordinate can never leave another client in a partially advanced turn.
+  validatePositions(room.board, positions, INITIAL_STONES_PER_PLAYER);
+
+  for (const position of positions) {
+    room.board[position.row][position.col] = playerId;
+  }
+  room.initialPlaced[playerId] = INITIAL_STONES_PER_PLAYER;
+  room.initialTurnIndex += 1;
+
+  if (room.initialTurnIndex >= room.initialOrder.length) {
+    beginPlanningRound(room, now, 1);
+  }
+}
+
 export function updateSelection(room: Room, playerId: PlayerId, positions: Position[]): void {
   if (room.phase !== 'PLANNING') throw new Error('INVALID_PHASE');
   const player = getPlayer(room, playerId);

@@ -4,6 +4,7 @@ import { emitAck, socket } from './socket';
 import type { Position, PublicRoom, RoundResolution } from './types';
 
 const SESSION_KEY = 'simultaneous-omok-session-v1';
+const INITIAL_SELECTIONS = 3;
 const MAX_SELECTIONS = 5;
 
 interface Session {
@@ -22,6 +23,7 @@ const ERROR_TEXT: Record<string, string> = {
   NOT_YOUR_TURN: '지금은 내 차례가 아닙니다.',
   CELL_OCCUPIED: '이미 돌이 놓인 칸입니다.',
   SELECTION_LIMIT: '한 라운드에는 최대 5곳까지 선택할 수 있습니다.',
+  INITIAL_SELECTION_COUNT: '초기 착수는 정확히 3곳을 선택해야 합니다.',
   SERVER_TIMEOUT: '서버 응답이 없습니다. 연결 상태를 확인하세요.',
 };
 
@@ -36,6 +38,7 @@ export default function App() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(Date.now());
+  const [gameOverOpen, setGameOverOpen] = useState(false);
 
   useEffect(() => {
     const onState = (nextRoom: PublicRoom) => setRoom(nextRoom);
@@ -94,7 +97,12 @@ export default function App() {
 
   useEffect(() => {
     setSelected([]);
-  }, [room?.round, room?.phase]);
+  }, [room?.round, room?.phase, room?.initialTurnIndex]);
+
+  useEffect(() => {
+    if (room?.phase === 'FINISHED') setGameOverOpen(true);
+    else setGameOverOpen(false);
+  }, [room?.phase]);
 
   const me = useMemo(
     () => room?.players.find((player) => player.id === session?.playerId) ?? null,
@@ -169,30 +177,42 @@ export default function App() {
 
   const handleBoardClick = (position: Position) => {
     if (!room || !session) return;
+
+    const exists = selected.some((item) => item.row === position.row && item.col === position.col);
+    const toggled = exists
+      ? selected.filter((item) => item.row !== position.row || item.col !== position.col)
+      : [...selected, position];
+
     if (room.phase === 'INITIAL_PLACEMENT') {
-      if (!isMyInitialTurn) return;
-      void run(async () => {
-        await emitAck('initial:place', { position });
-      });
+      if (!isMyInitialTurn || busy) return;
+      if (toggled.length > INITIAL_SELECTIONS) {
+        setError(ERROR_TEXT.INITIAL_SELECTION_COUNT);
+        return;
+      }
+      setError('');
+      setSelected(toggled);
       return;
     }
 
     if (room.phase !== 'PLANNING' || me?.ready) return;
-    const exists = selected.some((item) => item.row === position.row && item.col === position.col);
-    const next = exists
-      ? selected.filter((item) => item.row !== position.row || item.col !== position.col)
-      : [...selected, position];
-    if (next.length > MAX_SELECTIONS) {
+    if (toggled.length > MAX_SELECTIONS) {
       setError(ERROR_TEXT.SELECTION_LIMIT);
       return;
     }
-    setSelected(next);
-    void emitAck('round:update-selection', { positions: next }).catch((cause) => {
+    setSelected(toggled);
+    void emitAck('round:update-selection', { positions: toggled }).catch((cause) => {
       setSelected(selected);
       const code = cause instanceof Error ? cause.message : 'UNKNOWN_ERROR';
       setError(ERROR_TEXT[code] ?? code);
     });
   };
+
+  const confirmInitialPlacement = () =>
+    run(async () => {
+      if (selected.length !== INITIAL_SELECTIONS) throw new Error('INITIAL_SELECTION_COUNT');
+      await emitAck('initial:place-batch', { positions: selected });
+      setSelected([]);
+    });
 
   const leave = () =>
     run(async () => {
@@ -266,6 +286,12 @@ export default function App() {
                     maxLength={6}
                     placeholder="ROOM CODE"
                     onChange={(event) => setRoomCode(event.target.value.toUpperCase())}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' && !busy) {
+                        event.preventDefault();
+                        void join();
+                      }
+                    }}
                   />
                   <button disabled={busy || !nickname.trim()} onClick={join}>참가</button>
                 </div>
@@ -305,7 +331,6 @@ export default function App() {
         <div className="phase-box">
           <small>MISSION PHASE</small>
           <span>{phaseLabel(room.phase)}</span>
-          {room.phase === 'PLANNING' && <strong>{secondsLeft}s</strong>}
         </div>
       </header>
 
@@ -316,14 +341,73 @@ export default function App() {
               <small>PRIMARY DISPLAY</small>
               <strong>TACTICAL GRID</strong>
             </div>
-            <span>ROUND {String(room.round).padStart(2, '0')}</span>
+            <div className="panel-header-actions">
+              {room.phase === 'LOBBY' && isHost && (
+                <button
+                  className="primary header-start-button"
+                  disabled={room.players.length < 2 || busy}
+                  onClick={() => run(async () => { await emitAck('game:start'); })}
+                >
+                  INITIATE MISSION · {room.players.length}/6
+                </button>
+              )}
+              {room.phase === 'PLANNING' && (
+                <div className={`round-timer ${secondsLeft !== null && secondsLeft <= 5 ? 'round-timer--urgent' : ''}`} aria-live="polite">
+                  <small>TURN TIMER</small>
+                  <strong>{String(secondsLeft ?? 0).padStart(2, '0')}</strong>
+                  <span>SEC</span>
+                </div>
+              )}
+              {room.phase !== 'LOBBY' && room.phase !== 'PLANNING' && (
+                <span className="round-index">ROUND {String(room.round).padStart(2, '0')}</span>
+              )}
+            </div>
           </div>
+          {room.phase === 'INITIAL_PLACEMENT' && (
+            <div className={`round-control-bar ${isMyInitialTurn ? 'round-control-bar--active' : ''}`}>
+              <div className="turn-readout">
+                <small>OPENING TURN</small>
+                <strong>{isMyInitialTurn ? 'YOUR TURN' : playerName(room, currentInitialId)}</strong>
+                <span>{isMyInitialTurn ? `좌표 ${selected.length}/3` : '상대 착수 대기 중'}</span>
+              </div>
+              {isMyInitialTurn && (
+                <button
+                  className="primary control-lock-button"
+                  disabled={busy || selected.length !== INITIAL_SELECTIONS}
+                  onClick={confirmInitialPlacement}
+                >
+                  INITIAL LOCK · {selected.length}/3
+                </button>
+              )}
+            </div>
+          )}
+
+          {room.phase === 'PLANNING' && (
+            <div className="round-control-bar round-control-bar--planning">
+              <div className="selection-readout">
+                <small>COORDINATES</small>
+                <strong>{selected.length} / 5</strong>
+                <span>{me?.ready ? 'LOCKED' : '최대 5곳 · 다시 누르면 취소'}</span>
+              </div>
+              {!me?.ready && (
+                <button
+                  className="primary control-lock-button"
+                  disabled={busy}
+                  onClick={() => run(async () => { await emitAck('round:ready'); })}
+                >
+                  LOCK COORDINATES · {selected.length}/5
+                </button>
+              )}
+              {me?.ready && <div className="locked-indicator">COORDINATES LOCKED</div>}
+            </div>
+          )}
+
           <div className="status-line">
             {room.phase === 'LOBBY' && <span>2명 이상 모이면 방장이 게임을 시작할 수 있습니다.</span>}
             {room.phase === 'INITIAL_PLACEMENT' && (
               <span>
                 {isMyInitialTurn
-                  ? `내 차례 · ${room.initialPlaced[session.playerId] ?? 0}/3 착수`
+                  ? `내 차례 · 초기 좌표 ${selected.length}/3 선택`
                   : `${playerName(room, currentInitialId)} 님이 초기 돌을 놓는 중`}
               </span>
             )}
@@ -333,40 +417,38 @@ export default function App() {
             {room.phase === 'FINISHED' && <span>승자: {winnerNames}</span>}
           </div>
 
+          {room.phase === 'FINISHED' && (
+            <div className="game-result-summary">
+              <div>
+                <small>MISSION RESULT</small>
+                <strong>{winnerNames || '승자 확인 중'} · {room.winners.length > 1 ? '공동 승리' : '승리'}</strong>
+              </div>
+              <div className="game-result-actions">
+                <button className="secondary" onClick={() => setGameOverOpen(true)}>결과 다시 보기</button>
+                {isHost && (
+                  <button className="primary" onClick={() => run(async () => { await emitAck('game:restart'); })}>
+                    RESTART MISSION
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
           <Board
             board={room.board}
             players={room.players}
-            selected={room.phase === 'PLANNING' ? selected : []}
+            selected={room.phase === 'PLANNING' || (room.phase === 'INITIAL_PLACEMENT' && isMyInitialTurn) ? selected : []}
             collisions={resolution?.collisions ?? []}
             disabled={
               room.phase === 'LOBBY' ||
               room.phase === 'FINISHED' ||
               room.phase === 'RESOLVING' ||
+              busy ||
               (room.phase === 'INITIAL_PLACEMENT' && !isMyInitialTurn) ||
               (room.phase === 'PLANNING' && Boolean(me?.ready))
             }
             onCellClick={handleBoardClick}
           />
-
-          {room.phase === 'PLANNING' && !me?.ready && (
-            <button className="primary ready-button" onClick={() => run(async () => { await emitAck('round:ready'); })}>
-              LOCK COORDINATES · {selected.length}/5
-            </button>
-          )}
-          {room.phase === 'LOBBY' && isHost && (
-            <button
-              className="primary ready-button"
-              disabled={room.players.length < 2 || busy}
-              onClick={() => run(async () => { await emitAck('game:start'); })}
-            >
-              INITIATE MISSION · {room.players.length}/6
-            </button>
-          )}
-          {room.phase === 'FINISHED' && isHost && (
-            <button className="primary ready-button" onClick={() => run(async () => { await emitAck('game:restart'); })}>
-              RESTART MISSION
-            </button>
-          )}
         </div>
 
         <aside className="side-panel crew-panel">
@@ -414,6 +496,26 @@ export default function App() {
           <small>TACTICAL RESOLUTION</small>
           <strong>ROUND {Math.max(1, room.round - (room.phase === 'PLANNING' ? 1 : 0))} 공개</strong>
           <span>충돌 {resolution.collisions.length}곳 · 착수 성공 {resolution.placed.length}개</span>
+        </div>
+      )}
+
+      {room.phase === 'FINISHED' && gameOverOpen && (
+        <div className="game-over-modal" role="dialog" aria-modal="true" aria-labelledby="game-over-title">
+          <div className="game-over-card">
+            <button className="game-over-close" aria-label="결과 팝업 닫기" onClick={() => setGameOverOpen(false)}>×</button>
+            <small>MISSION COMPLETE</small>
+            <p className="game-over-kicker">GAME OVER</p>
+            <h2 id="game-over-title">{winnerNames || '승자 확인 중'}</h2>
+            <strong className="winner-label">{room.winners.length > 1 ? '공동 승리' : '승리'}</strong>
+            <p>오목이 완성되어 게임이 종료되었습니다.</p>
+            {isHost ? (
+              <button className="primary game-over-action" onClick={() => run(async () => { await emitAck('game:restart'); })}>
+                RESTART MISSION
+              </button>
+            ) : (
+              <div className="game-over-wait">방장이 재시작할 때까지 대기 중</div>
+            )}
+          </div>
         </div>
       )}
     </main>

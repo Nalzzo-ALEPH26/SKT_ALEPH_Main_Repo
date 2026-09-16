@@ -10,6 +10,7 @@ import {
   joinRoom,
   startGame,
   placeInitialStone,
+  placeInitialStones,
   updateSelection,
   readyPlayer,
   allPlayersReady,
@@ -106,4 +107,41 @@ test('keeps selections private, allows up to five, and resolves collisions', () 
   assert.equal(result.board[10][4], null);
   assert.equal(room.round, 2);
   assert.equal(room.roundEndsAt, 1_000 + ROUND_DURATION_MS);
+});
+
+
+test('submits all three opening stones atomically and advances exactly one turn', () => {
+  const room = createRoom('ATOM', 'p1', 'P1');
+  joinRoom(room, 'p2', 'P2');
+  startGame(room, () => 0, 1_000);
+
+  const first = room.initialOrder[0];
+  const second = room.initialOrder[1];
+  placeInitialStones(room, first, [pos(0, 0), pos(0, 1), pos(0, 2)], 2_000);
+
+  assert.equal(room.initialPlaced[first], 3);
+  assert.equal(room.initialTurnIndex, 1);
+  assert.equal(room.board[0][0], first);
+  assert.equal(room.board[0][1], first);
+  assert.equal(room.board[0][2], first);
+  assert.throws(
+    () => placeInitialStones(room, first, [pos(1, 0), pos(1, 1), pos(1, 2)], 2_100),
+    /NOT_YOUR_TURN/,
+  );
+
+  placeInitialStones(room, second, [pos(2, 0), pos(2, 1), pos(2, 2)], 3_000);
+  assert.equal(room.phase, 'PLANNING');
+  assert.equal(room.roundEndsAt, 3_000 + ROUND_DURATION_MS);
+});
+
+test('opening batch rejects partial placement without mutating the board', () => {
+  const room = createRoom('SAFE', 'p1', 'P1');
+  joinRoom(room, 'p2', 'P2');
+  startGame(room, () => 0, 1_000);
+  const first = room.initialOrder[0];
+
+  assert.throws(() => placeInitialStones(room, first, [pos(0, 0), pos(0, 1)]), /INITIAL_SELECTION_COUNT/);
+  assert.equal(room.initialPlaced[first], 0);
+  assert.equal(room.board[0][0], null);
+  assert.equal(room.board[0][1], null);
 });
