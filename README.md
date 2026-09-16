@@ -11,8 +11,14 @@
 
 https://nunchi-omok.nalzzoaleph26.workers.dev/
 
-**GitHub**
-
-https://github.com/Nalzzo-ALEPH26/SKT_ALEPH_Main_Repo/tree/main/nunchi-omok
 
 ---
+## 동시 오목 (Dongsi Omok)
+
+> 2~6명이 브라우저에서 같은 방에 접속해 플레이하는 실시간 오목 변형 게임입니다.
+
+## 🎮 바로 플레이
+
+**게임 실행**
+
+https://dongsi-omok-mu.vercel.app/
