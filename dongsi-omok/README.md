@@ -1,6 +1,6 @@
 # 동시 오목 (Dongsi Omok)
 
-https://dongsi-omok.vercel.app/
+https://dongsi-omok-mu.vercel.app/
 
 2~6명이 브라우저에서 같은 방에 접속해 플레이하는 실시간 오목 변형 게임입니다.
 
