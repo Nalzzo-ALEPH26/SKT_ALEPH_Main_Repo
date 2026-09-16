@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "skipLibCheck": true,
+    "rootDir": "server/src/game",
+    "outDir": "core-dist",
+    "declaration": false
+  },
+  "include": ["server/src/game/**/*.ts"]
+}
