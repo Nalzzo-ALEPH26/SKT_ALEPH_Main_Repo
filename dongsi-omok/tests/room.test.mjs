@@ -24,7 +24,7 @@ test('room constants match the agreed rules', () => {
   assert.equal(MIN_PLAYERS, 2);
   assert.equal(MAX_PLAYERS, 6);
   assert.equal(INITIAL_STONES_PER_PLAYER, 3);
-  assert.equal(ROUND_SELECTION_LIMIT, 5);
+  assert.equal(ROUND_SELECTION_LIMIT, 3);
   assert.equal(ROUND_DURATION_MS, 15_000);
 });
 
