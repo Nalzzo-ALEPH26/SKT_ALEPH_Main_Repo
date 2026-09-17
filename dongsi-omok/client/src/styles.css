@@ -939,3 +939,35 @@ button:not(:disabled):hover { border-color: rgba(103, 232, 249, .58); background
     margin-left: 0;
   }
 }
+
+
+/* compact gameplay header v8 */
+.gameplay-only .board-panel {
+  padding-top: 12px;
+}
+
+.gameplay-only .round-control-bar {
+  margin-top: 0;
+}
+
+.gameplay-only .round-control-bar--planning {
+  grid-template-columns: minmax(150px, .9fr) auto minmax(190px, 1.1fr);
+  align-items: stretch;
+}
+
+.gameplay-only .compact-round-timer {
+  align-self: stretch;
+  justify-self: center;
+  min-width: 106px;
+}
+
+@media (max-width: 720px) {
+  .gameplay-only .round-control-bar--planning {
+    grid-template-columns: 1fr auto;
+  }
+
+  .gameplay-only .round-control-bar--planning .control-lock-button,
+  .gameplay-only .round-control-bar--planning .locked-indicator {
+    grid-column: 1 / -1;
+  }
+}

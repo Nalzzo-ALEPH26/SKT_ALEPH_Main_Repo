@@ -417,33 +417,6 @@ export default function App() {
     <main className="shell game-shell cockpit-grid gameplay-only">
       <section className="layout gameplay-layout">
         <div className="board-panel tactical-panel">
-          <div className="panel-header">
-            <div>
-              <small>PRIMARY DISPLAY</small>
-              <strong>TACTICAL GRID</strong>
-            </div>
-            <div className="panel-header-actions">
-              {room.phase === 'LOBBY' && isHost && (
-                <button
-                  className="primary header-start-button"
-                  disabled={room.players.length < 2 || busy}
-                  onClick={() => run(async () => { await emitAck('game:start'); })}
-                >
-                  INITIATE MISSION · {room.players.length}/6
-                </button>
-              )}
-              {room.phase === 'PLANNING' && (
-                <div className={`round-timer ${secondsLeft !== null && secondsLeft <= 5 ? 'round-timer--urgent' : ''}`} aria-live="polite">
-                  <small>TURN TIMER</small>
-                  <strong>{String(secondsLeft ?? 0).padStart(2, '0')}</strong>
-                  <span>SEC</span>
-                </div>
-              )}
-              {room.phase !== 'LOBBY' && room.phase !== 'PLANNING' && (
-                <span className="round-index">ROUND {String(room.round).padStart(2, '0')}</span>
-              )}
-            </div>
-          </div>
           {room.phase === 'INITIAL_PLACEMENT' && (
             <div className={`round-control-bar ${isMyInitialTurn ? 'round-control-bar--active' : ''}`}>
               <div className="turn-readout">
@@ -470,6 +443,11 @@ export default function App() {
                 <strong>{selected.length} / {MAX_SELECTIONS}</strong>
                 <span>{me?.ready ? 'LOCKED' : `최대 ${MAX_SELECTIONS}곳 · 다시 누르면 취소`}</span>
               </div>
+              <div className={`round-timer compact-round-timer ${secondsLeft !== null && secondsLeft <= 5 ? 'round-timer--urgent' : ''}`} aria-live="polite">
+                <small>TURN TIMER</small>
+                <strong>{String(secondsLeft ?? 0).padStart(2, '0')}</strong>
+                <span>SEC</span>
+              </div>
               {!me?.ready && (
                 <button
                   className="primary control-lock-button"
@@ -482,21 +460,6 @@ export default function App() {
               {me?.ready && <div className="locked-indicator">COORDINATES LOCKED</div>}
             </div>
           )}
-
-          <div className="status-line">
-            {room.phase === 'LOBBY' && <span>2명 이상 모이면 방장이 게임을 시작할 수 있습니다.</span>}
-            {room.phase === 'INITIAL_PLACEMENT' && (
-              <span>
-                {isMyInitialTurn
-                  ? `내 차례 · 초기 좌표 ${selected.length}/3 선택`
-                  : `${playerName(room, currentInitialId)} 님이 초기 돌을 놓는 중`}
-              </span>
-            )}
-            {room.phase === 'PLANNING' && (
-              <span>{me?.ready ? '선택 확정 완료' : `비공개 선택 ${selected.length}/${MAX_SELECTIONS}`}</span>
-            )}
-            {room.phase === 'FINISHED' && <span>승자: {winnerNames}</span>}
-          </div>
           {error && <p className="error gameplay-error">{error}</p>}
 
           {room.phase === 'FINISHED' && (
