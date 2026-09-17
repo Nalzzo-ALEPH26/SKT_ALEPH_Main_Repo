@@ -10,7 +10,7 @@ import type { Player, PlayerId, Position, Room, RoundResolution } from './types.
 export const MIN_PLAYERS = 2;
 export const MAX_PLAYERS = 6;
 export const INITIAL_STONES_PER_PLAYER = 3;
-export const ROUND_SELECTION_LIMIT = 5;
+export const ROUND_SELECTION_LIMIT = 3;
 export const ROUND_DURATION_MS = 15_000;
 
 export function createRoom(roomId: string, hostId: PlayerId, nickname: string): Room {
