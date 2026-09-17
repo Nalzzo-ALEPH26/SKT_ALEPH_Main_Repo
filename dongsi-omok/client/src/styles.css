@@ -860,3 +860,82 @@ button:not(:disabled):hover { border-color: rgba(103, 232, 249, .58); background
   .game-result-actions { justify-content: stretch; }
   .game-result-actions button { flex: 1; }
 }
+
+
+/* lobby-game split v7 */
+.lobby-screen {
+  width: min(760px, 100%);
+  margin: 28px auto 0;
+}
+
+.lobby-room-panel {
+  width: 100%;
+}
+
+.lobby-guide {
+  margin: 0 0 18px;
+  opacity: 0.72;
+  line-height: 1.6;
+}
+
+.lobby-players {
+  display: grid;
+  gap: 10px;
+}
+
+.lobby-player-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.kick-button {
+  margin-left: auto;
+  border: 1px solid rgba(255, 98, 98, 0.45);
+  background: rgba(255, 72, 72, 0.08);
+  color: #ff9a9a;
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.kick-button:hover:not(:disabled) {
+  background: rgba(255, 72, 72, 0.16);
+}
+
+.lobby-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.lobby-start-button {
+  margin-left: auto;
+}
+
+.lobby-waiting {
+  margin-left: auto;
+  opacity: 0.7;
+  font-size: 0.9rem;
+}
+
+.gameplay-layout {
+  grid-template-columns: minmax(0, 1fr);
+  width: min(980px, 100%);
+  margin: 0 auto;
+}
+
+.gameplay-only .board-panel {
+  width: 100%;
+}
+
+@media (max-width: 700px) {
+  .lobby-actions {
+    align-items: stretch;
+  }
+  .lobby-actions > * {
+    width: 100%;
+    margin-left: 0;
+  }
+}

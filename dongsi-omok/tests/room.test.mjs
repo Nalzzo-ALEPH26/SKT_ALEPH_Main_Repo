@@ -8,6 +8,7 @@ import {
   ROUND_DURATION_MS,
   createRoom,
   joinRoom,
+  kickLobbyPlayer,
   startGame,
   placeInitialStone,
   placeInitialStones,
@@ -40,6 +41,23 @@ test('only allows joins while in the lobby', () => {
   joinRoom(room, 'p2', 'P2');
   startGame(room, () => 0.5, 1_000);
   assert.throws(() => joinRoom(room, 'p3', 'P3'), /GAME_IN_PROGRESS/);
+});
+
+
+test('host can kick another player from the lobby', () => {
+  const room = createRoom('KICK', 'host', 'Host');
+  joinRoom(room, 'guest', 'Guest');
+  kickLobbyPlayer(room, 'host', 'guest');
+  assert.deepEqual(room.players.map((player) => player.id), ['host']);
+});
+
+test('kick is host-only, cannot target self, and is lobby-only', () => {
+  const room = createRoom('KICK', 'host', 'Host');
+  joinRoom(room, 'guest', 'Guest');
+  assert.throws(() => kickLobbyPlayer(room, 'guest', 'host'), /HOST_ONLY/);
+  assert.throws(() => kickLobbyPlayer(room, 'host', 'host'), /CANNOT_KICK_SELF/);
+  startGame(room, () => 0.5, 1_000);
+  assert.throws(() => kickLobbyPlayer(room, 'host', 'guest'), /GAME_IN_PROGRESS/);
 });
 
 test('requires at least two players and gives three sequential initial stones per player', () => {
@@ -76,7 +94,7 @@ test('starts a 15 second planning round after all initial placements', () => {
   assert.equal(room.roundEndsAt, 8_000 + ROUND_DURATION_MS);
 });
 
-test('keeps selections private, allows up to five, and resolves collisions', () => {
+test('keeps selections private, allows up to three, and resolves collisions', () => {
   const room = createRoom('ABCD', 'p1', 'P1');
   joinRoom(room, 'p2', 'P2');
   startGame(room, () => 0, 0);
@@ -88,12 +106,12 @@ test('keeps selections private, allows up to five, and resolves collisions', () 
     placeInitialStone(room, playerId, pos(row, 2), 100);
   }
 
-  updateSelection(room, 'p1', [0, 1, 2, 3, 4].map((col) => pos(10, col)));
+  updateSelection(room, 'p1', [0, 1, 2].map((col) => pos(10, col)));
   assert.throws(
-    () => updateSelection(room, 'p1', [0, 1, 2, 3, 4, 5].map((col) => pos(10, col))),
+    () => updateSelection(room, 'p1', [0, 1, 2, 3].map((col) => pos(10, col))),
     /SELECTION_LIMIT/,
   );
-  updateSelection(room, 'p2', [pos(10, 4), pos(11, 4)]);
+  updateSelection(room, 'p2', [pos(10, 2), pos(11, 2)]);
 
   const publicState = toPublicRoom(room);
   assert.equal('selections' in publicState, false);
@@ -103,8 +121,8 @@ test('keeps selections private, allows up to five, and resolves collisions', () 
   assert.equal(allPlayersReady(room), true);
 
   const result = resolveRound(room, 1_000);
-  assert.deepEqual(result.collisions, [pos(10, 4)]);
-  assert.equal(result.board[10][4], null);
+  assert.deepEqual(result.collisions, [pos(10, 2)]);
+  assert.equal(result.board[10][2], null);
   assert.equal(room.round, 2);
   assert.equal(room.roundEndsAt, 1_000 + ROUND_DURATION_MS);
 });

@@ -6,6 +6,7 @@ import {
   allPlayersReady,
   createRoom,
   joinRoom,
+  kickLobbyPlayer,
   placeInitialStones,
   removeLobbyPlayer,
   resolveRound,
@@ -100,6 +101,26 @@ export function createSocketServer(): SocketServerBundle {
         }
         sessions.delete(socket.id);
         socket.leave(room.id);
+        return { ok: true };
+      });
+    });
+
+
+    socket.on('room:kick', (payload: { playerId?: string }, ack?: Ack) => {
+      handle(ack, () => {
+        const { room, playerId } = roomForSocket(socket.id);
+        const targetPlayerId = payload?.playerId ?? '';
+        kickLobbyPlayer(room, playerId, targetPlayerId);
+
+        for (const [targetSocketId, targetSession] of sessions) {
+          if (targetSession.roomId !== room.id || targetSession.playerId !== targetPlayerId) continue;
+          const targetSocket = io.sockets.sockets.get(targetSocketId);
+          targetSocket?.emit('room:kicked');
+          targetSocket?.leave(room.id);
+          sessions.delete(targetSocketId);
+        }
+
+        broadcastRoom(room);
         return { ok: true };
       });
     });

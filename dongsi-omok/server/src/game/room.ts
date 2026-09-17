@@ -47,8 +47,23 @@ export function removeLobbyPlayer(room: Room, playerId: PlayerId): void {
   if (room.phase !== 'LOBBY') throw new Error('GAME_IN_PROGRESS');
   if (room.hostId === playerId) throw new Error('HOST_CANNOT_LEAVE_WITHOUT_CLOSING_ROOM');
   room.players = room.players.filter((player) => player.id !== playerId);
+  room.players.forEach((player, index) => {
+    player.colorIndex = index;
+  });
   delete room.selections[playerId];
   delete room.initialPlaced[playerId];
+}
+
+export function kickLobbyPlayer(
+  room: Room,
+  actorPlayerId: PlayerId,
+  targetPlayerId: PlayerId,
+): void {
+  if (room.phase !== 'LOBBY') throw new Error('GAME_IN_PROGRESS');
+  if (room.hostId !== actorPlayerId) throw new Error('HOST_ONLY');
+  if (targetPlayerId === room.hostId) throw new Error('CANNOT_KICK_SELF');
+  if (!room.players.some((player) => player.id === targetPlayerId)) throw new Error('PLAYER_NOT_FOUND');
+  removeLobbyPlayer(room, targetPlayerId);
 }
 
 export function setPlayerConnected(room: Room, playerId: PlayerId, connected: boolean): void {

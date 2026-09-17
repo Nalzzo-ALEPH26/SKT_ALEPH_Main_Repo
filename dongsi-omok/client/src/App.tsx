@@ -20,6 +20,7 @@ const ERROR_TEXT: Record<string, string> = {
   PLAYER_NOT_FOUND: '기존 게임 정보를 찾을 수 없습니다.',
   NOT_ENOUGH_PLAYERS: '게임 시작에는 최소 2명이 필요합니다.',
   HOST_ONLY: '방장만 실행할 수 있습니다.',
+  CANNOT_KICK_SELF: '방장은 자기 자신을 강퇴할 수 없습니다.',
   NOT_YOUR_TURN: '지금은 내 차례가 아닙니다.',
   CELL_OCCUPIED: '이미 돌이 놓인 칸입니다.',
   SELECTION_LIMIT: '한 라운드에는 최대 3곳까지 선택할 수 있습니다.',
@@ -54,14 +55,25 @@ export default function App() {
       setRoom(null);
       setError('방장이 방을 닫았습니다.');
     };
+    const onKicked = () => {
+      clearSession();
+      setSavedSession(null);
+      setSession(null);
+      setRoom(null);
+      setSelected([]);
+      history.replaceState(null, '', location.pathname);
+      setError('방장에 의해 방에서 강퇴되었습니다.');
+    };
 
     socket.on('room:state', onState);
     socket.on('round:resolved', onResolved);
     socket.on('room:closed', onClosed);
+    socket.on('room:kicked', onKicked);
     return () => {
       socket.off('room:state', onState);
       socket.off('round:resolved', onResolved);
       socket.off('room:closed', onClosed);
+      socket.off('room:kicked', onKicked);
     };
   }, []);
 
@@ -225,6 +237,12 @@ export default function App() {
       history.replaceState(null, '', location.pathname);
     });
 
+
+  const kickPlayer = (playerId: string) =>
+    run(async () => {
+      await emitAck('room:kick', { playerId });
+    });
+
   if (!session || !room) {
     return (
       <main className="shell landing cockpit-grid">
@@ -318,23 +336,86 @@ export default function App() {
     .filter(Boolean)
     .join(', ');
 
-  return (
-    <main className="shell game-shell cockpit-grid">
-      <header className="topbar command-bar">
-        <div className="command-brand">
-          <span className="hud-status"><i className="system-light" /> MISSION CONTROL</span>
-          <div>
-            <p className="eyebrow">TACTICAL GRID / ROOM</p>
-            <strong className="room-code">{room.id}</strong>
+  if (room.phase === 'LOBBY') {
+    return (
+      <main className="shell game-shell cockpit-grid lobby-shell">
+        <header className="topbar command-bar">
+          <div className="command-brand">
+            <span className="hud-status"><i className="system-light" /> READY ROOM</span>
+            <div>
+              <p className="eyebrow">ROOM CODE</p>
+              <strong className="room-code">{room.id}</strong>
+            </div>
           </div>
-        </div>
-        <div className="phase-box">
-          <small>MISSION PHASE</small>
-          <span>{phaseLabel(room.phase)}</span>
-        </div>
-      </header>
+          <div className="phase-box">
+            <small>CREW</small>
+            <span>{room.players.length}/6</span>
+          </div>
+        </header>
 
-      <section className="layout">
+        <section className="lobby-screen">
+          <div className="tactical-panel lobby-room-panel">
+            <div className="panel-header">
+              <div>
+                <small>READY ROOM</small>
+                <strong>게임 대기실</strong>
+              </div>
+              <span className="round-index">WAITING</span>
+            </div>
+
+            <p className="lobby-guide">플레이어가 준비되면 방장이 게임을 시작합니다. 게임 시작 전에는 게임판이 표시되지 않습니다.</p>
+
+            <div className="players lobby-players">
+              {room.players.map((player) => (
+                <div className={`player-card ${player.id === session.playerId ? 'player-card--me' : ''}`} key={player.id}>
+                  <span className={`player-dot player-dot--${player.colorIndex}`} />
+                  <div className="lobby-player-info">
+                    <strong>{player.nickname}</strong>
+                    <small>
+                      {player.id === room.hostId ? 'COMMANDER · ' : ''}
+                      {player.connected ? 'LINKED' : 'SIGNAL LOST'}
+                    </small>
+                  </div>
+                  {isHost && player.id !== room.hostId && (
+                    <button className="kick-button" disabled={busy} onClick={() => kickPlayer(player.id)}>
+                      강퇴
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="lobby-actions">
+              <button
+                className="secondary"
+                onClick={() => navigator.clipboard?.writeText(`${location.origin}${location.pathname}?room=${room.id}`)}
+              >
+                INVITE LINK 복사
+              </button>
+              <button className="text-button" disabled={busy} onClick={leave}>방 나가기</button>
+              {isHost ? (
+                <button
+                  className="primary lobby-start-button"
+                  disabled={room.players.length < 2 || busy}
+                  onClick={() => run(async () => { await emitAck('game:start'); })}
+                >
+                  게임 시작 · {room.players.length}/6
+                </button>
+              ) : (
+                <div className="lobby-waiting">방장이 게임을 시작할 때까지 대기 중</div>
+              )}
+            </div>
+
+            {error && <p className="error">{error}</p>}
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  return (
+    <main className="shell game-shell cockpit-grid gameplay-only">
+      <section className="layout gameplay-layout">
         <div className="board-panel tactical-panel">
           <div className="panel-header">
             <div>
@@ -387,7 +468,7 @@ export default function App() {
               <div className="selection-readout">
                 <small>COORDINATES</small>
                 <strong>{selected.length} / {MAX_SELECTIONS}</strong>
-                <span>{me?.ready ? 'LOCKED' : '최대 ${MAX_SELECTIONS}곳 · 다시 누르면 취소'}</span>
+                <span>{me?.ready ? 'LOCKED' : `최대 ${MAX_SELECTIONS}곳 · 다시 누르면 취소`}</span>
               </div>
               {!me?.ready && (
                 <button
@@ -416,6 +497,7 @@ export default function App() {
             )}
             {room.phase === 'FINISHED' && <span>승자: {winnerNames}</span>}
           </div>
+          {error && <p className="error gameplay-error">{error}</p>}
 
           {room.phase === 'FINISHED' && (
             <div className="game-result-summary">
@@ -450,45 +532,6 @@ export default function App() {
             onCellClick={handleBoardClick}
           />
         </div>
-
-        <aside className="side-panel crew-panel">
-          <div className="side-title">
-            <div>
-              <small>CREW MANIFEST</small>
-              <h2>플레이어</h2>
-            </div>
-            <span>{room.players.length}/6</span>
-          </div>
-          <div className="players">
-            {room.players.map((player) => (
-              <div className={`player-card ${player.id === session.playerId ? 'player-card--me' : ''}`} key={player.id}>
-                <span className={`player-dot player-dot--${player.colorIndex}`} />
-                <div>
-                  <strong>{player.nickname}</strong>
-                  <small>
-                    {player.id === room.hostId ? 'COMMANDER · ' : ''}
-                    {player.connected ? 'LINKED' : 'SIGNAL LOST'}
-                  </small>
-                </div>
-                {room.phase === 'PLANNING' && <b>{player.ready ? 'LOCKED' : 'SCANNING'}</b>}
-              </div>
-            ))}
-          </div>
-
-          <div className="rule-card">
-            <h3>MISSION PROTOCOL</h3>
-            <p>① 랜덤 순서로 각자 초기 돌 3개를 순차 착수</p>
-            <p>② 매 라운드 15초 동안 빈 교차점 최대 3곳 선택</p>
-            <p>③ 같은 좌표를 2명 이상 고르면 해당 착수는 전부 무효</p>
-            <p>④ 5목 이상 완성 시 승리 · 동시 완성은 공동 승리</p>
-          </div>
-
-          <button className="secondary" onClick={() => navigator.clipboard?.writeText(`${location.origin}${location.pathname}?room=${room.id}`)}>
-            INVITE LINK 복사
-          </button>
-          {room.phase === 'LOBBY' && <button className="text-button" onClick={leave}>방 나가기</button>}
-          {error && <p className="error">{error}</p>}
-        </aside>
       </section>
 
       {resolution && (
