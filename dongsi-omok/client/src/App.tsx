@@ -5,7 +5,7 @@ import type { Position, PublicRoom, RoundResolution } from './types';
 
 const SESSION_KEY = 'simultaneous-omok-session-v1';
 const INITIAL_SELECTIONS = 3;
-const MAX_SELECTIONS = 5;
+const MAX_SELECTIONS = 3;
 
 interface Session {
   roomId: string;
@@ -22,7 +22,7 @@ const ERROR_TEXT: Record<string, string> = {
   HOST_ONLY: '방장만 실행할 수 있습니다.',
   NOT_YOUR_TURN: '지금은 내 차례가 아닙니다.',
   CELL_OCCUPIED: '이미 돌이 놓인 칸입니다.',
-  SELECTION_LIMIT: '한 라운드에는 최대 5곳까지 선택할 수 있습니다.',
+  SELECTION_LIMIT: '한 라운드에는 최대 3곳까지 선택할 수 있습니다.',
   INITIAL_SELECTION_COUNT: '초기 착수는 정확히 3곳을 선택해야 합니다.',
   SERVER_TIMEOUT: '서버 응답이 없습니다. 연결 상태를 확인하세요.',
 };
@@ -241,7 +241,7 @@ export default function App() {
             <p className="eyebrow">TACTICAL SIMULATION / REAL-TIME</p>
             <h1><span>DONGSI</span> OMOK</h1>
             <p className="lead">
-              첫 3수는 순서대로 배치하고, 이후 15초 동안 최대 5개의 좌표를 비공개로 지정합니다.
+              첫 3수는 순서대로 배치하고, 이후 15초 동안 최대 3개의 좌표를 비공개로 지정합니다.
               같은 좌표가 겹치면 해당 착수는 소멸합니다.
             </p>
           </div>
@@ -305,7 +305,7 @@ export default function App() {
             <div><small>GRID</small><strong>15 × 15</strong></div>
             <div><small>OPENING</small><strong>3 STONES</strong></div>
             <div><small>ROUND</small><strong>15 SEC</strong></div>
-            <div><small>INPUT</small><strong>MAX 5</strong></div>
+            <div><small>INPUT</small><strong>MAX 3</strong></div>
             <div><small>COLLISION</small><strong>VOID</strong></div>
           </div>
         </section>
@@ -386,8 +386,8 @@ export default function App() {
             <div className="round-control-bar round-control-bar--planning">
               <div className="selection-readout">
                 <small>COORDINATES</small>
-                <strong>{selected.length} / 5</strong>
-                <span>{me?.ready ? 'LOCKED' : '최대 5곳 · 다시 누르면 취소'}</span>
+                <strong>{selected.length} / {MAX_SELECTIONS}</strong>
+                <span>{me?.ready ? 'LOCKED' : '최대 ${MAX_SELECTIONS}곳 · 다시 누르면 취소'}</span>
               </div>
               {!me?.ready && (
                 <button
@@ -395,7 +395,7 @@ export default function App() {
                   disabled={busy}
                   onClick={() => run(async () => { await emitAck('round:ready'); })}
                 >
-                  LOCK COORDINATES · {selected.length}/5
+                  LOCK COORDINATES · {selected.length}/{MAX_SELECTIONS}
                 </button>
               )}
               {me?.ready && <div className="locked-indicator">COORDINATES LOCKED</div>}
@@ -412,7 +412,7 @@ export default function App() {
               </span>
             )}
             {room.phase === 'PLANNING' && (
-              <span>{me?.ready ? '선택 확정 완료' : `비공개 선택 ${selected.length}/5`}</span>
+              <span>{me?.ready ? '선택 확정 완료' : `비공개 선택 ${selected.length}/${MAX_SELECTIONS}`}</span>
             )}
             {room.phase === 'FINISHED' && <span>승자: {winnerNames}</span>}
           </div>
@@ -478,7 +478,7 @@ export default function App() {
           <div className="rule-card">
             <h3>MISSION PROTOCOL</h3>
             <p>① 랜덤 순서로 각자 초기 돌 3개를 순차 착수</p>
-            <p>② 매 라운드 15초 동안 빈 교차점 최대 5곳 선택</p>
+            <p>② 매 라운드 15초 동안 빈 교차점 최대 3곳 선택</p>
             <p>③ 같은 좌표를 2명 이상 고르면 해당 착수는 전부 무효</p>
             <p>④ 5목 이상 완성 시 승리 · 동시 완성은 공동 승리</p>
           </div>
