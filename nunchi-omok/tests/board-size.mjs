@@ -1,8 +1,9 @@
+import {testDB} from './d1-mock.mjs';
 import ts from 'typescript';import fs from 'node:fs';import assert from 'node:assert/strict';import {DatabaseSync} from 'node:sqlite';
 const compile=s=>ts.transpileModule(s,{compilerOptions:{module:ts.ModuleKind.ES2022,target:ts.ScriptTarget.ES2022}}).outputText;
 const url=s=>'data:text/javascript;base64,'+Buffer.from(s).toString('base64');const gameURL=url(compile(fs.readFileSync('lib/game.ts','utf8')));
 const sql=new DatabaseSync(':memory:');sql.exec(fs.readFileSync('drizzle/0000_deep_karnak.sql','utf8'));
-globalThis.testEnv={DB:{prepare(q){let v=[];return{bind(...values){v=values;return this},async first(){return sql.prepare(q).get(...v)},async run(){return{meta:{changes:sql.prepare(q).run(...v).changes}}}}}}};
+globalThis.testEnv={DB:testDB(sql)};
 const api=compile(fs.readFileSync('app/api/game/route.ts','utf8').replace("import { env } from 'cloudflare:workers';","const env=globalThis.testEnv;").replace("'@/lib/game'",JSON.stringify(gameURL)));
 const {POST}=await import(url(api));const call=async(action,s={},extra={})=>{const res=await POST(new Request('https://test/api/game',{method:'POST',body:JSON.stringify({action,...s,...extra})}));return {status:res.status,...await res.json()}};
 
