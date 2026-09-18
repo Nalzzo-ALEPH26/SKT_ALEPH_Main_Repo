@@ -31,11 +31,11 @@
     .point{position:absolute;border:0;background:transparent;padding:0;transform:translate(-50%,-50%);display:grid;place-items:center;border-radius:50%;z-index:3}
     .point::after{content:"";position:absolute;width:13%;height:13%;border-radius:50%;background:rgba(61,38,18,.74);opacity:.35}
     .point:hover{background:rgba(255,255,255,.14)}.point.selected{outline:3px solid #e9fbff;box-shadow:0 0 0 6px rgba(70,194,255,.36)}.point.disabled{cursor:default}.point.disabled:hover{background:transparent}
-    .stone{width:100%;height:100%;border-radius:50%;position:relative;z-index:2;border:1px solid rgba(255,255,255,.16);box-shadow:inset -6px -7px 11px rgba(0,0,0,.35),inset 5px 5px 9px rgba(255,255,255,.23),0 4px 7px rgba(0,0,0,.42)}
+    .stone{width:50%;height:50%;place-self:center;border-radius:50%;position:relative;z-index:2;border:1px solid rgba(255,255,255,.16);box-shadow:inset -4px -4px 7px rgba(0,0,0,.35),inset 3px 3px 6px rgba(255,255,255,.23),0 3px 5px rgba(0,0,0,.42)}
     .picknum{position:absolute;z-index:6;right:-5px;top:-7px;min-width:22px;height:22px;border-radius:999px;background:#102033;color:#fff;border:2px solid #eaf8ff;font-size:11px;font-weight:900;display:grid;place-items:center;padding:0 5px}
     .planning{margin-top:14px;padding:14px;border-radius:15px;background:#111725;border:1px solid #313d57}.planning h3{margin:0 0 5px}.choices{display:grid;gap:8px;margin-top:12px}.choice{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px;border-radius:11px;background:#1b2334}.vote{display:flex;align-items:center;gap:7px}.vote button{width:32px;height:32px;border-radius:9px;border:1px solid #495674;background:#28324b;color:#fff;font-weight:900}.vote b{width:26px;text-align:center}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
     .waiting{padding:16px;border-radius:14px;background:#131b2a;border:1px dashed #46536f;color:#d9e4f7}.score-list,.log{display:grid;gap:8px}.score{padding:10px;border-radius:12px;background:#111725;border:1px solid #313c56}.scoretop{display:flex;justify-content:space-between;gap:10px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}.stat{text-align:center;padding:6px;border-radius:8px;background:#1b2334}.stat b{display:block}.stat span{font-size:11px;color:var(--muted)}.log{max-height:220px;overflow:auto}.log div{font-size:12px;line-height:1.45;padding:8px;border-radius:9px;background:#111725;color:#d7dfef}
-    .resultbox{margin-top:14px;padding:14px;border-radius:14px;border:1px solid #45516d;background:#111725}.resultbox h3{margin:0 0 10px}.resultrow{display:flex;justify-content:space-between;gap:10px;padding:9px;border-radius:9px;background:#1a2233;margin:6px 0}.winner{outline:2px solid #f7d888}
+    .resultbox{margin-top:14px;padding:14px;border-radius:14px;border:1px solid #45516d;background:#111725}.game-bottom-actions{display:flex;justify-content:flex-start;margin-top:18px}.resultbox h3{margin:0 0 10px}.resultrow{display:flex;justify-content:space-between;gap:10px;padding:9px;border-radius:9px;background:#1a2233;margin:6px 0}.winner{outline:2px solid #f7d888}
     .conn{font-size:12px;color:var(--muted)}.conn.ok{color:var(--good)}
     @media(max-width:900px){.layout{grid-template-columns:1fr}.side{position:static}.topbar{flex-direction:column}.room-tools{justify-content:flex-start}.form-grid{grid-template-columns:1fr}.full{grid-column:auto}}
   </style>
@@ -66,11 +66,11 @@
       <b>이번 온라인 버전에서의 판정</b>
       <ol>
         <li><b>4×4는 16개의 교차점</b>을 뜻합니다. 돌은 칸 안이 아니라 오목/바둑처럼 선의 십자 교차점 위에 놓입니다.</li>
-        <li>판의 선 간격·가장자리·돌 지름은 전통적인 일본식 바둑판 비율(가로 간격 22, 세로 간격 23.7, 돌 지름 22.5)을 축소해 적용했습니다.</li>
-        <li>각 플레이어는 자기 컴퓨터에서 서로 다른 교차점 2곳과 각 지점에 사용할 투표권을 비밀리에 제출합니다.</li>
+        <li>돌은 기존 버전보다 절반 크기로 표시되어 교차점과 선을 더 쉽게 볼 수 있습니다.</li>
+        <li>각 플레이어는 <b>30초 안에</b> 서로 다른 교차점 2곳과 각 지점에 사용할 투표권을 비밀리에 제출합니다. 시간 안에 제출하지 못하면 그 턴에는 돌을 놓지 않습니다.</li>
         <li>Supabase 데이터베이스는 모두의 제출을 받은 뒤 한꺼번에 판정합니다. 같은 지점이면 더 많은 표를 건 사람이 차지하고, 최고 표가 동률이면 기존 돌이 유지됩니다.</li>
-        <li>이미 돌이 놓인 교차점도 다시 선택할 수 있습니다. 연결은 상·하·좌·우만 계산합니다.</li>
-        <li>턴 종료 때 자신의 가장 큰 연결 묶음 크기만큼 점수를 얻고, 다음 턴 투표권도 그 크기만큼 받습니다. 총 5턴입니다.</li>
+        <li>이미 돌이 놓인 교차점도 다시 선택할 수 있습니다. 연결은 가로·세로·두 대각선의 <b>연속된 일렬</b>을 계산합니다.</li>
+        <li>점수는 누적하지 않습니다. 매 턴 현재 최장 일렬 길이만큼 다음 턴 투표권을 얻고, <b>5턴 종료 시 가장 긴 일렬을 만든 플레이어가 승리</b>합니다.</li>
       </ol>
     </div>
   </section>
@@ -107,6 +107,7 @@
             <span class="pill">보드 <strong id="sizeText">4 × 4</strong></span>
             <span class="pill">내 투표권 <strong id="budgetText">0</strong></span>
             <span class="pill">제출 <strong id="submittedText">0 / 2</strong></span>
+            <span class="pill">남은 시간 <strong id="timerText">30초</strong></span>
           </div>
           <div class="board-shell"><div id="goBoard" class="go-board"></div></div>
 
@@ -121,14 +122,14 @@
           <div id="waitingPanel" class="waiting hidden"></div>
           <div id="resultPanel" class="resultbox hidden"></div>
           <div id="gameOverPanel" class="resultbox hidden"></div>
+          <div id="gameBottomActions" class="game-bottom-actions"><button id="leaveRoomBtn" class="btn danger">방에서 나가기</button></div>
         </main>
 
         <aside class="panel side">
-          <h3 style="margin-top:0">현재 순위</h3>
+          <h3 style="margin-top:0">현재 연결 현황</h3>
           <div id="scoreList" class="score-list"></div>
           <h3>기록</h3>
           <div id="log" class="log"></div>
-          <div class="actions"><button id="restartBtn" class="btn ghost hidden">같은 방에서 다시 하기</button></div>
         </aside>
       </div>
     </div>
@@ -154,6 +155,7 @@
   let roomChannel = null;
   let autoRejoinTried = false;
   let refreshTimer = null;
+  let timeoutRequestKey = null;
 
   function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
   function setError(sel,text){ const el=$(sel); if(!text){el.classList.add('hidden');el.textContent='';}else{el.textContent=text;el.classList.remove('hidden');} }
@@ -164,6 +166,25 @@
   function countStones(seat){ return (state?.board||[]).reduce((n,x)=>n+(x===seat?1:0),0); }
   function spent(){ return votes.slice(0,picks.length).reduce((a,b)=>a+b,0); }
   function remaining(){ const p=me(); return p ? (state.voteBudgets[p.seat]||0)-spent() : 0; }
+  function deadlineMs(){ return state?.turnDeadline ? new Date(state.turnDeadline).getTime() : 0; }
+  function timeExpired(){ const d=deadlineMs(); return !!d && Date.now() >= d; }
+
+  async function tickTimer(){
+    const el=$('#timerText');
+    if(!el) return;
+    if(!state || state.phase!=='planning' || !state.turnDeadline){ el.textContent='--'; return; }
+    const ms=deadlineMs()-Date.now();
+    el.textContent=`${Math.max(0,Math.ceil(ms/1000))}초`;
+    if(ms<=0){
+      $('#submitPlanBtn').disabled=true;
+      const key=`${state.id}:${state.turn}`;
+      if(timeoutRequestKey!==key){
+        timeoutRequestKey=key;
+        try{ state=await rpc('resolve_turn_timeout',{p_room_id:roomId}); render(); }
+        catch(e){ timeoutRequestKey=null; setError('#planError',e.message); }
+      }
+    }
+  }
 
   function normalizeState(raw){
     if(!raw) return null;
@@ -258,7 +279,7 @@
   function returnToLanding(){
     if(roomChannel && sb){ sb.removeChannel(roomChannel); roomChannel=null; }
     clearTimeout(refreshTimer);
-    state=null; roomId=null; picks=[]; votes=[0,0];
+    state=null; roomId=null; picks=[]; votes=[0,0]; timeoutRequestKey=null;
     localStorage.removeItem(roomIdKey);
     localStorage.removeItem(roomCodeKey);
     const url=new URL(location.href);url.searchParams.delete('room');history.replaceState(null,'',url);
@@ -270,7 +291,7 @@
   function render(){
     if(!state)return;
     $('#roomCodeTop').textContent=state.code;$('#roomCodeBig').textContent=state.code;
-    const phases={lobby:'로비 · 각자 다른 컴퓨터에서 접속하세요',planning:'계획 단계 · 각자 두 수를 비밀 제출',result:'턴 결과 · 모두 준비하면 다음 턴',gameover:'게임 종료'};
+    const phases={lobby:'로비 · 각자 다른 컴퓨터에서 접속하세요',planning:'계획 단계 · 30초 안에 두 수를 비밀 제출',result:'턴 결과 · 모두 준비하면 다음 턴',gameover:'게임 종료'};
     $('#phaseText').textContent=phases[state.phase]||state.phase;
     $('#lobbyPanel').classList.toggle('hidden',state.phase!=='lobby');
     $('#gamePanel').classList.toggle('hidden',state.phase==='lobby');
@@ -298,9 +319,10 @@
     $('#waitingPanel').classList.toggle('hidden',!(planning&&mine.submitted));
     $('#resultPanel').classList.toggle('hidden',state.phase!=='result');
     $('#gameOverPanel').classList.toggle('hidden',state.phase!=='gameover');
-    $('#restartBtn').classList.toggle('hidden',!(state.phase==='gameover'&&isHost()));
+    $('#gameBottomActions').classList.toggle('hidden',state.phase==='gameover');
     if(planning&&!mine.submitted)renderChoices();
-    if(planning&&mine.submitted){const count=state.players.filter(p=>p.submitted).length;$('#waitingPanel').innerHTML=`<b>제출 완료</b><br><span class="tiny">다른 플레이어의 비밀 선택은 공개되지 않습니다. 모두 제출하면 Supabase에서 동시에 판정합니다. (${count}/${state.maxPlayers})</span>`;}
+    tickTimer();
+    if(planning&&mine.submitted){const count=state.players.filter(p=>p.submitted).length;$('#waitingPanel').innerHTML=`<b>제출 완료</b><br><span class="tiny">다른 플레이어의 비밀 선택은 공개되지 않습니다. 모두 제출하거나 30초가 끝나면 Supabase에서 동시에 판정합니다. (${count}/${state.maxPlayers})</span>`;}
     if(state.phase==='result')renderResult();
     if(state.phase==='gameover')renderGameOver();
   }
@@ -315,7 +337,7 @@
     const w=marginX*2+gapX*(cols-1),h=marginY*2+gapY*(rows-1);board.style.width=w+'px';board.style.height=h+'px';
     for(let r=0;r<rows;r++){const line=document.createElement('div');line.className='line h';line.style.left=marginX+'px';line.style.top=(marginY+r*gapY)+'px';line.style.width=(gapX*(cols-1))+'px';line.style.height=lineSize+'px';board.appendChild(line);}
     for(let c=0;c<cols;c++){const line=document.createElement('div');line.className='line v';line.style.top=marginY+'px';line.style.left=(marginX+c*gapX)+'px';line.style.height=(gapY*(rows-1))+'px';line.style.width=lineSize+'px';board.appendChild(line);}
-    const mine=me();const canPick=state.phase==='planning'&&mine&&!mine.submitted;
+    const mine=me();const canPick=state.phase==='planning'&&mine&&!mine.submitted&&!timeExpired();
     for(let i=0;i<state.board.length;i++){
       const r=Math.floor(i/cols),c=i%cols;const point=document.createElement('button');point.type='button';point.className='point'+(canPick?'':' disabled');
       point.style.width=size+'px';point.style.height=size+'px';point.style.left=(marginX+c*gapX)+'px';point.style.top=(marginY+r*gapY)+'px';
@@ -331,30 +353,48 @@
     const wrap=$('#choices');wrap.innerHTML='';
     for(let slot=0;slot<2;slot++){
       const row=document.createElement('div');row.className='choice';const label=document.createElement('div');
-      label.innerHTML=picks[slot]===undefined?`<b>선택 ${slot+1}</b><div class="tiny">보드의 교차점을 선택하세요.</div>`:`<b>선택 ${slot+1} · ${coord(picks[slot])}</b><div class="tiny">이 위치에 사용할 투표권</div>`;
+      label.innerHTML=picks[slot]===undefined?`<b>투표${slot+1}</b><div class="tiny">보드의 교차점을 선택하세요.</div>`:`<b>투표${slot+1} · ${coord(picks[slot])}</b><div class="tiny">이 위치에 사용할 투표권</div>`;
       const ctrl=document.createElement('div');ctrl.className='vote';const minus=document.createElement('button');minus.textContent='−';const num=document.createElement('b');num.textContent=votes[slot]||0;const plus=document.createElement('button');plus.textContent='+';
-      minus.disabled=picks[slot]===undefined||(votes[slot]||0)<=0;plus.disabled=picks[slot]===undefined||remaining()<=0;
+      minus.disabled=timeExpired()||picks[slot]===undefined||(votes[slot]||0)<=0;plus.disabled=timeExpired()||picks[slot]===undefined||remaining()<=0;
       minus.onclick=()=>{votes[slot]-=1;renderGame();};plus.onclick=()=>{votes[slot]+=1;renderGame();};ctrl.append(minus,num,plus);row.append(label,ctrl);wrap.appendChild(row);
     }
-    $('#submitPlanBtn').disabled=picks.length!==2;
+    $('#submitPlanBtn').disabled=picks.length!==2||timeExpired();
   }
 
   function renderScores(){
-    const order=[...state.players].sort((a,b)=>(state.scores[b.seat]||0)-(state.scores[a.seat]||0)||(state.chainSizes[b.seat]||0)-(state.chainSizes[a.seat]||0)||a.seat-b.seat);
-    $('#scoreList').innerHTML=order.map(p=>`<div class="score"><div class="scoretop"><div><span class="dot" style="background:${p.color}"></span><b>${esc(p.name)}</b>${p.userId===userId?' · 나':''}</div><b>${state.scores[p.seat]||0}점</b></div><div class="stats"><div class="stat"><b>${state.chainSizes[p.seat]||0}</b><span>최대 연결</span></div><div class="stat"><b>${state.voteBudgets[p.seat]||0}</b><span>투표권</span></div><div class="stat"><b>${countStones(p.seat)}</b><span>돌</span></div></div></div>`).join('');
+    const order=[...state.players].sort((a,b)=>(state.chainSizes[b.seat]||0)-(state.chainSizes[a.seat]||0)||a.seat-b.seat);
+    $('#scoreList').innerHTML=order.map(p=>`<div class="score"><div class="scoretop"><div><span class="dot" style="background:${p.color}"></span><b>${esc(p.name)}</b>${p.userId===userId?' · 나':''}</div><b>일렬 ${state.chainSizes[p.seat]||0}개</b></div><div class="stats"><div class="stat"><b>${state.chainSizes[p.seat]||0}</b><span>최장 일렬</span></div><div class="stat"><b>${state.voteBudgets[p.seat]||0}</b><span>투표권</span></div><div class="stat"><b>${countStones(p.seat)}</b><span>돌</span></div></div></div>`).join('');
   }
   function renderLog(){$('#log').innerHTML=state.logs.length?state.logs.map(x=>`<div>${esc(x)}</div>`).join(''):'<div>아직 기록이 없습니다.</div>';}
 
   function renderResult(){
     const r=state.lastTurnResult;if(!r)return;const mine=me();const ready=state.readyNext.includes(mine.seat);const readyCount=state.readyNext.length;
-    const rows=state.players.map(p=>({p,earned:r.earned[p.seat]||0})).sort((a,b)=>b.earned-a.earned||a.p.seat-b.p.seat).map(x=>`<div class="resultrow"><span><span class="dot" style="background:${x.p.color}"></span>${esc(x.p.name)}</span><b>+${x.earned}점 · 연결 ${state.chainSizes[x.p.seat]||0}</b></div>`).join('');
-    $('#resultPanel').innerHTML=`<h3>${r.turn}턴 결과</h3>${rows}<div class="tiny">충돌 ${r.clashes}곳 · 동률 ${r.ties}곳 · 변화 ${r.changed}곳</div><div class="actions"><button id="readyBtn" class="btn primary" ${ready?'disabled':''}>${ready?'준비 완료':'다음 턴 준비'}</button><span class="pill">준비 ${readyCount}/${state.maxPlayers}</span></div>`;
+    const rows=state.players.slice().sort((a,b)=>(state.chainSizes[b.seat]||0)-(state.chainSizes[a.seat]||0)||a.seat-b.seat).map(p=>`<div class="resultrow"><span><span class="dot" style="background:${p.color}"></span>${esc(p.name)}</span><b>최장 일렬 ${state.chainSizes[p.seat]||0}개 · 다음 투표권 ${state.voteBudgets[p.seat]||0}</b></div>`).join('');
+    $('#resultPanel').innerHTML=`<h3>${r.turn}턴 결과</h3>${rows}<div class="tiny">충돌 ${r.clashes}곳 · 동률 ${r.ties}곳 · 변화 ${r.changed}곳</div><div class="actions"><button id="readyBtn" class="btn primary" ${ready?'disabled':''}>${ready?'준비 완료':'다음 턴 준비'}</button><span class="pill">준비 ${readyCount}/${state.players.length}</span></div>`;
     $('#readyBtn').onclick=async()=>{try{state=await rpc('ready_next',{p_room_id:roomId});render();}catch(e){alert(e.message);}};
   }
 
   function renderGameOver(){
-    const max=Math.max(...state.scores);const winners=state.players.filter(p=>state.scores[p.seat]===max);const order=[...state.players].sort((a,b)=>state.scores[b.seat]-state.scores[a.seat]||state.chainSizes[b.seat]-state.chainSizes[a.seat]||a.seat-b.seat);
-    $('#gameOverPanel').innerHTML=`<h3>${winners.length===1?`${esc(winners[0].name)} 승리!`:`공동 승리 · ${winners.map(p=>esc(p.name)).join(', ')}`}</h3>${order.map((p,i)=>`<div class="resultrow ${state.scores[p.seat]===max?'winner':''}"><span>${i+1}위 · <span class="dot" style="background:${p.color}"></span>${esc(p.name)}</span><b>${state.scores[p.seat]}점</b></div>`).join('')}<div class="tiny">5턴이 종료되었습니다.</div>`;
+    const mine=me();
+    const max=Math.max(...state.players.map(p=>state.chainSizes[p.seat]||0));
+    const winners=state.players.filter(p=>(state.chainSizes[p.seat]||0)===max);
+    const order=[...state.players].sort((a,b)=>(state.chainSizes[b.seat]||0)-(state.chainSizes[a.seat]||0)||a.seat-b.seat);
+    const ready=state.readyNext.includes(mine.seat);const readyCount=state.readyNext.length;
+    $('#gameOverPanel').innerHTML=`<h3>${winners.length===1?`${esc(winners[0].name)} 승리!`:`공동 승리 · ${winners.map(p=>esc(p.name)).join(', ')}`}</h3>${order.map((p,i)=>`<div class="resultrow ${(state.chainSizes[p.seat]||0)===max?'winner':''}"><span>${i+1}위 · <span class="dot" style="background:${p.color}"></span>${esc(p.name)}</span><b>최장 일렬 ${state.chainSizes[p.seat]||0}개</b></div>`).join('')}<div class="tiny">5턴 종료 · 누적 점수 없이 마지막 보드의 최장 일렬로 승부합니다.</div><div class="actions"><button id="rematchBtn" class="btn primary" ${ready?'disabled':''}>${ready?'다시하기 준비 완료':'다시하기'}</button><span class="pill">다시하기 ${readyCount}/${state.players.length}</span><button id="leaveRoomEndBtn" class="btn danger">방에서 나가기</button></div>`;
+    $('#rematchBtn').onclick=async()=>{try{state=await rpc('restart_game',{p_room_id:roomId});picks=[];votes=[0,0];render();}catch(e){alert(e.message);}};
+    $('#leaveRoomEndBtn').onclick=leaveRoom;
+  }
+
+  async function leaveRoom(){
+    if(!state||!roomId)return;
+    const duringGame=state.phase==='planning'||state.phase==='result';
+    const msg=duringGame?'게임 도중 방을 나가면 현재 경기가 취소되고 남은 플레이어는 로비로 돌아갑니다. 정말 나갈까요?':'이 방에서 나갈까요?';
+    if(!confirm(msg))return;
+    try{
+      const {error}=await sb.rpc('leave_game_room',{p_room_id:roomId});
+      if(error)throw new Error(error.message||'방에서 나가기에 실패했습니다.');
+      returnToLanding();
+    }catch(e){ alert(e.message); }
   }
 
   $('#createTab').onclick=()=>{$('#createTab').classList.add('active');$('#joinTab').classList.remove('active');$('#createForm').classList.remove('hidden');$('#joinForm').classList.add('hidden');setError('#landingError','');};
@@ -378,13 +418,14 @@
     }
   };
   $('#submitPlanBtn').onclick=async()=>{setError('#planError','');try{state=await rpc('submit_move',{p_room_id:roomId,p_cells:[...picks],p_votes:[votes[0]||0,votes[1]||0]});if(me()?.submitted){picks=[];votes=[0,0];}render();}catch(e){setError('#planError',e.message);}};
-  $('#clearBtn').onclick=()=>{picks=[];votes=[0,0];renderGame();};
-  $('#restartBtn').onclick=async()=>{try{state=await rpc('restart_game',{p_room_id:roomId});render();}catch(e){alert(e.message);}};
+  $('#clearBtn').onclick=()=>{if(timeExpired())return;picks=[];votes=[0,0];renderGame();};
+  $('#leaveRoomBtn').onclick=leaveRoom;
 
   async function copyText(text){try{await navigator.clipboard.writeText(text);return true;}catch{return false;}}
   $('#copyCodeBtn').onclick=async()=>{if(state)await copyText(state.code);};
   $('#copyInviteBtn').onclick=async()=>{if(!state)return;const u=new URL(location.href);u.searchParams.set('room',state.code);await copyText(u.toString());};
   window.addEventListener('resize',()=>{if(state&&state.phase!=='lobby')renderBoard();});
+  setInterval(tickTimer,250);
 
   async function autoRejoin(){
     if(autoRejoinTried)return;autoRejoinTried=true;
