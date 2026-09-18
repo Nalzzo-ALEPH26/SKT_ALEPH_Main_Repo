@@ -32,7 +32,8 @@
     .point:hover{background:rgba(255,255,255,.14)}.point.selected{outline:none;box-shadow:none}.point.selected::before{content:"";position:absolute;width:50%;height:50%;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:50%;border:3px solid #e9fbff;box-sizing:border-box;box-shadow:0 0 0 2px rgba(70,194,255,.28);z-index:5;pointer-events:none}.point.disabled{cursor:default}.point.disabled:hover{background:transparent}
     .stone{width:50%;height:50%;place-self:center;border-radius:50%;position:relative;z-index:2;border:1px solid rgba(255,255,255,.16);box-shadow:inset -4px -4px 7px rgba(0,0,0,.35),inset 3px 3px 6px rgba(255,255,255,.23),0 3px 5px rgba(0,0,0,.42)}
     .picknum{position:absolute;z-index:6;right:14%;top:10%;min-width:22px;height:22px;border-radius:999px;background:#102033;color:#fff;border:2px solid #eaf8ff;font-size:11px;font-weight:900;display:grid;place-items:center;padding:0 5px}
-    .planning{margin-top:14px;padding:14px;border-radius:15px;background:#111725;border:1px solid #313d57}.planning h3{margin:0 0 5px}.choices{display:grid;gap:8px;margin-top:12px}.choice{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px;border-radius:11px;background:#1b2334}.vote{display:flex;align-items:center;gap:7px}.vote button{width:32px;height:32px;border-radius:9px;border:1px solid #495674;background:#28324b;color:#fff;font-weight:900}.vote b{width:26px;text-align:center}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+    .planning{margin-top:14px;padding:14px;border-radius:15px;background:#111725;border:1px solid #313d57}.planning h3{margin:0 0 5px}.choices{display:grid;gap:8px;margin-top:12px}.choice{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px;border-radius:11px;background:#1b2334}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+    .vote-help{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}.vote-meter{font-weight:900}.proposal-wrap{position:absolute;z-index:12;display:flex;align-items:center;gap:4px;transform:translate(-50%,-50%);user-select:none}.proposal-stone{width:24px;height:24px;border-radius:50%;border:2px solid rgba(255,255,255,.92);box-shadow:0 2px 6px rgba(0,0,0,.5);display:grid;place-items:center;color:#fff;font-size:10px;font-weight:950;text-shadow:0 1px 2px #000;cursor:pointer}.proposal-stone:hover{outline:2px solid #fff}.proposal-select{height:28px;min-width:48px;border-radius:8px;border:1px solid #5b6888;background:#111827;color:#fff;font-size:12px;font-weight:800;padding:0 4px}.proposal-label{position:absolute;left:50%;top:27px;transform:translateX(-50%);white-space:nowrap;background:rgba(15,21,35,.92);border:1px solid #46516e;border-radius:7px;padding:2px 5px;font-size:10px;color:#e8eef9;pointer-events:none}.proposal-zero{opacity:.7}
     .waiting{padding:16px;border-radius:14px;background:#131b2a;border:1px dashed #46536f;color:#d9e4f7}.score-list,.log{display:grid;gap:8px}.score{padding:10px;border-radius:12px;background:#111725;border:1px solid #313c56}.scoretop{display:flex;justify-content:space-between;gap:10px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}.stat{text-align:center;padding:6px;border-radius:8px;background:#1b2334}.stat b{display:block}.stat span{font-size:11px;color:var(--muted)}.log{max-height:220px;overflow:auto}.log div{font-size:12px;line-height:1.45;padding:8px;border-radius:9px;background:#111725;color:#d7dfef}
     .resultbox{margin-top:14px;padding:14px;border-radius:14px;border:1px solid #45516d;background:#111725}.game-bottom-actions{display:flex;justify-content:flex-start;margin-top:18px}.resultbox h3{margin:0 0 10px}.resultrow{display:flex;justify-content:space-between;gap:10px;padding:9px;border-radius:9px;background:#1a2233;margin:6px 0}.winner{outline:2px solid #f7d888}
     .conn{font-size:12px;color:var(--muted)}.conn.ok{color:var(--good)}
@@ -66,11 +67,13 @@
       <ol>
         <li><b>4×4는 16개의 교차점</b>을 뜻합니다. 돌은 칸 안이 아니라 오목/바둑처럼 선의 십자 교차점 위에 놓입니다.</li>
         <li>돌은 기존 버전보다 절반 크기로 표시되어 교차점과 선을 더 쉽게 볼 수 있습니다.</li>
-        <li>각 플레이어는 <b>30초 안에</b> 서로 다른 교차점 2곳과 각 지점에 사용할 투표권을 비밀리에 제출합니다. 시간 안에 제출하지 못하면 그 턴에는 돌을 놓지 않습니다.</li>
+        <li>각 플레이어는 <b>20초 안에</b> 서로 다른 교차점 2곳만 비밀리에 정합니다. 이 단계에서는 투표하지 않습니다.</li>
+        <li>모두 제출하거나 20초가 지나면 <b>투표 단계</b>가 시작되고, 모든 플레이어의 후보 위치가 동시에 공개됩니다.</li>
+        <li><b>투표 시간은 30초</b>입니다. 후보 돌을 <b>왼쪽 클릭하면 +1표, 오른쪽 클릭하면 -1표</b>이고, 후보 옆 드롭다운으로도 표 수를 직접 정할 수 있습니다.</li>
+        <li>투표권은 최소 1표입니다. 현재 최장 일렬이 1개면 2표, 2개면 3표처럼 <b>최장 일렬 + 1</b>표를 받습니다.</li>
+        <li>같은 교차점에 여러 후보가 겹치면 전체 플레이어에게 받은 표의 합이 가장 큰 후보가 그 자리를 차지합니다. 최고 득표가 동률이면 기존 돌을 유지합니다.</li>
         <li>턴 결과가 공개된 뒤에는 <b>20초의 다음 턴 준비 시간</b>이 주어집니다. 전원이 준비하면 즉시 넘어가고, 20초가 지나면 자동으로 다음 턴이 시작됩니다.</li>
-        <li>Supabase 데이터베이스는 모두의 제출을 받은 뒤 한꺼번에 판정합니다. 같은 지점이면 더 많은 표를 건 사람이 차지하고, 최고 표가 동률이면 기존 돌이 유지됩니다.</li>
-        <li>이미 돌이 놓인 교차점도 다시 선택할 수 있습니다. 연결은 가로·세로·두 대각선의 <b>연속된 일렬</b>을 계산합니다.</li>
-        <li>점수는 누적하지 않습니다. 매 턴 현재 최장 일렬 길이만큼 다음 턴 투표권을 얻고, <b>5턴 종료 시 가장 긴 일렬을 만든 플레이어가 승리</b>합니다.</li>
+        <li>점수는 누적하지 않습니다. <b>5턴 종료 시 가로·세로·대각선 중 가장 긴 일렬</b>을 만든 플레이어가 승리합니다.</li>
       </ol>
     </div>
   </section>
@@ -107,16 +110,27 @@
             <span class="pill">보드 <strong id="sizeText">4 × 4</strong></span>
             <span class="pill">내 투표권 <strong id="budgetText">0</strong></span>
             <span class="pill">제출 <strong id="submittedText">0 / 2</strong></span>
-            <span class="pill">남은 시간 <strong id="timerText">30초</strong></span>
+            <span class="pill">남은 시간 <strong id="timerText">20초</strong></span>
           </div>
           <div class="board-shell"><div id="goBoard" class="go-board"></div></div>
 
           <section id="planPanel" class="planning">
             <h3>내 비밀 계획</h3>
-            <div class="tiny">두 교차점을 선택하세요. 이 선택은 제출해도 다른 플레이어에게 공개되지 않습니다.</div>
+            <div class="tiny">20초 안에 돌을 놓고 싶은 교차점 2곳만 정하세요. 투표는 다음 단계에서 합니다.</div>
             <div id="choices" class="choices"></div>
             <div class="actions"><button id="submitPlanBtn" class="btn primary" disabled>두 수 제출</button><button id="clearBtn" class="btn secondary">선택 지우기</button></div>
             <div id="planError" class="error hidden"></div>
+          </section>
+
+          <section id="votePanel" class="planning hidden">
+            <h3>공개 투표</h3>
+            <div class="tiny">모든 후보 위치가 공개되었습니다. 후보 돌을 왼쪽 클릭하면 +1표, 오른쪽 클릭하면 -1표입니다. 옆의 드롭다운으로도 표 수를 정할 수 있습니다.</div>
+            <div class="vote-help">
+              <span class="pill">사용 <strong id="voteSpentText">0</strong></span>
+              <span class="pill">남음 <strong id="voteRemainText">1</strong></span>
+            </div>
+            <div class="actions"><button id="submitVotesBtn" class="btn primary">투표 제출</button></div>
+            <div id="voteError" class="error hidden"></div>
           </section>
 
           <div id="waitingPanel" class="waiting hidden"></div>
@@ -151,7 +165,7 @@
   let state = null;
   let roomId = null;
   let picks = [];
-  let votes = [0,0];
+  let ballot = {};
   let roomChannel = null;
   let autoRejoinTried = false;
   let refreshTimer = null;
@@ -164,15 +178,18 @@
   function playerName(seat){ return state?.players.find(p=>p.seat===seat)?.name || `플레이어 ${seat+1}`; }
   function coord(index){ return `${Math.floor(index/state.cols)+1}행 ${(index%state.cols)+1}열`; }
   function countStones(seat){ return (state?.board||[]).reduce((n,x)=>n+(x===seat?1:0),0); }
-  function spent(){ return votes.slice(0,picks.length).reduce((a,b)=>a+b,0); }
-  function remaining(){ const p=me(); return p ? (state.voteBudgets[p.seat]||0)-spent() : 0; }
+  function proposalKey(p){ return `${p.seat}:${p.cell}`; }
+  function currentBudget(){ const p=me(); return p ? Math.max(1, Number(state.voteBudgets[p.seat]||0)) : 1; }
+  function spent(){ return Object.values(ballot).reduce((a,b)=>a+Number(b||0),0); }
+  function remaining(){ return Math.max(0,currentBudget()-spent()); }
   function deadlineMs(){ return state?.turnDeadline ? new Date(state.turnDeadline).getTime() : 0; }
   function timeExpired(){ const d=deadlineMs(); return !!d && Date.now() >= d; }
 
   async function tickTimer(){
     const el=$('#timerText');
     if(!el) return;
-    if(!state || !state.turnDeadline || !['planning','result'].includes(state.phase)){ el.textContent='--'; return; }
+    if(!state){ el.textContent='--'; return; }
+    if(!state.turnDeadline || !['planning','voting','result'].includes(state.phase)){ el.textContent='--'; return; }
     const ms=deadlineMs()-Date.now();
     el.textContent=`${Math.max(0,Math.ceil(ms/1000))}초`;
     if(ms>0) return;
@@ -182,8 +199,19 @@
       const key=`planning:${state.id}:${state.turn}`;
       if(timeoutRequestKey!==key){
         timeoutRequestKey=key;
-        try{ state=await rpc('resolve_turn_timeout',{p_room_id:roomId}); timeoutRequestKey=null; render(); }
+        try{ state=await rpc('resolve_turn_timeout',{p_room_id:roomId}); timeoutRequestKey=null; picks=[]; ballot={}; render(); }
         catch(e){ timeoutRequestKey=null; setError('#planError',e.message); }
+      }
+      return;
+    }
+
+    if(state.phase==='voting'){
+      $('#submitVotesBtn').disabled=true;
+      const key=`voting:${state.id}:${state.turn}`;
+      if(timeoutRequestKey!==key){
+        timeoutRequestKey=key;
+        try{ state=await rpc('resolve_vote_timeout',{p_room_id:roomId}); timeoutRequestKey=null; ballot={}; render(); }
+        catch(e){ timeoutRequestKey=null; setError('#voteError',e.message); }
       }
       return;
     }
@@ -192,7 +220,7 @@
       const key=`result:${state.id}:${state.turn}`;
       if(timeoutRequestKey!==key){
         timeoutRequestKey=key;
-        try{ state=await rpc('resolve_ready_timeout',{p_room_id:roomId}); timeoutRequestKey=null; render(); }
+        try{ state=await rpc('resolve_ready_timeout',{p_room_id:roomId}); timeoutRequestKey=null; picks=[]; ballot={}; render(); }
         catch(e){ timeoutRequestKey=null; console.error(e); }
       }
     }
@@ -200,100 +228,89 @@
 
   function normalizeState(raw){
     if(!raw) return null;
-    const s = {...raw};
-    s.board = (s.board||[]).map(v => Number(v) < 0 ? null : Number(v));
-    s.scores = (s.scores||[]).map(Number);
-    s.chainSizes = (s.chainSizes||[]).map(Number);
-    s.voteBudgets = (s.voteBudgets||[]).map(Number);
-    s.readyNext = (s.readyNext||[]).map(Number);
-    s.logs = s.logs || [];
-    s.players = (s.players||[]).map(p=>({...p,seat:Number(p.seat),color:COLORS[Number(p.seat)%COLORS.length]}));
-    if(s.lastTurnResult?.earned) s.lastTurnResult.earned=s.lastTurnResult.earned.map(Number);
+    const s={...raw};
+    s.board=(s.board||[]).map(v=>Number(v)<0?null:Number(v));
+    s.scores=(s.scores||[]).map(Number);
+    s.chainSizes=(s.chainSizes||[]).map(Number);
+    s.voteBudgets=(s.voteBudgets||[]).map(Number);
+    s.readyNext=(s.readyNext||[]).map(Number);
+    s.logs=s.logs||[];
+    s.proposals=(s.proposals||[]).map(p=>({...p,seat:Number(p.seat),cell:Number(p.cell)}));
+    s.players=(s.players||[]).map(p=>({...p,seat:Number(p.seat),color:COLORS[Number(p.seat)%COLORS.length]}));
     return s;
   }
 
   function configOk(){
     const c=window.GAME_CONFIG||{};
-    return c.supabaseUrl && c.supabaseKey && !c.supabaseUrl.includes('YOUR_') && !c.supabaseKey.includes('YOUR_');
+    return c.supabaseUrl&&c.supabaseKey&&!c.supabaseUrl.includes('YOUR_')&&!c.supabaseKey.includes('YOUR_');
   }
 
   async function initSupabase(){
     $('#createBtn').disabled=true; $('#joinBtn').disabled=true;
-    if(!configOk()){
-      setError('#landingError','먼저 config.js에 Supabase URL과 Publishable Key를 넣어주세요. README의 3단계를 따라 하면 됩니다.');
-      $('#connectionText').textContent='Supabase 설정 필요';
-      return;
-    }
+    if(!configOk()){ setError('#landingError','먼저 config.js에 Supabase URL과 Publishable Key를 넣어주세요.'); return; }
     try{
-      sb = window.supabase.createClient(window.GAME_CONFIG.supabaseUrl, window.GAME_CONFIG.supabaseKey, {
-        auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}
-      });
+      sb=window.supabase.createClient(window.GAME_CONFIG.supabaseUrl,window.GAME_CONFIG.supabaseKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
       let {data:{session},error}=await sb.auth.getSession();
-      if(error) throw error;
-      if(!session){
-        const signed=await sb.auth.signInAnonymously();
-        if(signed.error) throw signed.error;
-        session=signed.data.session;
-      }
+      if(error)throw error;
+      if(!session){ const signed=await sb.auth.signInAnonymously(); if(signed.error)throw signed.error; session=signed.data.session; }
       userId=session.user.id;
       $('#createBtn').disabled=false; $('#joinBtn').disabled=false;
       $('#connectionText').textContent='Supabase 준비됨'; $('#connectionText').classList.add('ok');
       await autoRejoin();
     }catch(e){
-      const msg = String(e.message||e);
-      setError('#landingError', msg.includes('Anonymous') ? 'Supabase에서 Anonymous Sign-Ins(익명 로그인)를 먼저 켜주세요.' : `Supabase 연결 실패: ${msg}`);
-      $('#connectionText').textContent='Supabase 연결 실패'; $('#connectionText').classList.remove('ok');
+      const msg=String(e.message||e);
+      setError('#landingError',msg.includes('Anonymous')?'Supabase에서 Anonymous Sign-Ins를 먼저 켜주세요.':`Supabase 연결 실패: ${msg}`);
     }
   }
 
   async function rpc(fn,args){
-    if(!sb) throw new Error('Supabase가 아직 연결되지 않았습니다.');
+    if(!sb)throw new Error('Supabase가 아직 연결되지 않았습니다.');
     const {data,error}=await sb.rpc(fn,args);
-    if(error) throw new Error(error.message||'Supabase 요청에 실패했습니다.');
+    if(error)throw new Error(error.message||'Supabase 요청에 실패했습니다.');
     return normalizeState(data);
   }
 
   async function refreshState(){
-    if(!roomId || !sb) return;
+    if(!roomId||!sb)return;
     try{
+      const oldPhase=state?.phase;
       const fresh=await rpc('get_room_state',{p_room_id:roomId});
-      const wasSubmitted=me()?.submitted;
       state=fresh;
-      if(me()?.submitted && !wasSubmitted){ picks=[];votes=[0,0]; }
+      if(oldPhase!==state.phase){
+        if(state.phase!=='planning')picks=[];
+        if(state.phase!=='voting')ballot={};
+      }
       render();
-    }catch(e){
-      $('#connectionText').textContent='동기화 오류'; $('#connectionText').classList.remove('ok');
-    }
+    }catch(e){ $('#connectionText').textContent='동기화 오류'; $('#connectionText').classList.remove('ok'); }
   }
 
   function queueRefresh(){ clearTimeout(refreshTimer); refreshTimer=setTimeout(refreshState,50); }
 
   function subscribeRoom(id){
-    if(roomChannel) sb.removeChannel(roomChannel);
+    if(roomChannel)sb.removeChannel(roomChannel);
     $('#connectionText').textContent='실시간 연결 중'; $('#connectionText').classList.remove('ok');
     roomChannel=sb.channel(`stone-room-${id}`)
       .on('postgres_changes',{event:'*',schema:'public',table:'rooms',filter:`id=eq.${id}`},queueRefresh)
       .on('postgres_changes',{event:'*',schema:'public',table:'players',filter:`room_id=eq.${id}`},queueRefresh)
       .subscribe(status=>{
-        if(status==='SUBSCRIBED'){ $('#connectionText').textContent='실시간 연결됨';$('#connectionText').classList.add('ok'); }
-        else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'){ $('#connectionText').textContent='실시간 재연결 중';$('#connectionText').classList.remove('ok'); }
+        if(status==='SUBSCRIBED'){ $('#connectionText').textContent='실시간 연결됨'; $('#connectionText').classList.add('ok'); }
+        else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'){ $('#connectionText').textContent='실시간 재연결 중'; $('#connectionText').classList.remove('ok'); }
       });
   }
 
   function enterRoom(initialState,name){
-    state=normalizeState(initialState); roomId=state.id;
-    localStorage.setItem(roomIdKey,roomId);localStorage.setItem(roomCodeKey,state.code);localStorage.setItem(nameKey,name||me()?.name||'플레이어');
-    const url=new URL(location.href);url.searchParams.set('room',state.code);history.replaceState(null,'',url);
-    $('#landing').classList.add('hidden');$('#roomScreen').classList.remove('hidden');
-    subscribeRoom(roomId);render();
+    state=normalizeState(initialState); roomId=state.id; picks=[]; ballot={};
+    localStorage.setItem(roomIdKey,roomId); localStorage.setItem(roomCodeKey,state.code); localStorage.setItem(nameKey,name||me()?.name||'플레이어');
+    const url=new URL(location.href); url.searchParams.set('room',state.code); history.replaceState(null,'',url);
+    $('#landing').classList.add('hidden'); $('#roomScreen').classList.remove('hidden');
+    subscribeRoom(roomId); render();
   }
 
   function returnToLanding(){
-    if(roomChannel && sb){ sb.removeChannel(roomChannel); roomChannel=null; }
+    if(roomChannel&&sb){sb.removeChannel(roomChannel);roomChannel=null;}
     clearTimeout(refreshTimer);
-    state=null; roomId=null; picks=[]; votes=[0,0]; timeoutRequestKey=null;
-    localStorage.removeItem(roomIdKey);
-    localStorage.removeItem(roomCodeKey);
+    state=null;roomId=null;picks=[];ballot={};timeoutRequestKey=null;
+    localStorage.removeItem(roomIdKey);localStorage.removeItem(roomCodeKey);
     const url=new URL(location.href);url.searchParams.delete('room');history.replaceState(null,'',url);
     $('#roomScreen').classList.add('hidden');$('#landing').classList.remove('hidden');
     $('#deleteRoomBtn').disabled=false;
@@ -302,8 +319,8 @@
 
   function render(){
     if(!state)return;
-    $('#roomCodeTop').textContent=state.code;$('#roomCodeBig').textContent=state.code;
-    const phases={lobby:'로비 · 각자 다른 컴퓨터에서 접속하세요',planning:'계획 단계 · 30초 안에 두 수를 비밀 제출',result:'턴 결과 · 20초 안에 준비, 이후 자동으로 다음 턴',gameover:'게임 종료'};
+    $('#roomCodeTop').textContent=state.code; $('#roomCodeBig').textContent=state.code;
+    const phases={lobby:'로비 · 각자 다른 컴퓨터에서 접속하세요',planning:'두 수 제출 · 20초 안에 위치 2곳을 비밀 선택',voting:'투표 단계 · 30초 안에 공개된 후보에 투표권 행사',result:'턴 결과 · 20초 안에 다음 턴 준비',gameover:'게임 종료'};
     $('#phaseText').textContent=phases[state.phase]||state.phase;
     $('#lobbyPanel').classList.toggle('hidden',state.phase!=='lobby');
     $('#gamePanel').classList.toggle('hidden',state.phase==='lobby');
@@ -313,28 +330,30 @@
   function renderLobby(){
     $('#lobbyCount').textContent=`${state.players.length} / ${state.maxPlayers}명`;
     $('#playerList').innerHTML=state.players.map(p=>`<div class="player"><div><span class="dot" style="background:${p.color}"></span><b>${esc(p.name)}</b>${p.userId===state.hostUserId?' · 방장':''}${p.userId===userId?' · 나':''}</div><div class="tiny">참가 완료</div></div>`).join('')+Array.from({length:Math.max(0,state.maxPlayers-state.players.length)},()=>`<div class="player off"><b>빈 자리</b><div class="tiny">플레이어 대기 중</div></div>`).join('');
-    $('#startBtn').classList.toggle('hidden',!isHost());
-    $('#startBtn').disabled=state.players.length!==state.maxPlayers;
-    const canDelete=isHost() && state.players.length===1;
-    $('#deleteRoomBtn').classList.toggle('hidden',!canDelete);
-    $('#deleteRoomBtn').disabled=false;
+    $('#startBtn').classList.toggle('hidden',!isHost()); $('#startBtn').disabled=state.players.length!==state.maxPlayers;
+    const canDelete=isHost()&&state.players.length===1; $('#deleteRoomBtn').classList.toggle('hidden',!canDelete); $('#deleteRoomBtn').disabled=false;
   }
 
   function renderGame(){
     const mine=me();if(!mine)return;
-    $('#turnText').textContent=`${state.turn} / ${state.maxTurns}`;$('#sizeText').textContent=`${state.cols} × ${state.rows}`;
-    $('#budgetText').textContent=state.voteBudgets[mine.seat]||0;
-    $('#submittedText').textContent=`${state.players.filter(p=>p.submitted).length} / ${state.maxPlayers}`;
-    renderBoard();renderScores();renderLog();
+    $('#turnText').textContent=`${state.turn} / ${state.maxTurns}`; $('#sizeText').textContent=`${state.cols} × ${state.rows}`;
+    $('#budgetText').textContent=currentBudget();
+    $('#submittedText').textContent=`${state.players.filter(p=>p.submitted).length} / ${state.players.length}`;
+
     const planning=state.phase==='planning';
+    const voting=state.phase==='voting';
     $('#planPanel').classList.toggle('hidden',!planning||mine.submitted);
-    $('#waitingPanel').classList.toggle('hidden',!(planning&&mine.submitted));
+    $('#votePanel').classList.toggle('hidden',!voting||mine.submitted);
+    $('#waitingPanel').classList.toggle('hidden',!((planning||voting)&&mine.submitted));
     $('#resultPanel').classList.toggle('hidden',state.phase!=='result');
     $('#gameOverPanel').classList.toggle('hidden',state.phase!=='gameover');
     $('#gameBottomActions').classList.toggle('hidden',state.phase==='gameover');
+
+    renderBoard(); renderScores(); renderLog();
     if(planning&&!mine.submitted)renderChoices();
-    tickTimer();
-    if(planning&&mine.submitted){const count=state.players.filter(p=>p.submitted).length;$('#waitingPanel').innerHTML=`<b>제출 완료</b><br><span class="tiny">다른 플레이어의 비밀 선택은 공개되지 않습니다. 모두 제출하거나 30초가 끝나면 Supabase에서 동시에 판정합니다. (${count}/${state.maxPlayers})</span>`;}
+    if(voting&&!mine.submitted)renderVotePanel();
+    if(planning&&mine.submitted){const count=state.players.filter(p=>p.submitted).length;$('#waitingPanel').innerHTML=`<b>두 수 제출 완료</b><br><span class="tiny">모두 제출하거나 20초가 끝나면 후보가 공개되고 투표 단계가 시작됩니다. (${count}/${state.players.length})</span>`;}
+    if(voting&&mine.submitted){const count=state.players.filter(p=>p.submitted).length;$('#waitingPanel').innerHTML=`<b>투표 제출 완료</b><br><span class="tiny">모든 플레이어가 투표를 제출하거나 30초가 끝나면 서버가 한꺼번에 돌 배치를 판정합니다. (${count}/${state.players.length})</span>`;}
     if(state.phase==='result')renderResult();
     if(state.phase==='gameover')renderGameOver();
   }
@@ -355,82 +374,118 @@
       point.style.width=size+'px';point.style.height=size+'px';point.style.left=(marginX+c*gapX)+'px';point.style.top=(marginY+r*gapY)+'px';
       const pi=picks.indexOf(i);if(pi>=0){point.classList.add('selected');const tag=document.createElement('span');tag.className='picknum';tag.textContent=pi+1;point.appendChild(tag);}
       const owner=state.board[i];if(owner!==null){const stone=document.createElement('span');stone.className='stone';stone.style.background=COLORS[owner%COLORS.length];stone.title=playerName(owner);point.appendChild(stone);}
-      if(canPick)point.addEventListener('click',()=>togglePick(i));board.appendChild(point);
+      if(canPick)point.addEventListener('click',()=>togglePick(i)); board.appendChild(point);
+    }
+    if(state.phase==='voting')renderProposalMarkers(board,{gapX,gapY,marginX,marginY});
+  }
+
+  function renderProposalMarkers(board,g){
+    const groups=new Map();
+    for(const p of state.proposals||[]){ if(!groups.has(p.cell))groups.set(p.cell,[]); groups.get(p.cell).push(p); }
+    for(const [cell,list] of groups){
+      const r=Math.floor(cell/state.cols),c=cell%state.cols;
+      list.forEach((p,index)=>{
+        const key=proposalKey(p); const total=list.length;
+        let dx=0,dy=0;
+        if(total>1){ const angle=(-Math.PI/2)+(Math.PI*2*index/total); const radius=Math.min(22,Math.max(14,g.gapX*.27)); dx=Math.cos(angle)*radius;dy=Math.sin(angle)*radius; }
+        const wrap=document.createElement('div');wrap.className='proposal-wrap';wrap.style.left=(g.marginX+c*g.gapX+dx)+'px';wrap.style.top=(g.marginY+r*g.gapY+dy)+'px';
+        const stone=document.createElement('button');stone.type='button';stone.className='proposal-stone'+((ballot[key]||0)===0?' proposal-zero':'');stone.style.background=COLORS[p.seat%COLORS.length];stone.textContent=String((ballot[key]||0));stone.title=`${playerName(p.seat)} 후보 · ${coord(p.cell)} · 왼쪽 +1 / 오른쪽 -1`;
+        stone.addEventListener('click',e=>{e.preventDefault();adjustVote(key,1);});
+        stone.addEventListener('contextmenu',e=>{e.preventDefault();adjustVote(key,-1);});
+        const select=document.createElement('select');select.className='proposal-select';select.title=`${playerName(p.seat)} 후보 투표수`;
+        const current=Number(ballot[key]||0);const max=current+remaining();
+        for(let n=0;n<=max;n++){const o=document.createElement('option');o.value=String(n);o.textContent=String(n);if(n===current)o.selected=true;select.appendChild(o);}
+        select.addEventListener('change',()=>setVote(key,Number(select.value)));
+        const label=document.createElement('span');label.className='proposal-label';label.textContent=playerName(p.seat);
+        wrap.append(stone,select,label);board.appendChild(wrap);
+      });
     }
   }
 
-  function togglePick(i){const idx=picks.indexOf(i);if(idx>=0){picks.splice(idx,1);votes.splice(idx,1);while(votes.length<2)votes.push(0);}else if(picks.length<2)picks.push(i);renderGame();}
+  function adjustVote(key,delta){
+    if(state.phase!=='voting'||me()?.submitted||timeExpired())return;
+    const cur=Number(ballot[key]||0);
+    if(delta>0&&remaining()<=0)return;
+    const next=Math.max(0,cur+delta);ballot[key]=next;renderGame();
+  }
+
+  function setVote(key,next){
+    if(state.phase!=='voting'||me()?.submitted||timeExpired())return;
+    const cur=Number(ballot[key]||0);const allowed=cur+remaining();ballot[key]=Math.max(0,Math.min(next,allowed));renderGame();
+  }
+
+  function togglePick(i){const idx=picks.indexOf(i);if(idx>=0)picks.splice(idx,1);else if(picks.length<2)picks.push(i);renderGame();}
 
   function renderChoices(){
     const wrap=$('#choices');wrap.innerHTML='';
     for(let slot=0;slot<2;slot++){
       const row=document.createElement('div');row.className='choice';const label=document.createElement('div');
-      label.innerHTML=picks[slot]===undefined?`<b>투표${slot+1}</b><div class="tiny">보드의 교차점을 선택하세요.</div>`:`<b>투표${slot+1} · ${coord(picks[slot])}</b><div class="tiny">이 위치에 사용할 투표권</div>`;
-      const ctrl=document.createElement('div');ctrl.className='vote';const minus=document.createElement('button');minus.textContent='−';const num=document.createElement('b');num.textContent=votes[slot]||0;const plus=document.createElement('button');plus.textContent='+';
-      minus.disabled=timeExpired()||picks[slot]===undefined||(votes[slot]||0)<=0;plus.disabled=timeExpired()||picks[slot]===undefined||remaining()<=0;
-      minus.onclick=()=>{votes[slot]-=1;renderGame();};plus.onclick=()=>{votes[slot]+=1;renderGame();};ctrl.append(minus,num,plus);row.append(label,ctrl);wrap.appendChild(row);
+      label.innerHTML=picks[slot]===undefined?`<b>놓을 자리 ${slot+1}</b><div class="tiny">보드의 교차점을 선택하세요.</div>`:`<b>놓을 자리 ${slot+1} · ${coord(picks[slot])}</b><div class="tiny">투표는 다음 단계에서 합니다.</div>`;
+      row.append(label);wrap.appendChild(row);
     }
     $('#submitPlanBtn').disabled=picks.length!==2||timeExpired();
   }
 
+  function renderVotePanel(){
+    $('#voteSpentText').textContent=spent(); $('#voteRemainText').textContent=remaining();
+    $('#submitVotesBtn').disabled=timeExpired();
+  }
+
   function renderScores(){
     const order=[...state.players].sort((a,b)=>(state.chainSizes[b.seat]||0)-(state.chainSizes[a.seat]||0)||a.seat-b.seat);
-    $('#scoreList').innerHTML=order.map(p=>`<div class="score"><div class="scoretop"><div><span class="dot" style="background:${p.color}"></span><b>${esc(p.name)}</b>${p.userId===userId?' · 나':''}</div><b>일렬 ${state.chainSizes[p.seat]||0}개</b></div><div class="stats"><div class="stat"><b>${state.chainSizes[p.seat]||0}</b><span>최장 일렬</span></div><div class="stat"><b>${state.voteBudgets[p.seat]||0}</b><span>투표권</span></div><div class="stat"><b>${countStones(p.seat)}</b><span>돌</span></div></div></div>`).join('');
+    $('#scoreList').innerHTML=order.map(p=>`<div class="score"><div class="scoretop"><div><span class="dot" style="background:${p.color}"></span><b>${esc(p.name)}</b>${p.userId===userId?' · 나':''}</div><b>일렬 ${state.chainSizes[p.seat]||0}개</b></div><div class="stats"><div class="stat"><b>${state.chainSizes[p.seat]||0}</b><span>최장 일렬</span></div><div class="stat"><b>${Math.max(1,state.voteBudgets[p.seat]||0)}</b><span>투표권</span></div><div class="stat"><b>${countStones(p.seat)}</b><span>돌</span></div></div></div>`).join('');
   }
-  function renderLog(){$('#log').innerHTML=state.logs.length?state.logs.map(x=>`<div>${esc(x)}</div>`).join(''):'<div>아직 기록이 없습니다.</div>';}
+
+  function renderLog(){ $('#log').innerHTML=state.logs.length?state.logs.map(x=>`<div>${esc(x)}</div>`).join(''):'<div>아직 기록이 없습니다.</div>'; }
 
   function renderResult(){
     const r=state.lastTurnResult;if(!r)return;const mine=me();const ready=state.readyNext.includes(mine.seat);const readyCount=state.readyNext.length;
-    const rows=state.players.slice().sort((a,b)=>(state.chainSizes[b.seat]||0)-(state.chainSizes[a.seat]||0)||a.seat-b.seat).map(p=>`<div class="resultrow"><span><span class="dot" style="background:${p.color}"></span>${esc(p.name)}</span><b>최장 일렬 ${state.chainSizes[p.seat]||0}개 · 다음 투표권 ${state.voteBudgets[p.seat]||0}</b></div>`).join('');
-    $('#resultPanel').innerHTML=`<h3>${r.turn}턴 결과</h3>${rows}<div class="tiny">충돌 ${r.clashes}곳 · 동률 ${r.ties}곳 · 변화 ${r.changed}곳</div><div class="tiny" style="margin-top:8px">준비 단계는 20초입니다. 전원이 준비하면 즉시, 그렇지 않으면 시간이 끝나면 자동으로 다음 턴이 시작됩니다.</div><div class="actions"><button id="readyBtn" class="btn primary" ${ready?'disabled':''}>${ready?'준비 완료':'다음 턴 준비'}</button><span class="pill">준비 ${readyCount}/${state.players.length}</span></div>`;
-    $('#readyBtn').onclick=async()=>{try{state=await rpc('ready_next',{p_room_id:roomId});render();}catch(e){alert(e.message);}};
+    const rows=state.players.slice().sort((a,b)=>(state.chainSizes[b.seat]||0)-(state.chainSizes[a.seat]||0)||a.seat-b.seat).map(p=>`<div class="resultrow"><span><span class="dot" style="background:${p.color}"></span>${esc(p.name)}</span><b>최장 일렬 ${state.chainSizes[p.seat]||0}개 · 다음 투표권 ${Math.max(1,state.voteBudgets[p.seat]||0)}</b></div>`).join('');
+    $('#resultPanel').innerHTML=`<h3>${r.turn}턴 결과</h3>${rows}<div class="tiny">충돌 ${r.clashes}곳 · 동률 ${r.ties}곳 · 변화 ${r.changed}곳</div><div class="tiny" style="margin-top:8px">투표권은 최장 일렬 + 1표이며 최소 1표입니다. 준비 단계는 20초입니다.</div><div class="actions"><button id="readyBtn" class="btn primary" ${ready?'disabled':''}>${ready?'준비 완료':'다음 턴 준비'}</button><span class="pill">준비 ${readyCount}/${state.players.length}</span></div>`;
+    $('#readyBtn').onclick=async()=>{try{state=await rpc('ready_next',{p_room_id:roomId});picks=[];ballot={};render();}catch(e){alert(e.message);}};
   }
 
   function renderGameOver(){
-    const mine=me();
-    const max=Math.max(...state.players.map(p=>state.chainSizes[p.seat]||0));
-    const winners=state.players.filter(p=>(state.chainSizes[p.seat]||0)===max);
+    const mine=me();const max=Math.max(...state.players.map(p=>state.chainSizes[p.seat]||0));const winners=state.players.filter(p=>(state.chainSizes[p.seat]||0)===max);
     const order=[...state.players].sort((a,b)=>(state.chainSizes[b.seat]||0)-(state.chainSizes[a.seat]||0)||a.seat-b.seat);
     const ready=state.readyNext.includes(mine.seat);const readyCount=state.readyNext.length;
-    $('#gameOverPanel').innerHTML=`<h3>${winners.length===1?`${esc(winners[0].name)} 승리!`:`공동 승리 · ${winners.map(p=>esc(p.name)).join(', ')}`}</h3>${order.map((p,i)=>`<div class="resultrow ${(state.chainSizes[p.seat]||0)===max?'winner':''}"><span>${i+1}위 · <span class="dot" style="background:${p.color}"></span>${esc(p.name)}</span><b>최장 일렬 ${state.chainSizes[p.seat]||0}개</b></div>`).join('')}<div class="tiny">5턴 종료 · 누적 점수 없이 마지막 보드의 최장 일렬로 승부합니다.</div><div class="actions"><button id="rematchBtn" class="btn primary" ${ready?'disabled':''}>${ready?'다시하기 준비 완료':'다시하기'}</button><span class="pill">다시하기 ${readyCount}/${state.players.length}</span><button id="leaveRoomEndBtn" class="btn danger">방에서 나가기</button></div>`;
-    $('#rematchBtn').onclick=async()=>{try{state=await rpc('restart_game',{p_room_id:roomId});picks=[];votes=[0,0];render();}catch(e){alert(e.message);}};
+    $('#gameOverPanel').innerHTML=`<h3>${winners.length===1?`${esc(winners[0].name)} 승리!`:`공동 승리 · ${winners.map(p=>esc(p.name)).join(', ')}`}</h3>${order.map((p,i)=>`<div class="resultrow ${(state.chainSizes[p.seat]||0)===max?'winner':''}"><span>${i+1}위 · <span class="dot" style="background:${p.color}"></span>${esc(p.name)}</span><b>최장 일렬 ${state.chainSizes[p.seat]||0}개</b></div>`).join('')}<div class="tiny">5턴 종료 · 마지막 보드의 최장 일렬로 승부합니다.</div><div class="actions"><button id="rematchBtn" class="btn primary" ${ready?'disabled':''}>${ready?'다시하기 준비 완료':'다시하기'}</button><span class="pill">다시하기 ${readyCount}/${state.players.length}</span><button id="leaveRoomEndBtn" class="btn danger">방에서 나가기</button></div>`;
+    $('#rematchBtn').onclick=async()=>{try{state=await rpc('restart_game',{p_room_id:roomId});picks=[];ballot={};render();}catch(e){alert(e.message);}};
     $('#leaveRoomEndBtn').onclick=leaveRoom;
   }
 
   async function leaveRoom(){
     if(!state||!roomId)return;
-    const duringGame=state.phase==='planning'||state.phase==='result';
+    const duringGame=['planning','voting','result'].includes(state.phase);
     const msg=duringGame?'게임 도중 방을 나가면 현재 경기가 취소되고 남은 플레이어는 로비로 돌아갑니다. 정말 나갈까요?':'이 방에서 나갈까요?';
     if(!confirm(msg))return;
-    try{
-      const {error}=await sb.rpc('leave_game_room',{p_room_id:roomId});
-      if(error)throw new Error(error.message||'방에서 나가기에 실패했습니다.');
-      returnToLanding();
-    }catch(e){ alert(e.message); }
+    try{const {error}=await sb.rpc('leave_game_room',{p_room_id:roomId});if(error)throw new Error(error.message||'방에서 나가기에 실패했습니다.');returnToLanding();}catch(e){alert(e.message);}
   }
 
   $('#createTab').onclick=()=>{$('#createTab').classList.add('active');$('#joinTab').classList.remove('active');$('#createForm').classList.remove('hidden');$('#joinForm').classList.add('hidden');setError('#landingError','');};
   $('#joinTab').onclick=()=>{$('#joinTab').classList.add('active');$('#createTab').classList.remove('active');$('#joinForm').classList.remove('hidden');$('#createForm').classList.add('hidden');setError('#landingError','');};
-
   $('#createBtn').onclick=async()=>{const name=$('#createName').value.trim()||'플레이어 1';const maxPlayers=Number($('#maxPlayers').value)||2;try{const s=await rpc('create_game_room',{p_name:name,p_max_players:maxPlayers});enterRoom(s,name);}catch(e){setError('#landingError',e.message);}};
   $('#joinBtn').onclick=async()=>{const name=$('#joinName').value.trim()||'플레이어';const code=$('#roomCodeInput').value.trim().toUpperCase();try{const s=await rpc('join_game_room',{p_code:code,p_name:name});enterRoom(s,name);}catch(e){setError('#landingError',e.message);}};
-  $('#startBtn').onclick=async()=>{try{state=await rpc('start_game',{p_room_id:roomId});setError('#lobbyError','');render();}catch(e){setError('#lobbyError',e.message);}};
+  $('#startBtn').onclick=async()=>{try{state=await rpc('start_game',{p_room_id:roomId});picks=[];ballot={};setError('#lobbyError','');render();}catch(e){setError('#lobbyError',e.message);}};
   $('#deleteRoomBtn').onclick=async()=>{
-    if(!state || !isHost() || state.phase!=='lobby' || state.players.length!==1) return;
-    if(!confirm('아직 아무도 참가하지 않았습니다. 이 방을 삭제하고 처음 화면으로 돌아갈까요?')) return;
+    if(!state||!isHost()||state.phase!=='lobby'||state.players.length!==1)return;
+    if(!confirm('아직 아무도 참가하지 않았습니다. 이 방을 삭제하고 처음 화면으로 돌아갈까요?'))return;
     $('#deleteRoomBtn').disabled=true;
-    try{
-      const {error}=await sb.rpc('delete_empty_room',{p_room_id:roomId});
-      if(error) throw new Error(error.message||'방 삭제에 실패했습니다.');
-      returnToLanding();
-    }catch(e){
-      setError('#lobbyError',e.message);
-      $('#deleteRoomBtn').disabled=false;
-      await refreshState();
-    }
+    try{const {error}=await sb.rpc('delete_empty_room',{p_room_id:roomId});if(error)throw new Error(error.message||'방 삭제에 실패했습니다.');returnToLanding();}
+    catch(e){setError('#lobbyError',e.message);$('#deleteRoomBtn').disabled=false;await refreshState();}
   };
-  $('#submitPlanBtn').onclick=async()=>{setError('#planError','');try{state=await rpc('submit_move',{p_room_id:roomId,p_cells:[...picks],p_votes:[votes[0]||0,votes[1]||0]});if(me()?.submitted){picks=[];votes=[0,0];}render();}catch(e){setError('#planError',e.message);}};
-  $('#clearBtn').onclick=()=>{if(timeExpired())return;picks=[];votes=[0,0];renderGame();};
+  $('#submitPlanBtn').onclick=async()=>{setError('#planError','');try{state=await rpc('submit_positions',{p_room_id:roomId,p_cells:[...picks]});picks=[];ballot={};render();}catch(e){setError('#planError',e.message);}};
+  $('#clearBtn').onclick=()=>{if(timeExpired())return;picks=[];renderGame();};
+  $('#submitVotesBtn').onclick=async()=>{
+    setError('#voteError','');
+    if(timeExpired()){ setError('#voteError','30초 투표 시간이 종료되었습니다.'); return; }
+    try{
+      const proposals=state.proposals||[];
+      const seats=proposals.map(p=>p.seat);const cells=proposals.map(p=>p.cell);const counts=proposals.map(p=>Number(ballot[proposalKey(p)]||0));
+      state=await rpc('submit_votes',{p_room_id:roomId,p_proposal_seats:seats,p_cells:cells,p_votes:counts});
+      ballot={};render();
+    }catch(e){setError('#voteError',e.message);}
+  };
   $('#leaveRoomBtn').onclick=leaveRoom;
 
   async function copyText(text){try{await navigator.clipboard.writeText(text);return true;}catch{return false;}}
@@ -442,15 +497,8 @@
   async function autoRejoin(){
     if(autoRejoinTried)return;autoRejoinTried=true;
     const qRoom=(new URL(location.href).searchParams.get('room')||'').toUpperCase();const savedName=localStorage.getItem(nameKey);const savedId=localStorage.getItem(roomIdKey);const savedCode=(localStorage.getItem(roomCodeKey)||'').toUpperCase();
-    if(qRoom){
-      $('#joinTab').click();$('#roomCodeInput').value=qRoom;
-      if(savedName)$('#joinName').value=savedName;
-      if(savedName){try{const s=await rpc('join_game_room',{p_code:qRoom,p_name:savedName});enterRoom(s,savedName);return;}catch(e){setError('#landingError',e.message);}}
-      return;
-    }
-    if(savedId&&savedName){
-      try{const s=await rpc('get_room_state',{p_room_id:savedId});enterRoom(s,savedName);return;}catch{localStorage.removeItem(roomIdKey);localStorage.removeItem(roomCodeKey);}
-    }
+    if(qRoom){$('#joinTab').click();$('#roomCodeInput').value=qRoom;if(savedName)$('#joinName').value=savedName;if(savedName){try{const s=await rpc('join_game_room',{p_code:qRoom,p_name:savedName});enterRoom(s,savedName);return;}catch(e){setError('#landingError',e.message);}}return;}
+    if(savedId&&savedName){try{const s=await rpc('get_room_state',{p_room_id:savedId});enterRoom(s,savedName);return;}catch{localStorage.removeItem(roomIdKey);localStorage.removeItem(roomCodeKey);}}
     if(savedCode)$('#roomCodeInput').value=savedCode;
   }
 
