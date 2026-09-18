@@ -99,7 +99,7 @@ https://bonsago123-cloud.github.io/game/
 
 ### 📂 프로젝트 폴더
 
-https://github.com/bonsago123-cloud/game
+`/democracy-omok`
 
 ---
 
