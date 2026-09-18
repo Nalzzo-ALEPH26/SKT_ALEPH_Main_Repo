@@ -8,7 +8,7 @@ SKT ALEPH 선동과 날조 팀의 사이드 프로젝트 모음입니다.
 |---|---|---:|---|---|---|
 | 눈치오목 v2 | 보드게임 | 2~6명 | 비공개 동시 배치 심리전 오목 | [실행](https://nunchi-omok.nalzzoaleph26.workers.dev/) | 김봉경 |
 | 동시 오목 | 보드게임 | 2~6명 | 개발자가 미쳤어요! 마성의 오목! | [실행](https://dongsi-omok-mu.vercel.app/) | 황건희 |
-| 연결의 한 수 Online | 전략 보드게임 | 2~8명 | 투표권으로 교차점 소유권을 다투는 동시 선택 전략 게임 | [실행](https://bonsago123-cloud.github.io/game/) | - |
+| 연결의 한 수 Online | 전략 보드게임 | 2~8명 | 투표권으로 교차점 소유권을 다투는 동시 선택 전략 게임 | [실행](https://bonsago123-cloud.github.io/game/) | 황윤찬 |
 
 ---
 
@@ -36,13 +36,6 @@ SKT ALEPH 선동과 날조 팀의 사이드 프로젝트 모음입니다.
 - 같은 라운드에서 여러 명이 승리 조건을 만족하면 공동 우승입니다.
 - 모든 돌이 제거된 플레이어는 다음 라운드에서 돌 3개로 다시 시작합니다.
 
-### 기술 구성
-
-- React / TypeScript
-- Cloudflare Workers
-- Cloudflare D1
-- Drizzle ORM
-- GitHub 연동 자동 배포
 
 ### 🎮 플레이
 
@@ -99,20 +92,12 @@ https://dongsi-omok-mu.vercel.app/
 - 가장 큰 연결 묶음 크기만큼 점수와 다음 턴 투표권을 얻습니다.
 - 5턴 종료 후 누적 점수가 가장 높은 플레이어가 승리합니다.
 
-### 기술 구성
-
-- HTML / CSS / JavaScript
-- GitHub Pages
-- Supabase PostgreSQL
-- Supabase Realtime
-- Supabase Anonymous Auth
-- Row Level Security (RLS)
 
 ### 🎮 플레이
 
 https://bonsago123-cloud.github.io/game/
 
-### 📂 GitHub
+### 📂 프로젝트 폴더
 
 https://github.com/bonsago123-cloud/game
 
