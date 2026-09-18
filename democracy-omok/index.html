@@ -33,7 +33,7 @@
     .stone{width:50%;height:50%;place-self:center;border-radius:50%;position:relative;z-index:2;border:1px solid rgba(255,255,255,.16);box-shadow:inset -4px -4px 7px rgba(0,0,0,.35),inset 3px 3px 6px rgba(255,255,255,.23),0 3px 5px rgba(0,0,0,.42)}
     .picknum{position:absolute;z-index:6;right:14%;top:10%;min-width:22px;height:22px;border-radius:999px;background:#102033;color:#fff;border:2px solid #eaf8ff;font-size:11px;font-weight:900;display:grid;place-items:center;padding:0 5px}
     .planning{margin-top:14px;padding:14px;border-radius:15px;background:#111725;border:1px solid #313d57}.planning h3{margin:0 0 5px}.choices{display:grid;gap:8px;margin-top:12px}.choice{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px;border-radius:11px;background:#1b2334}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
-    .vote-help{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}.vote-meter{font-weight:900}.proposal-wrap{position:absolute;z-index:12;display:flex;flex-direction:column;align-items:center;gap:4px;transform:translate(-50%,-18px);user-select:none}.proposal-stone{width:28px;height:28px;border-radius:50%;border:2px solid rgba(255,255,255,.96);box-shadow:0 2px 6px rgba(0,0,0,.5);display:grid;place-items:center;background:#f3e7c9;color:#172033;font-size:11px;font-weight:950;cursor:pointer}.proposal-stone:hover{outline:2px solid #fff}.proposal-stone.active{outline:3px solid #83d8ff;box-shadow:0 0 0 2px rgba(14,19,32,.9),0 2px 6px rgba(0,0,0,.5)}.proposal-select{height:28px;min-width:54px;border-radius:8px;border:1px solid #5b6888;background:#111827;color:#fff;font-size:12px;font-weight:800;padding:0 4px}.proposal-label{white-space:nowrap;background:rgba(15,21,35,.92);border:1px solid #46516e;border-radius:7px;padding:2px 5px;font-size:10px;color:#e8eef9;pointer-events:none;max-width:120px;overflow:hidden;text-overflow:ellipsis}.proposal-zero{opacity:.72}
+    .vote-help{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}.vote-meter{font-weight:900}.proposal-wrap{position:absolute;z-index:12;display:flex;flex-direction:column;align-items:center;gap:4px;transform:translate(-50%,-50%);user-select:none;pointer-events:auto}.proposal-stone{width:32px;height:32px;border-radius:50%;border:2px solid rgba(255,255,255,.98);box-shadow:0 2px 7px rgba(0,0,0,.58);display:grid;place-items:center;background:#f3e7c9;color:#172033;font-size:12px;font-weight:950;cursor:pointer}.proposal-stone:hover{outline:2px solid #fff}.proposal-stone.active{outline:3px solid #83d8ff;box-shadow:0 0 0 2px rgba(14,19,32,.9),0 2px 7px rgba(0,0,0,.58)}.proposal-zero{opacity:.82}.vote-candidates{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:12px}.vote-candidate{display:flex;flex-direction:column;align-items:stretch;gap:7px;padding:10px;border:1px solid #3b4764;border-radius:12px;background:#151c2b}.vote-candidate.active{border-color:#83d8ff;box-shadow:0 0 0 2px rgba(131,216,255,.18)}.vote-location-btn{min-height:44px;border-radius:10px;border:1px solid #566582;background:#222c42;color:#fff;font-weight:900;padding:9px;cursor:pointer}.vote-location-btn.active{background:#eaf8ff;color:#102033;border-color:#eaf8ff}.vote-location-btn small{display:block;font-size:11px;font-weight:700;opacity:.75;margin-top:3px}.proposal-select{width:100%;height:38px;border-radius:9px;border:1px solid #5b6888;background:#111827;color:#fff;font-size:14px;font-weight:800;padding:0 8px}.proposal-label{font-size:11px;color:#b9c4d8;text-align:center;overflow-wrap:anywhere}.vote-empty{margin-top:12px;padding:12px;border-radius:10px;background:#111725;border:1px dashed #46536f;color:#d9e4f7}
     .waiting{padding:16px;border-radius:14px;background:#131b2a;border:1px dashed #46536f;color:#d9e4f7}.score-list,.log{display:grid;gap:8px}.score{padding:10px;border-radius:12px;background:#111725;border:1px solid #313c56}.scoretop{display:flex;justify-content:space-between;gap:10px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}.stat{text-align:center;padding:6px;border-radius:8px;background:#1b2334}.stat b{display:block}.stat span{font-size:11px;color:var(--muted)}.log{max-height:220px;overflow:auto}.log div{font-size:12px;line-height:1.45;padding:8px;border-radius:9px;background:#111725;color:#d7dfef}
     .resultbox{margin-top:14px;padding:14px;border-radius:14px;border:1px solid #45516d;background:#111725}.game-bottom-actions{display:flex;justify-content:flex-start;margin-top:18px}.resultbox h3{margin:0 0 10px}.resultrow{display:flex;justify-content:space-between;gap:10px;padding:9px;border-radius:9px;background:#1a2233;margin:6px 0}.winner{outline:2px solid #f7d888}
     .conn{font-size:12px;color:var(--muted)}.conn.ok{color:var(--good)}
@@ -65,11 +65,11 @@
     <div class="rules">
       <b>이번 온라인 버전에서의 판정</b>
       <ol>
-        <li><b>4×4는 16개의 교차점</b>을 뜻합니다. 돌은 칸 안이 아니라 오목/바둑처럼 선의 십자 교차점 위에 놓입니다.</li>
+        <li>보드는 인원에 따라 <b>2~3명 5×5, 4명 6×5, 5~6명 6×6, 7명 7×6, 8명 7×7</b> 교차점으로 커집니다. 돌은 칸 안이 아니라 선의 십자 교차점 위에 놓입니다.</li>
         <li>돌은 기존 버전보다 절반 크기로 표시되어 교차점과 선을 더 쉽게 볼 수 있습니다.</li>
         <li>각 플레이어는 <b>20초 안에</b> 서로 다른 교차점 2곳만 비밀리에 정합니다. 이 단계에서는 투표하지 않습니다.</li>
         <li>모두 제출하거나 20초가 지나면 <b>투표 단계</b>가 시작되고, 모든 플레이어의 후보 위치가 동시에 공개됩니다.</li>
-        <li><b>투표 시간은 30초</b>입니다. 한 플레이어는 공개된 후보 중 <b>한 곳에만</b> 투표할 수 있습니다. 후보를 왼쪽 클릭하면 +1표, 오른쪽 클릭하면 -1표이며, 후보 아래 드롭다운으로도 표 수를 정할 수 있습니다.</li>
+        <li><b>투표 시간은 30초</b>입니다. 한 플레이어는 공개된 후보 중 <b>한 곳에만</b> 투표할 수 있습니다. 후보를 왼쪽 클릭하면 +1표, 오른쪽 클릭하면 -1표이며, 각 놓을 자리 아래의 드롭다운으로도 표 수를 정할 수 있습니다.</li>
         <li>투표권은 최소 1표입니다. 현재 최장 일렬이 1개면 2표, 2개면 3표처럼 <b>최장 일렬 + 1</b>표를 받습니다.</li>
         <li>후보를 누가 골랐는지는 소유권과 관계없습니다. 한 위치에서 <b>가장 많은 표를 건 플레이어의 색</b>으로 그 자리가 바뀝니다. 최고 득표가 동률이면 기존 돌을 유지하고, 빈 자리였다면 아무 변화도 없습니다. 아무도 투표하지 않은 후보에도 돌이 놓이지 않습니다.</li>
         <li>턴 결과가 공개된 뒤에는 <b>20초의 다음 턴 준비 시간</b>이 주어집니다. 전원이 준비하면 즉시 넘어가고, 20초가 지나면 자동으로 다음 턴이 시작됩니다.</li>
@@ -124,11 +124,12 @@
 
           <section id="votePanel" class="planning hidden">
             <h3>공개 투표</h3>
-            <div class="tiny">모든 후보 위치가 공개되었습니다. 후보 돌을 왼쪽 클릭하면 +1표, 오른쪽 클릭하면 -1표입니다. 옆의 드롭다운으로도 표 수를 정할 수 있습니다.</div>
+            <div class="tiny">모든 후보가 공개됩니다. <b>놓을 자리 버튼 또는 바둑판의 후보 원을 왼쪽 클릭할 때마다 +1표</b>, <b>오른쪽 클릭할 때마다 -1표</b>입니다. 한 번에 한 위치에만 투표할 수 있습니다.</div>
             <div class="vote-help">
               <span class="pill">사용 <strong id="voteSpentText">0</strong></span>
               <span class="pill">남음 <strong id="voteRemainText">1</strong></span>
             </div>
+            <div id="voteCandidates" class="vote-candidates"></div>
             <div class="actions"><button id="submitVotesBtn" class="btn primary">투표 제출</button></div>
             <div id="voteError" class="error hidden"></div>
           </section>
@@ -393,27 +394,11 @@
       stone.type='button';
       stone.className='proposal-stone'+(active?' active':'')+(current===0?' proposal-zero':'');
       stone.textContent=String(current);
-      stone.title=`${coord(cell)} 후보 · 왼쪽 +1 / 오른쪽 -1`;
+      stone.setAttribute('aria-label',`${coord(cell)} 후보, 현재 ${current}표. 왼쪽 클릭 +1, 오른쪽 클릭 -1`);
+      stone.title=`${coord(cell)} · 왼쪽 +1 / 오른쪽 -1`;
       stone.addEventListener('click',e=>{e.preventDefault();adjustVote(cell,1);});
       stone.addEventListener('contextmenu',e=>{e.preventDefault();adjustVote(cell,-1);});
-
-      const select=document.createElement('select');
-      select.className='proposal-select';
-      select.title=`${coord(cell)} 투표수`;
-      const budget=currentBudget();
-      for(let n=0;n<=budget;n++){
-        const o=document.createElement('option');
-        o.value=String(n);o.textContent=String(n);
-        if(n===current)o.selected=true;
-        select.appendChild(o);
-      }
-      select.addEventListener('change',()=>setVote(cell,Number(select.value)));
-
-      const label=document.createElement('span');
-      label.className='proposal-label';
-      const names=(p.proposers||[]).join(', ');
-      label.textContent=names?`후보 · ${names}`:'후보';
-      wrap.append(stone,select,label);
+      wrap.append(stone);
       board.appendChild(wrap);
     }
   }
@@ -455,8 +440,52 @@
   }
 
   function renderVotePanel(){
-    $('#voteSpentText').textContent=spent(); $('#voteRemainText').textContent=remaining();
+    $('#voteSpentText').textContent=spent();
+    $('#voteRemainText').textContent=remaining();
     $('#submitVotesBtn').disabled=timeExpired();
+
+    const list=$('#voteCandidates');
+    list.innerHTML='';
+    const proposals=state.proposals||[];
+    if(!proposals.length){
+      list.innerHTML='<div class="vote-empty">공개된 놓을 자리가 없습니다. 이번 투표는 0표로 제출할 수 있습니다.</div>';
+      return;
+    }
+
+    const budget=currentBudget();
+    for(const p of proposals){
+      const cell=Number(p.cell);
+      const active=ballot.cell===cell;
+      const current=active?Number(ballot.votes||0):0;
+      const card=document.createElement('div');
+      card.className='vote-candidate'+(active?' active':'');
+
+      const place=document.createElement('button');
+      place.type='button';
+      place.className='vote-location-btn'+(active?' active':'');
+      place.innerHTML=`${coord(cell)}<small>왼쪽 +1 · 오른쪽 -1 · 현재 ${current}표</small>`;
+      place.addEventListener('click',e=>{e.preventDefault();adjustVote(cell,1);});
+      place.addEventListener('contextmenu',e=>{e.preventDefault();adjustVote(cell,-1);});
+
+      const select=document.createElement('select');
+      select.className='proposal-select';
+      select.setAttribute('aria-label',`${coord(cell)} 투표수 선택`);
+      for(let n=0;n<=budget;n++){
+        const o=document.createElement('option');
+        o.value=String(n);
+        o.textContent=`${n}표`;
+        if(n===current)o.selected=true;
+        select.appendChild(o);
+      }
+      select.addEventListener('change',()=>setVote(cell,Number(select.value)));
+
+      const label=document.createElement('div');
+      label.className='proposal-label';
+      const names=(p.proposers||[]).join(', ');
+      label.textContent=names?`이 위치를 고른 사람: ${names}`:'공개 후보';
+      card.append(place,select,label);
+      list.appendChild(card);
+    }
   }
 
   function renderScores(){
