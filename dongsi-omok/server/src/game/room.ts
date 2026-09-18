@@ -24,6 +24,8 @@ export function createRoom(roomId: string, hostId: PlayerId, nickname: string): 
     round: 0,
     roundEndsAt: null,
     selections: { [hostId]: [] },
+    conversionTargets: { [hostId]: null },
+    conversionClaimedBy: null,
     initialOrder: [],
     initialTurnIndex: 0,
     initialPlaced: { [hostId]: 0 },
@@ -39,6 +41,7 @@ export function joinRoom(room: Room, playerId: PlayerId, nickname: string): Play
   const player = createPlayer(playerId, nickname, room.players.length);
   room.players.push(player);
   room.selections[playerId] = [];
+  room.conversionTargets[playerId] = null;
   room.initialPlaced[playerId] = 0;
   return player;
 }
@@ -51,6 +54,7 @@ export function removeLobbyPlayer(room: Room, playerId: PlayerId): void {
     player.colorIndex = index;
   });
   delete room.selections[playerId];
+  delete room.conversionTargets[playerId];
   delete room.initialPlaced[playerId];
 }
 
@@ -84,6 +88,8 @@ export function startGame(room: Room, rng: () => number = Math.random, now = Dat
   room.initialOrder = shuffled(room.players.map((player) => player.id), rng);
   room.initialPlaced = Object.fromEntries(room.players.map((player) => [player.id, 0]));
   room.selections = Object.fromEntries(room.players.map((player) => [player.id, []]));
+  room.conversionTargets = Object.fromEntries(room.players.map((player) => [player.id, null]));
+  room.conversionClaimedBy = null;
   room.players.forEach((player) => {
     player.ready = false;
   });
@@ -151,12 +157,33 @@ export function updateSelection(room: Room, playerId: PlayerId, positions: Posit
   if (player.ready) throw new Error('ALREADY_READY');
 
   validatePositions(room.board, positions, ROUND_SELECTION_LIMIT);
+  if (positions.length > 0) room.conversionTargets[playerId] = null;
   room.selections[playerId] = positions.map((position) => ({ ...position }));
 }
 
-export function readyPlayer(room: Room, playerId: PlayerId): void {
+export function readyPlayer(
+  room: Room,
+  playerId: PlayerId,
+  targetPlayerId: PlayerId | null = null,
+): void {
   if (room.phase !== 'PLANNING') throw new Error('INVALID_PHASE');
   const player = getPlayer(room, playerId);
+  if (player.ready) throw new Error('ALREADY_READY');
+
+  // 전환권은 대상을 고른 순간이 아니라 LOCK을 확정한 순간 선착순으로 획득한다.
+  if (targetPlayerId) {
+    if (targetPlayerId === playerId) throw new Error('CANNOT_TARGET_SELF');
+    getPlayer(room, targetPlayerId);
+    if (room.conversionClaimedBy && room.conversionClaimedBy !== playerId) {
+      throw new Error('CONVERSION_ALREADY_CLAIMED');
+    }
+    room.conversionClaimedBy = playerId;
+    room.conversionTargets[playerId] = targetPlayerId;
+    room.selections[playerId] = [];
+  } else {
+    room.conversionTargets[playerId] = null;
+  }
+
   player.ready = true;
 }
 
@@ -164,14 +191,56 @@ export function allPlayersReady(room: Room): boolean {
   return room.players.length > 0 && room.players.every((player) => player.ready);
 }
 
-export function resolveRound(room: Room, now = Date.now()): RoundResolution {
+export function resolveRound(
+  room: Room,
+  now = Date.now(),
+  rng: () => number = Math.random,
+): RoundResolution {
   if (room.phase !== 'PLANNING') throw new Error('INVALID_PHASE');
   room.phase = 'RESOLVING';
 
   const activeSelections = Object.fromEntries(
-    room.players.map((player) => [player.id, room.selections[player.id] ?? []]),
+    room.players.map((player) => [
+      player.id,
+      (room.selections[player.id] ?? []).map((position) => ({ ...position })),
+    ]),
   );
+  // 전환은 각 플레이어가 원래 선택한 좌표만 대상으로 한다.
+  // 전환으로 새로 생긴 돌을 다른 전환이 다시 빼앗는 연쇄 효과는 만들지 않는다.
+  const remainingOriginalSelections = Object.fromEntries(
+    room.players.map((player) => [
+      player.id,
+      (room.selections[player.id] ?? []).map((position) => ({ ...position })),
+    ]),
+  );
+  const converted: NonNullable<RoundResolution['converted']> = [];
+
+  for (const player of room.players) {
+    const targetPlayerId = room.conversionTargets[player.id];
+    if (!targetPlayerId) continue;
+
+    // 특수 행동은 자신의 일반 3수 착수를 완전히 대체한다.
+    // 상대가 고른 원래 좌표 중 최대 2개를 중복 없이 무작위로 가져온다.
+    activeSelections[player.id] = [];
+    const candidates = remainingOriginalSelections[targetPlayerId] ?? [];
+
+    for (let convertedCount = 0; convertedCount < 2 && candidates.length > 0; convertedCount += 1) {
+      const randomIndex = Math.min(candidates.length - 1, Math.floor(rng() * candidates.length));
+      const [position] = candidates.splice(randomIndex, 1);
+      activeSelections[targetPlayerId] = (activeSelections[targetPlayerId] ?? []).filter(
+        (candidate) => candidate.row !== position.row || candidate.col !== position.col,
+      );
+      activeSelections[player.id].push({ ...position });
+      converted.push({
+        fromPlayerId: targetPlayerId,
+        toPlayerId: player.id,
+        position: { ...position },
+      });
+    }
+  }
+
   const resolution = resolveSelections(room.board, activeSelections);
+  resolution.converted = converted;
   room.board = resolution.board;
   room.winners = getWinners(room.board);
   resolution.winners = [...room.winners];
@@ -202,6 +271,7 @@ export function toPublicRoom(room: Room) {
     initialPlaced: { ...room.initialPlaced },
     winners: [...room.winners],
     players: room.players.map((player) => ({ ...player })),
+    conversionAvailable: room.conversionClaimedBy === null,
   };
 }
 
@@ -210,6 +280,8 @@ function beginPlanningRound(room: Room, now: number, round: number): void {
   room.round = round;
   room.roundEndsAt = now + ROUND_DURATION_MS;
   room.selections = Object.fromEntries(room.players.map((player) => [player.id, []]));
+  room.conversionTargets = Object.fromEntries(room.players.map((player) => [player.id, null]));
+  room.conversionClaimedBy = null;
   room.players.forEach((player) => {
     player.ready = false;
   });

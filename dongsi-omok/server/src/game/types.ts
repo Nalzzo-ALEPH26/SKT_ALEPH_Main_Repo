@@ -32,6 +32,8 @@ export interface Room {
   round: number;
   roundEndsAt: number | null;
   selections: Record<PlayerId, Position[]>;
+  conversionTargets: Record<PlayerId, PlayerId | null>;
+  conversionClaimedBy: PlayerId | null;
   initialOrder: PlayerId[];
   initialTurnIndex: number;
   initialPlaced: Record<PlayerId, number>;
@@ -43,10 +45,17 @@ export interface PlacedStone {
   position: Position;
 }
 
+export interface ConvertedStone {
+  fromPlayerId: PlayerId;
+  toPlayerId: PlayerId;
+  position: Position;
+}
+
 export interface RoundResolution {
   board: Board;
   collisions: Position[];
   placed: PlacedStone[];
   revealedSelections: Record<PlayerId, Position[]>;
   winners: PlayerId[];
+  converted?: ConvertedStone[];
 }

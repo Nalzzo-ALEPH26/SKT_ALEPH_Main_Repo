@@ -971,3 +971,122 @@ button:not(:disabled):hover { border-color: rgba(103, 232, 249, .58); background
     grid-column: 1 / -1;
   }
 }
+
+
+/* opponent stone conversion v9 */
+.gameplay-only .conversion-control {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: auto minmax(190px, 1fr) minmax(180px, auto);
+  gap: 8px;
+  align-items: end;
+  padding-top: 2px;
+}
+
+.conversion-mode {
+  min-height: 44px;
+  margin: 0;
+  border-color: rgba(103, 232, 249, .14);
+  color: #8fb6c1;
+  background: rgba(5, 18, 27, .76);
+}
+
+.conversion-mode--active {
+  border-color: rgba(103, 232, 249, .42);
+  color: #d9faff;
+  box-shadow: inset 0 0 18px rgba(34, 211, 238, .06);
+}
+
+.conversion-target-field {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}
+
+.conversion-target-field > span {
+  color: #698a96;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .14em;
+}
+
+.conversion-target-field select {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 11px;
+  border: 1px solid rgba(251, 191, 36, .26);
+  border-radius: 9px;
+  color: #ffe6a3;
+  background: rgba(35, 24, 7, .72);
+  font: inherit;
+  font-weight: 800;
+}
+
+.conversion-control > small {
+  align-self: center;
+  color: #718a93;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+@media (max-width: 720px) {
+  .gameplay-only .conversion-control {
+    grid-template-columns: 1fr 1fr;
+  }
+  .conversion-control > small {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 460px) {
+  .gameplay-only .conversion-control {
+    grid-template-columns: 1fr;
+  }
+  .conversion-control > small {
+    grid-column: auto;
+  }
+}
+
+
+/* conversion marker + first-lock claim v10 */
+.board-point--converted::after {
+  content: "";
+  position: absolute;
+  inset: 3%;
+  z-index: 8;
+  border: 2px solid #fbbf24;
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow: 0 0 0 2px rgba(251, 191, 36, .16), 0 0 22px rgba(251, 191, 36, .7);
+  animation: conversionPulse .55s ease-in-out infinite alternate;
+}
+
+.conversion-mark {
+  position: absolute;
+  z-index: 10;
+  right: -3px;
+  top: -4px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 1px solid rgba(255, 255, 255, .72);
+  border-radius: 50%;
+  color: #241500;
+  background: #fbbf24;
+  box-shadow: 0 0 14px rgba(251, 191, 36, .72);
+  font-size: 12px;
+  font-weight: 1000;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.conversion-target-field select:disabled {
+  opacity: .48;
+  cursor: not-allowed;
+}
+
+@keyframes conversionPulse {
+  from { transform: scale(.94); opacity: .72; }
+  to { transform: scale(1.08); opacity: 1; }
+}

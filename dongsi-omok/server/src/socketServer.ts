@@ -157,10 +157,10 @@ export function createSocketServer(): SocketServerBundle {
       });
     });
 
-    socket.on('round:ready', (_payload: unknown, ack?: Ack) => {
+    socket.on('round:ready', (payload: { targetPlayerId?: string | null } | undefined, ack?: Ack) => {
       handle(ack, () => {
         const { room, playerId } = roomForSocket(socket.id);
-        readyPlayer(room, playerId);
+        readyPlayer(room, playerId, payload?.targetPlayerId ?? null);
         broadcastRoom(room);
         if (allPlayersReady(room)) resolveAndBroadcast(room);
         return { ok: true };

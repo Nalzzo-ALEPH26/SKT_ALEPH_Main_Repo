@@ -25,6 +25,7 @@ export interface PublicRoom {
   initialPlaced: Record<string, number>;
   winners: string[];
   players: PublicPlayer[];
+  conversionAvailable: boolean;
 }
 
 export interface RoundResolution {
@@ -33,4 +34,5 @@ export interface RoundResolution {
   placed: Array<{ playerId: string; position: Position }>;
   revealedSelections: Record<string, Position[]>;
   winners: string[];
+  converted?: Array<{ fromPlayerId: string; toPlayerId: string; position: Position }>;
 }

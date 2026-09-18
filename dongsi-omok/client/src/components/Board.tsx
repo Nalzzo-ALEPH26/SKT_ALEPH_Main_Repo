@@ -1,11 +1,12 @@
 import type { CSSProperties } from 'react';
-import type { Position, PublicPlayer } from '../types';
+import type { Position, PublicPlayer, RoundResolution } from '../types';
 
 interface BoardProps {
   board: (string | null)[][];
   players: PublicPlayer[];
   selected: Position[];
   collisions: Position[];
+  converted: NonNullable<RoundResolution['converted']>;
   disabled?: boolean;
   onCellClick: (position: Position) => void;
 }
@@ -31,10 +32,11 @@ function axisPercent(index: number, size: number): string {
   return `${BOARD_MARGIN_PERCENT + (index / (size - 1)) * usable}%`;
 }
 
-export function Board({ board, players, selected, collisions, disabled, onCellClick }: BoardProps) {
+export function Board({ board, players, selected, collisions, converted, disabled, onCellClick }: BoardProps) {
   const size = board.length;
   const selectedKeys = new Set(selected.map(({ row, col }) => `${row}:${col}`));
   const collisionKeys = new Set(collisions.map(({ row, col }) => `${row}:${col}`));
+  const convertedKeys = new Set(converted.map(({ position }) => `${position.row}:${position.col}`));
   const playerMap = new Map(players.map((player) => [player.id, player]));
   const indexes = Array.from({ length: size }, (_, index) => index);
 
@@ -78,6 +80,7 @@ export function Board({ board, players, selected, collisions, disabled, onCellCl
             const player = playerId ? playerMap.get(playerId) : undefined;
             const isSelected = selectedKeys.has(key);
             const isCollision = collisionKeys.has(key);
+            const isConverted = convertedKeys.has(key);
             const pointStyle: PointStyle = {
               '--x': axisPercent(col, size),
               '--y': axisPercent(row, size),
@@ -89,7 +92,7 @@ export function Board({ board, players, selected, collisions, disabled, onCellCl
                 role="gridcell"
                 aria-label={`${row + 1}행 ${col + 1}열 교차점`}
                 key={key}
-                className={`board-point ${isSelected ? 'board-point--selected' : ''} ${isCollision ? 'board-point--collision' : ''}`}
+                className={`board-point ${isSelected ? 'board-point--selected' : ''} ${isCollision ? 'board-point--collision' : ''} ${isConverted ? 'board-point--converted' : ''}`}
                 style={pointStyle}
                 disabled={disabled || Boolean(playerId)}
                 onClick={() => onCellClick({ row, col })}
@@ -105,6 +108,7 @@ export function Board({ board, players, selected, collisions, disabled, onCellCl
                 ) : (
                   <span className="aim-dot" aria-hidden="true" />
                 )}
+                {isConverted && <span className="conversion-mark" title="상대 돌 전환" aria-label="전환된 돌">↺</span>}
               </button>
             );
           }),

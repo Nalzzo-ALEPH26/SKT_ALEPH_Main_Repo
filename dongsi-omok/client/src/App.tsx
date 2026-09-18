@@ -21,6 +21,8 @@ const ERROR_TEXT: Record<string, string> = {
   NOT_ENOUGH_PLAYERS: '게임 시작에는 최소 2명이 필요합니다.',
   HOST_ONLY: '방장만 실행할 수 있습니다.',
   CANNOT_KICK_SELF: '방장은 자기 자신을 강퇴할 수 없습니다.',
+  CANNOT_TARGET_SELF: '자기 자신은 전환 대상으로 선택할 수 없습니다.',
+  CONVERSION_ALREADY_CLAIMED: '이번 라운드의 상대 돌 전환권은 다른 플레이어가 먼저 LOCK했습니다.',
   NOT_YOUR_TURN: '지금은 내 차례가 아닙니다.',
   CELL_OCCUPIED: '이미 돌이 놓인 칸입니다.',
   SELECTION_LIMIT: '한 라운드에는 최대 3곳까지 선택할 수 있습니다.',
@@ -40,12 +42,14 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(Date.now());
   const [gameOverOpen, setGameOverOpen] = useState(false);
+  const [conversionTargetId, setConversionTargetId] = useState('');
 
   useEffect(() => {
     const onState = (nextRoom: PublicRoom) => setRoom(nextRoom);
     const onResolved = (result: RoundResolution) => {
       setResolution(result);
       setSelected([]);
+      setConversionTargetId('');
       window.setTimeout(() => setResolution(null), 1800);
     };
     const onClosed = () => {
@@ -109,6 +113,7 @@ export default function App() {
 
   useEffect(() => {
     setSelected([]);
+    setConversionTargetId('');
   }, [room?.round, room?.phase, room?.initialTurnIndex]);
 
   useEffect(() => {
@@ -120,6 +125,10 @@ export default function App() {
     () => room?.players.find((player) => player.id === session?.playerId) ?? null,
     [room, session?.playerId],
   );
+  useEffect(() => {
+    if (room?.phase !== 'PLANNING' || room.conversionAvailable || me?.ready) return;
+    setConversionTargetId('');
+  }, [room?.phase, room?.conversionAvailable, me?.ready]);
   const isHost = Boolean(room && session && room.hostId === session.playerId);
   const currentInitialId = room?.initialOrder[room.initialTurnIndex] ?? null;
   const isMyInitialTurn = room?.phase === 'INITIAL_PLACEMENT' && currentInitialId === session?.playerId;
@@ -225,6 +234,19 @@ export default function App() {
       await emitAck('initial:place-batch', { positions: selected });
       setSelected([]);
     });
+
+  const chooseConversionTarget = (targetPlayerId: string) => {
+    setError('');
+    setConversionTargetId(targetPlayerId);
+    if (!targetPlayerId) return;
+
+    // 대상 선택만으로는 전환권을 차지하지 않는다. LOCK 직전에 내 일반 착수만 비운다.
+    setSelected([]);
+    void emitAck('round:update-selection', { positions: [] }).catch((cause) => {
+      const code = cause instanceof Error ? cause.message : 'UNKNOWN_ERROR';
+      setError(ERROR_TEXT[code] ?? code);
+    });
+  };
 
   const leave = () =>
     run(async () => {
@@ -439,9 +461,15 @@ export default function App() {
           {room.phase === 'PLANNING' && (
             <div className="round-control-bar round-control-bar--planning">
               <div className="selection-readout">
-                <small>COORDINATES</small>
-                <strong>{selected.length} / {MAX_SELECTIONS}</strong>
-                <span>{me?.ready ? 'LOCKED' : `최대 ${MAX_SELECTIONS}곳 · 다시 누르면 취소`}</span>
+                <small>{conversionTargetId ? 'OVERRIDE' : 'COORDINATES'}</small>
+                <strong>{conversionTargetId ? '2 RANDOM' : `${selected.length} / ${MAX_SELECTIONS}`}</strong>
+                <span>
+                  {me?.ready
+                    ? 'LOCKED'
+                    : conversionTargetId
+                      ? `${playerName(room, conversionTargetId)}의 선택 중 최대 2개를 내 돌로 전환`
+                      : `최대 ${MAX_SELECTIONS}곳 · 다시 누르면 취소`}
+                </span>
               </div>
               <div className={`round-timer compact-round-timer ${secondsLeft !== null && secondsLeft <= 5 ? 'round-timer--urgent' : ''}`} aria-live="polite">
                 <small>TURN TIMER</small>
@@ -452,12 +480,46 @@ export default function App() {
                 <button
                   className="primary control-lock-button"
                   disabled={busy}
-                  onClick={() => run(async () => { await emitAck('round:ready'); })}
+                  onClick={() => run(async () => {
+                    await emitAck('round:ready', { targetPlayerId: conversionTargetId || null });
+                  })}
                 >
-                  LOCK COORDINATES · {selected.length}/{MAX_SELECTIONS}
+                  {conversionTargetId
+                    ? `OVERRIDE LOCK · ${playerName(room, conversionTargetId)}`
+                    : `LOCK COORDINATES · ${selected.length}/${MAX_SELECTIONS}`}
                 </button>
               )}
               {me?.ready && <div className="locked-indicator">COORDINATES LOCKED</div>}
+
+              <div className="conversion-control">
+                <button
+                  className={!conversionTargetId ? 'conversion-mode conversion-mode--active' : 'conversion-mode'}
+                  disabled={busy || Boolean(me?.ready)}
+                  onClick={() => chooseConversionTarget('')}
+                >
+                  직접 3수
+                </button>
+                <label className="conversion-target-field">
+                  <span>상대 돌 전환</span>
+                  <select
+                    value={conversionTargetId}
+                    disabled={busy || Boolean(me?.ready) || !room.conversionAvailable}
+                    onChange={(event) => chooseConversionTarget(event.target.value)}
+                  >
+                    <option value="">사용 안 함</option>
+                    {room.players
+                      .filter((player) => player.id !== session.playerId)
+                      .map((player) => (
+                        <option key={player.id} value={player.id}>{player.nickname}</option>
+                      ))}
+                  </select>
+                </label>
+                <small>
+                  {room.conversionAvailable
+                    ? '전환은 LOCK 선착순 1명만 사용 · 직접 3수를 포기하고 상대 선택 최대 2개를 가져옵니다.'
+                    : '이번 라운드의 전환권은 이미 사용됨 · 직접 3수만 가능합니다.'}
+                </small>
+              </div>
             </div>
           )}
           {error && <p className="error gameplay-error">{error}</p>}
@@ -482,15 +544,21 @@ export default function App() {
           <Board
             board={room.board}
             players={room.players}
-            selected={room.phase === 'PLANNING' || (room.phase === 'INITIAL_PLACEMENT' && isMyInitialTurn) ? selected : []}
+            selected={
+              ((room.phase === 'PLANNING' && !conversionTargetId) ||
+                (room.phase === 'INITIAL_PLACEMENT' && isMyInitialTurn))
+                ? selected
+                : []
+            }
             collisions={resolution?.collisions ?? []}
+            converted={resolution?.converted ?? []}
             disabled={
               room.phase === 'LOBBY' ||
               room.phase === 'FINISHED' ||
               room.phase === 'RESOLVING' ||
               busy ||
               (room.phase === 'INITIAL_PLACEMENT' && !isMyInitialTurn) ||
-              (room.phase === 'PLANNING' && Boolean(me?.ready))
+              (room.phase === 'PLANNING' && Boolean(me?.ready || conversionTargetId))
             }
             onCellClick={handleBoardClick}
           />
@@ -501,12 +569,21 @@ export default function App() {
         <div className="reveal-toast">
           <small>TACTICAL RESOLUTION</small>
           <strong>ROUND {Math.max(1, room.round - (room.phase === 'PLANNING' ? 1 : 0))} 공개</strong>
-          <span>충돌 {resolution.collisions.length}곳 · 착수 성공 {resolution.placed.length}개</span>
+          <span>
+            충돌 {resolution.collisions.length}곳 · 착수 성공 {resolution.placed.length}개
+            {(resolution.converted?.length ?? 0) > 0 ? ` · 돌 전환 ${resolution.converted?.length ?? 0}개` : ''}
+          </span>
         </div>
       )}
 
       {room.phase === 'FINISHED' && gameOverOpen && (
-        <div className="game-over-modal" role="dialog" aria-modal="true" aria-labelledby="game-over-title">
+        <div
+          className="game-over-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="game-over-title"
+          onClick={() => setGameOverOpen(false)}
+        >
           <div className="game-over-card">
             <button className="game-over-close" aria-label="결과 팝업 닫기" onClick={() => setGameOverOpen(false)}>×</button>
             <small>MISSION COMPLETE</small>
@@ -515,7 +592,13 @@ export default function App() {
             <strong className="winner-label">{room.winners.length > 1 ? '공동 승리' : '승리'}</strong>
             <p>오목이 완성되어 게임이 종료되었습니다.</p>
             {isHost ? (
-              <button className="primary game-over-action" onClick={() => run(async () => { await emitAck('game:restart'); })}>
+              <button
+                className="primary game-over-action"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  void run(async () => { await emitAck('game:restart'); });
+                }}
+              >
                 RESTART MISSION
               </button>
             ) : (
