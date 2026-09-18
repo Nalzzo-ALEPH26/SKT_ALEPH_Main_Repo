@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>연결의 한 수 Online</title>
+  <style>
+    :root{
+      --bg:#0e1320;--panel:#171d2c;--panel2:#20283b;--line:#35405a;--text:#f7f9ff;--muted:#a9b3c9;
+      --accent:#83d8ff;--wood:#d7aa63;--wood2:#c58c45;--ink:#3f2b17;--good:#9aefb5;--warn:#ffd58b;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;background:radial-gradient(circle at 25% 10%,#202b49 0,#0e1320 44%);color:var(--text);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    button,input{font:inherit} button{cursor:pointer}
+    .hidden{display:none!important}
+    .app{max-width:1240px;margin:0 auto;padding:22px}
+    .panel{background:rgba(23,29,44,.96);border:1px solid #313c56;border-radius:22px;box-shadow:0 24px 70px rgba(0,0,0,.25)}
+    .landing{max-width:760px;margin:34px auto;padding:26px}
+    .brand h1{margin:0;font-size:clamp(30px,6vw,52px);letter-spacing:-.05em}.brand p{margin:8px 0 0;color:var(--muted)}
+    .tabs{display:flex;gap:8px;margin-top:24px}.tab{flex:1;border:1px solid #3a4663;border-radius:12px;padding:10px;background:#141a29;color:#d9e3f5;font-weight:800}.tab.active{background:#eaf8ff;color:#102033;border-color:#eaf8ff}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}.field label{display:block;font-weight:800;margin-bottom:7px}.field input{width:100%;border:1px solid #3b4764;background:#0f1523;color:#fff;border-radius:12px;padding:12px}.full{grid-column:1/-1}
+    .btn{border:0;border-radius:12px;padding:11px 15px;font-weight:850}.primary{background:#eaf8ff;color:#102033}.secondary{background:#283149;color:#fff;border:1px solid #46516e}.ghost{background:transparent;color:#dbe5f6;border:1px solid #46516e}.danger{background:#4c2932;color:#ffdce2;border:1px solid #74414d}.btn:disabled{opacity:.42;cursor:not-allowed}
+    .rules{margin-top:18px;padding:15px;border-radius:14px;background:#111725;border:1px solid #303a53;color:#dce4f3}.rules li{margin:6px 0;line-height:1.5}.tiny{font-size:12px;color:var(--muted)}
+    .error{margin-top:12px;color:#ffd1d1;background:#3a2027;border:1px solid #6f3a46;padding:10px 12px;border-radius:10px}
+    .topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px}.room-tools{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.pill{background:#111827;border:1px solid #37445f;border-radius:999px;padding:9px 12px;color:#dce7f8;font-size:14px}.pill strong{color:#fff}
+    .lobby{padding:22px}.lobby-head{display:flex;justify-content:space-between;gap:18px;align-items:center;flex-wrap:wrap}.code{font-size:34px;font-weight:950;letter-spacing:.16em}.players{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin:18px 0}.player{padding:12px;border-radius:14px;border:1px solid #34405b;background:#111725}.player.off{opacity:.55}.dot{display:inline-block;width:14px;height:14px;border-radius:50%;vertical-align:-2px;margin-right:8px;box-shadow:0 0 0 2px #fff4}
+    .layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:18px;align-items:start}.main{padding:18px}.side{padding:17px;position:sticky;top:16px}.status-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+    .board-shell{display:flex;justify-content:center;overflow:auto;padding:16px;border-radius:18px;background:#0d1320;border:1px solid #2e3952}
+    .go-board{position:relative;background:linear-gradient(135deg,var(--wood),var(--wood2));border:5px solid #8f5d2d;box-shadow:inset 0 0 0 2px rgba(77,44,15,.34),0 14px 32px rgba(0,0,0,.25);border-radius:6px;flex:0 0 auto}
+    .line{position:absolute;background:rgba(58,37,17,.83);pointer-events:none}.line.h{height:2px}.line.v{width:2px}
+    .point{position:absolute;border:0;background:transparent;padding:0;transform:translate(-50%,-50%);display:grid;place-items:center;border-radius:50%;z-index:3}
+    .point::after{content:"";position:absolute;width:13%;height:13%;border-radius:50%;background:rgba(61,38,18,.74);opacity:.35}
+    .point:hover{background:rgba(255,255,255,.14)}.point.selected{outline:3px solid #e9fbff;box-shadow:0 0 0 6px rgba(70,194,255,.36)}.point.disabled{cursor:default}.point.disabled:hover{background:transparent}
+    .stone{width:100%;height:100%;border-radius:50%;position:relative;z-index:2;border:1px solid rgba(255,255,255,.16);box-shadow:inset -6px -7px 11px rgba(0,0,0,.35),inset 5px 5px 9px rgba(255,255,255,.23),0 4px 7px rgba(0,0,0,.42)}
+    .picknum{position:absolute;z-index:6;right:-5px;top:-7px;min-width:22px;height:22px;border-radius:999px;background:#102033;color:#fff;border:2px solid #eaf8ff;font-size:11px;font-weight:900;display:grid;place-items:center;padding:0 5px}
+    .planning{margin-top:14px;padding:14px;border-radius:15px;background:#111725;border:1px solid #313d57}.planning h3{margin:0 0 5px}.choices{display:grid;gap:8px;margin-top:12px}.choice{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px;border-radius:11px;background:#1b2334}.vote{display:flex;align-items:center;gap:7px}.vote button{width:32px;height:32px;border-radius:9px;border:1px solid #495674;background:#28324b;color:#fff;font-weight:900}.vote b{width:26px;text-align:center}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+    .waiting{padding:16px;border-radius:14px;background:#131b2a;border:1px dashed #46536f;color:#d9e4f7}.score-list,.log{display:grid;gap:8px}.score{padding:10px;border-radius:12px;background:#111725;border:1px solid #313c56}.scoretop{display:flex;justify-content:space-between;gap:10px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}.stat{text-align:center;padding:6px;border-radius:8px;background:#1b2334}.stat b{display:block}.stat span{font-size:11px;color:var(--muted)}.log{max-height:220px;overflow:auto}.log div{font-size:12px;line-height:1.45;padding:8px;border-radius:9px;background:#111725;color:#d7dfef}
+    .resultbox{margin-top:14px;padding:14px;border-radius:14px;border:1px solid #45516d;background:#111725}.resultbox h3{margin:0 0 10px}.resultrow{display:flex;justify-content:space-between;gap:10px;padding:9px;border-radius:9px;background:#1a2233;margin:6px 0}.winner{outline:2px solid #f7d888}
+    .conn{font-size:12px;color:var(--muted)}.conn.ok{color:var(--good)}
+    @media(max-width:900px){.layout{grid-template-columns:1fr}.side{position:static}.topbar{flex-direction:column}.room-tools{justify-content:flex-start}.form-grid{grid-template-columns:1fr}.full{grid-column:auto}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <section id="landing" class="panel landing">
+    <div class="brand"><h1>연결의 한 수 Online</h1><p>GitHub Pages에서 열고 Supabase로 여러 컴퓨터가 동기화되는 온라인 전략 게임</p></div>
+    <div class="tabs">
+      <button id="createTab" class="tab active">방 만들기</button>
+      <button id="joinTab" class="tab">방 참가</button>
+    </div>
+
+    <div id="createForm" class="form-grid">
+      <div class="field"><label>내 이름</label><input id="createName" maxlength="18" value="플레이어 1" /></div>
+      <div class="field"><label>총 플레이어 수</label><input id="maxPlayers" type="number" min="2" max="8" value="2" /></div>
+      <div class="full"><button id="createBtn" class="btn primary">Supabase 방 만들기</button></div>
+    </div>
+
+    <div id="joinForm" class="form-grid hidden">
+      <div class="field"><label>내 이름</label><input id="joinName" maxlength="18" value="플레이어" /></div>
+      <div class="field"><label>방 코드</label><input id="roomCodeInput" maxlength="6" placeholder="예: A7KD9P" style="text-transform:uppercase" /></div>
+      <div class="full"><button id="joinBtn" class="btn primary">방 참가하기</button></div>
+    </div>
+    <div id="landingError" class="error hidden"></div>
+
+    <div class="rules">
+      <b>이번 온라인 버전에서의 판정</b>
+      <ol>
+        <li><b>4×4는 16개의 교차점</b>을 뜻합니다. 돌은 칸 안이 아니라 오목/바둑처럼 선의 십자 교차점 위에 놓입니다.</li>
+        <li>판의 선 간격·가장자리·돌 지름은 전통적인 일본식 바둑판 비율(가로 간격 22, 세로 간격 23.7, 돌 지름 22.5)을 축소해 적용했습니다.</li>
+        <li>각 플레이어는 자기 컴퓨터에서 서로 다른 교차점 2곳과 각 지점에 사용할 투표권을 비밀리에 제출합니다.</li>
+        <li>Supabase 데이터베이스는 모두의 제출을 받은 뒤 한꺼번에 판정합니다. 같은 지점이면 더 많은 표를 건 사람이 차지하고, 최고 표가 동률이면 기존 돌이 유지됩니다.</li>
+        <li>이미 돌이 놓인 교차점도 다시 선택할 수 있습니다. 연결은 상·하·좌·우만 계산합니다.</li>
+        <li>턴 종료 때 자신의 가장 큰 연결 묶음 크기만큼 점수를 얻고, 다음 턴 투표권도 그 크기만큼 받습니다. 총 5턴입니다.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="roomScreen" class="hidden">
+    <div class="topbar">
+      <div class="brand"><h1>연결의 한 수</h1><p id="phaseText">로비</p></div>
+      <div class="room-tools">
+        <span id="connectionText" class="pill conn">Supabase 연결 중</span>
+        <span class="pill">방 <strong id="roomCodeTop">------</strong></span>
+        <button id="copyInviteBtn" class="btn secondary">초대 링크 복사</button>
+      </div>
+    </div>
+
+    <div id="lobbyPanel" class="panel lobby">
+      <div class="lobby-head">
+        <div><div class="tiny">방 코드</div><div id="roomCodeBig" class="code">------</div></div>
+        <div><div id="lobbyCount" style="font-weight:900;font-size:20px">0 / 2명</div><div class="tiny">모든 플레이어가 들어오면 방장이 시작합니다.</div></div>
+      </div>
+      <div id="playerList" class="players"></div>
+      <div class="actions">
+        <button id="startBtn" class="btn primary">게임 시작</button>
+        <button id="copyCodeBtn" class="btn secondary">방 코드 복사</button>
+        <button id="deleteRoomBtn" class="btn danger hidden">방 삭제하고 처음으로</button>
+      </div>
+      <div id="lobbyError" class="error hidden"></div>
+    </div>
+
+    <div id="gamePanel" class="hidden">
+      <div class="layout">
+        <main class="panel main">
+          <div class="status-row">
+            <span class="pill">턴 <strong id="turnText">1 / 5</strong></span>
+            <span class="pill">보드 <strong id="sizeText">4 × 4</strong></span>
+            <span class="pill">내 투표권 <strong id="budgetText">0</strong></span>
+            <span class="pill">제출 <strong id="submittedText">0 / 2</strong></span>
+          </div>
+          <div class="board-shell"><div id="goBoard" class="go-board"></div></div>
+
+          <section id="planPanel" class="planning">
+            <h3>내 비밀 계획</h3>
+            <div class="tiny">두 교차점을 선택하세요. 이 선택은 제출해도 다른 플레이어에게 공개되지 않습니다.</div>
+            <div id="choices" class="choices"></div>
+            <div class="actions"><button id="submitPlanBtn" class="btn primary" disabled>두 수 제출</button><button id="clearBtn" class="btn secondary">선택 지우기</button></div>
+            <div id="planError" class="error hidden"></div>
+          </section>
+
+          <div id="waitingPanel" class="waiting hidden"></div>
+          <div id="resultPanel" class="resultbox hidden"></div>
+          <div id="gameOverPanel" class="resultbox hidden"></div>
+        </main>
+
+        <aside class="panel side">
+          <h3 style="margin-top:0">현재 순위</h3>
+          <div id="scoreList" class="score-list"></div>
+          <h3>기록</h3>
+          <div id="log" class="log"></div>
+          <div class="actions"><button id="restartBtn" class="btn ghost hidden">같은 방에서 다시 하기</button></div>
+        </aside>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(() => {
+  const $ = (s) => document.querySelector(s);
+  const COLORS = ['#111827','#ef4444','#3b82f6','#22c55e','#a855f7','#f59e0b','#06b6d4','#f97316'];
+  const roomIdKey = 'stoneVoteSupabaseRoomId';
+  const roomCodeKey = 'stoneVoteSupabaseRoomCode';
+  const nameKey = 'stoneVoteName';
+
+  let sb = null;
+  let userId = null;
+  let state = null;
+  let roomId = null;
+  let picks = [];
+  let votes = [0,0];
+  let roomChannel = null;
+  let autoRejoinTried = false;
+  let refreshTimer = null;
+
+  function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function setError(sel,text){ const el=$(sel); if(!text){el.classList.add('hidden');el.textContent='';}else{el.textContent=text;el.classList.remove('hidden');} }
+  function me(){ return state?.players.find(p=>p.userId===userId)||null; }
+  function isHost(){ return !!state && state.hostUserId===userId; }
+  function playerName(seat){ return state?.players.find(p=>p.seat===seat)?.name || `플레이어 ${seat+1}`; }
+  function coord(index){ return `${Math.floor(index/state.cols)+1}행 ${(index%state.cols)+1}열`; }
+  function countStones(seat){ return (state?.board||[]).reduce((n,x)=>n+(x===seat?1:0),0); }
+  function spent(){ return votes.slice(0,picks.length).reduce((a,b)=>a+b,0); }
+  function remaining(){ const p=me(); return p ? (state.voteBudgets[p.seat]||0)-spent() : 0; }
+
+  function normalizeState(raw){
+    if(!raw) return null;
+    const s = {...raw};
+    s.board = (s.board||[]).map(v => Number(v) < 0 ? null : Number(v));
+    s.scores = (s.scores||[]).map(Number);
+    s.chainSizes = (s.chainSizes||[]).map(Number);
+    s.voteBudgets = (s.voteBudgets||[]).map(Number);
+    s.readyNext = (s.readyNext||[]).map(Number);
+    s.logs = s.logs || [];
+    s.players = (s.players||[]).map(p=>({...p,seat:Number(p.seat),color:COLORS[Number(p.seat)%COLORS.length]}));
+    if(s.lastTurnResult?.earned) s.lastTurnResult.earned=s.lastTurnResult.earned.map(Number);
+    return s;
+  }
+
+  function configOk(){
+    const c=window.GAME_CONFIG||{};
+    return c.supabaseUrl && c.supabaseKey && !c.supabaseUrl.includes('YOUR_') && !c.supabaseKey.includes('YOUR_');
+  }
+
+  async function initSupabase(){
+    $('#createBtn').disabled=true; $('#joinBtn').disabled=true;
+    if(!configOk()){
+      setError('#landingError','먼저 config.js에 Supabase URL과 Publishable Key를 넣어주세요. README의 3단계를 따라 하면 됩니다.');
+      $('#connectionText').textContent='Supabase 설정 필요';
+      return;
+    }
+    try{
+      sb = window.supabase.createClient(window.GAME_CONFIG.supabaseUrl, window.GAME_CONFIG.supabaseKey, {
+        auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}
+      });
+      let {data:{session},error}=await sb.auth.getSession();
+      if(error) throw error;
+      if(!session){
+        const signed=await sb.auth.signInAnonymously();
+        if(signed.error) throw signed.error;
+        session=signed.data.session;
+      }
+      userId=session.user.id;
+      $('#createBtn').disabled=false; $('#joinBtn').disabled=false;
+      $('#connectionText').textContent='Supabase 준비됨'; $('#connectionText').classList.add('ok');
+      await autoRejoin();
+    }catch(e){
+      const msg = String(e.message||e);
+      setError('#landingError', msg.includes('Anonymous') ? 'Supabase에서 Anonymous Sign-Ins(익명 로그인)를 먼저 켜주세요.' : `Supabase 연결 실패: ${msg}`);
+      $('#connectionText').textContent='Supabase 연결 실패'; $('#connectionText').classList.remove('ok');
+    }
+  }
+
+  async function rpc(fn,args){
+    if(!sb) throw new Error('Supabase가 아직 연결되지 않았습니다.');
+    const {data,error}=await sb.rpc(fn,args);
+    if(error) throw new Error(error.message||'Supabase 요청에 실패했습니다.');
+    return normalizeState(data);
+  }
+
+  async function refreshState(){
+    if(!roomId || !sb) return;
+    try{
+      const fresh=await rpc('get_room_state',{p_room_id:roomId});
+      const wasSubmitted=me()?.submitted;
+      state=fresh;
+      if(me()?.submitted && !wasSubmitted){ picks=[];votes=[0,0]; }
+      render();
+    }catch(e){
+      $('#connectionText').textContent='동기화 오류'; $('#connectionText').classList.remove('ok');
+    }
+  }
+
+  function queueRefresh(){ clearTimeout(refreshTimer); refreshTimer=setTimeout(refreshState,50); }
+
+  function subscribeRoom(id){
+    if(roomChannel) sb.removeChannel(roomChannel);
+    $('#connectionText').textContent='실시간 연결 중'; $('#connectionText').classList.remove('ok');
+    roomChannel=sb.channel(`stone-room-${id}`)
+      .on('postgres_changes',{event:'*',schema:'public',table:'rooms',filter:`id=eq.${id}`},queueRefresh)
+      .on('postgres_changes',{event:'*',schema:'public',table:'players',filter:`room_id=eq.${id}`},queueRefresh)
+      .subscribe(status=>{
+        if(status==='SUBSCRIBED'){ $('#connectionText').textContent='실시간 연결됨';$('#connectionText').classList.add('ok'); }
+        else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'){ $('#connectionText').textContent='실시간 재연결 중';$('#connectionText').classList.remove('ok'); }
+      });
+  }
+
+  function enterRoom(initialState,name){
+    state=normalizeState(initialState); roomId=state.id;
+    localStorage.setItem(roomIdKey,roomId);localStorage.setItem(roomCodeKey,state.code);localStorage.setItem(nameKey,name||me()?.name||'플레이어');
+    const url=new URL(location.href);url.searchParams.set('room',state.code);history.replaceState(null,'',url);
+    $('#landing').classList.add('hidden');$('#roomScreen').classList.remove('hidden');
+    subscribeRoom(roomId);render();
+  }
+
+  function returnToLanding(){
+    if(roomChannel && sb){ sb.removeChannel(roomChannel); roomChannel=null; }
+    clearTimeout(refreshTimer);
+    state=null; roomId=null; picks=[]; votes=[0,0];
+    localStorage.removeItem(roomIdKey);
+    localStorage.removeItem(roomCodeKey);
+    const url=new URL(location.href);url.searchParams.delete('room');history.replaceState(null,'',url);
+    $('#roomScreen').classList.add('hidden');$('#landing').classList.remove('hidden');
+    $('#deleteRoomBtn').disabled=false;
+    setError('#lobbyError','');setError('#landingError','');
+  }
+
+  function render(){
+    if(!state)return;
+    $('#roomCodeTop').textContent=state.code;$('#roomCodeBig').textContent=state.code;
+    const phases={lobby:'로비 · 각자 다른 컴퓨터에서 접속하세요',planning:'계획 단계 · 각자 두 수를 비밀 제출',result:'턴 결과 · 모두 준비하면 다음 턴',gameover:'게임 종료'};
+    $('#phaseText').textContent=phases[state.phase]||state.phase;
+    $('#lobbyPanel').classList.toggle('hidden',state.phase!=='lobby');
+    $('#gamePanel').classList.toggle('hidden',state.phase==='lobby');
+    if(state.phase==='lobby')renderLobby();else renderGame();
+  }
+
+  function renderLobby(){
+    $('#lobbyCount').textContent=`${state.players.length} / ${state.maxPlayers}명`;
+    $('#playerList').innerHTML=state.players.map(p=>`<div class="player"><div><span class="dot" style="background:${p.color}"></span><b>${esc(p.name)}</b>${p.userId===state.hostUserId?' · 방장':''}${p.userId===userId?' · 나':''}</div><div class="tiny">참가 완료</div></div>`).join('')+Array.from({length:Math.max(0,state.maxPlayers-state.players.length)},()=>`<div class="player off"><b>빈 자리</b><div class="tiny">플레이어 대기 중</div></div>`).join('');
+    $('#startBtn').classList.toggle('hidden',!isHost());
+    $('#startBtn').disabled=state.players.length!==state.maxPlayers;
+    const canDelete=isHost() && state.players.length===1;
+    $('#deleteRoomBtn').classList.toggle('hidden',!canDelete);
+    $('#deleteRoomBtn').disabled=false;
+  }
+
+  function renderGame(){
+    const mine=me();if(!mine)return;
+    $('#turnText').textContent=`${state.turn} / ${state.maxTurns}`;$('#sizeText').textContent=`${state.cols} × ${state.rows}`;
+    $('#budgetText').textContent=state.voteBudgets[mine.seat]||0;
+    $('#submittedText').textContent=`${state.players.filter(p=>p.submitted).length} / ${state.maxPlayers}`;
+    renderBoard();renderScores();renderLog();
+    const planning=state.phase==='planning';
+    $('#planPanel').classList.toggle('hidden',!planning||mine.submitted);
+    $('#waitingPanel').classList.toggle('hidden',!(planning&&mine.submitted));
+    $('#resultPanel').classList.toggle('hidden',state.phase!=='result');
+    $('#gameOverPanel').classList.toggle('hidden',state.phase!=='gameover');
+    $('#restartBtn').classList.toggle('hidden',!(state.phase==='gameover'&&isHost()));
+    if(planning&&!mine.submitted)renderChoices();
+    if(planning&&mine.submitted){const count=state.players.filter(p=>p.submitted).length;$('#waitingPanel').innerHTML=`<b>제출 완료</b><br><span class="tiny">다른 플레이어의 비밀 선택은 공개되지 않습니다. 모두 제출하면 Supabase에서 동시에 판정합니다. (${count}/${state.maxPlayers})</span>`;}
+    if(state.phase==='result')renderResult();
+    if(state.phase==='gameover')renderGameOver();
+  }
+
+  function renderBoard(){
+    const board=$('#goBoard');board.innerHTML='';
+    const maxW=Math.min(690,Math.max(310,window.innerWidth-90));const maxH=Math.min(690,Math.max(310,window.innerHeight-250));
+    const cols=state.cols,rows=state.rows;
+    const yRatio=23.7/22,edgeXRatio=14.1/22,edgeYRatio=13.95/23.7,stoneRatio=22.5/22;
+    const fitX=maxW/(Math.max(1,cols-1)+2*edgeXRatio);const fitY=maxH/(Math.max(1,rows-1)*yRatio+2*edgeYRatio*yRatio);
+    const gapX=Math.max(48,Math.min(82,Math.floor(Math.min(fitX,fitY))));const gapY=gapX*yRatio;const marginX=gapX*edgeXRatio,marginY=gapY*edgeYRatio;const size=gapX*stoneRatio;const lineSize=Math.max(2,gapX/22);
+    const w=marginX*2+gapX*(cols-1),h=marginY*2+gapY*(rows-1);board.style.width=w+'px';board.style.height=h+'px';
+    for(let r=0;r<rows;r++){const line=document.createElement('div');line.className='line h';line.style.left=marginX+'px';line.style.top=(marginY+r*gapY)+'px';line.style.width=(gapX*(cols-1))+'px';line.style.height=lineSize+'px';board.appendChild(line);}
+    for(let c=0;c<cols;c++){const line=document.createElement('div');line.className='line v';line.style.top=marginY+'px';line.style.left=(marginX+c*gapX)+'px';line.style.height=(gapY*(rows-1))+'px';line.style.width=lineSize+'px';board.appendChild(line);}
+    const mine=me();const canPick=state.phase==='planning'&&mine&&!mine.submitted;
+    for(let i=0;i<state.board.length;i++){
+      const r=Math.floor(i/cols),c=i%cols;const point=document.createElement('button');point.type='button';point.className='point'+(canPick?'':' disabled');
+      point.style.width=size+'px';point.style.height=size+'px';point.style.left=(marginX+c*gapX)+'px';point.style.top=(marginY+r*gapY)+'px';
+      const pi=picks.indexOf(i);if(pi>=0){point.classList.add('selected');const tag=document.createElement('span');tag.className='picknum';tag.textContent=pi+1;point.appendChild(tag);}
+      const owner=state.board[i];if(owner!==null){const stone=document.createElement('span');stone.className='stone';stone.style.background=COLORS[owner%COLORS.length];stone.title=playerName(owner);point.appendChild(stone);}
+      if(canPick)point.addEventListener('click',()=>togglePick(i));board.appendChild(point);
+    }
+  }
+
+  function togglePick(i){const idx=picks.indexOf(i);if(idx>=0){picks.splice(idx,1);votes.splice(idx,1);while(votes.length<2)votes.push(0);}else if(picks.length<2)picks.push(i);renderGame();}
+
+  function renderChoices(){
+    const wrap=$('#choices');wrap.innerHTML='';
+    for(let slot=0;slot<2;slot++){
+      const row=document.createElement('div');row.className='choice';const label=document.createElement('div');
+      label.innerHTML=picks[slot]===undefined?`<b>선택 ${slot+1}</b><div class="tiny">보드의 교차점을 선택하세요.</div>`:`<b>선택 ${slot+1} · ${coord(picks[slot])}</b><div class="tiny">이 위치에 사용할 투표권</div>`;
+      const ctrl=document.createElement('div');ctrl.className='vote';const minus=document.createElement('button');minus.textContent='−';const num=document.createElement('b');num.textContent=votes[slot]||0;const plus=document.createElement('button');plus.textContent='+';
+      minus.disabled=picks[slot]===undefined||(votes[slot]||0)<=0;plus.disabled=picks[slot]===undefined||remaining()<=0;
+      minus.onclick=()=>{votes[slot]-=1;renderGame();};plus.onclick=()=>{votes[slot]+=1;renderGame();};ctrl.append(minus,num,plus);row.append(label,ctrl);wrap.appendChild(row);
+    }
+    $('#submitPlanBtn').disabled=picks.length!==2;
+  }
+
+  function renderScores(){
+    const order=[...state.players].sort((a,b)=>(state.scores[b.seat]||0)-(state.scores[a.seat]||0)||(state.chainSizes[b.seat]||0)-(state.chainSizes[a.seat]||0)||a.seat-b.seat);
+    $('#scoreList').innerHTML=order.map(p=>`<div class="score"><div class="scoretop"><div><span class="dot" style="background:${p.color}"></span><b>${esc(p.name)}</b>${p.userId===userId?' · 나':''}</div><b>${state.scores[p.seat]||0}점</b></div><div class="stats"><div class="stat"><b>${state.chainSizes[p.seat]||0}</b><span>최대 연결</span></div><div class="stat"><b>${state.voteBudgets[p.seat]||0}</b><span>투표권</span></div><div class="stat"><b>${countStones(p.seat)}</b><span>돌</span></div></div></div>`).join('');
+  }
+  function renderLog(){$('#log').innerHTML=state.logs.length?state.logs.map(x=>`<div>${esc(x)}</div>`).join(''):'<div>아직 기록이 없습니다.</div>';}
+
+  function renderResult(){
+    const r=state.lastTurnResult;if(!r)return;const mine=me();const ready=state.readyNext.includes(mine.seat);const readyCount=state.readyNext.length;
+    const rows=state.players.map(p=>({p,earned:r.earned[p.seat]||0})).sort((a,b)=>b.earned-a.earned||a.p.seat-b.p.seat).map(x=>`<div class="resultrow"><span><span class="dot" style="background:${x.p.color}"></span>${esc(x.p.name)}</span><b>+${x.earned}점 · 연결 ${state.chainSizes[x.p.seat]||0}</b></div>`).join('');
+    $('#resultPanel').innerHTML=`<h3>${r.turn}턴 결과</h3>${rows}<div class="tiny">충돌 ${r.clashes}곳 · 동률 ${r.ties}곳 · 변화 ${r.changed}곳</div><div class="actions"><button id="readyBtn" class="btn primary" ${ready?'disabled':''}>${ready?'준비 완료':'다음 턴 준비'}</button><span class="pill">준비 ${readyCount}/${state.maxPlayers}</span></div>`;
+    $('#readyBtn').onclick=async()=>{try{state=await rpc('ready_next',{p_room_id:roomId});render();}catch(e){alert(e.message);}};
+  }
+
+  function renderGameOver(){
+    const max=Math.max(...state.scores);const winners=state.players.filter(p=>state.scores[p.seat]===max);const order=[...state.players].sort((a,b)=>state.scores[b.seat]-state.scores[a.seat]||state.chainSizes[b.seat]-state.chainSizes[a.seat]||a.seat-b.seat);
+    $('#gameOverPanel').innerHTML=`<h3>${winners.length===1?`${esc(winners[0].name)} 승리!`:`공동 승리 · ${winners.map(p=>esc(p.name)).join(', ')}`}</h3>${order.map((p,i)=>`<div class="resultrow ${state.scores[p.seat]===max?'winner':''}"><span>${i+1}위 · <span class="dot" style="background:${p.color}"></span>${esc(p.name)}</span><b>${state.scores[p.seat]}점</b></div>`).join('')}<div class="tiny">5턴이 종료되었습니다.</div>`;
+  }
+
+  $('#createTab').onclick=()=>{$('#createTab').classList.add('active');$('#joinTab').classList.remove('active');$('#createForm').classList.remove('hidden');$('#joinForm').classList.add('hidden');setError('#landingError','');};
+  $('#joinTab').onclick=()=>{$('#joinTab').classList.add('active');$('#createTab').classList.remove('active');$('#joinForm').classList.remove('hidden');$('#createForm').classList.add('hidden');setError('#landingError','');};
+
+  $('#createBtn').onclick=async()=>{const name=$('#createName').value.trim()||'플레이어 1';const maxPlayers=Number($('#maxPlayers').value)||2;try{const s=await rpc('create_game_room',{p_name:name,p_max_players:maxPlayers});enterRoom(s,name);}catch(e){setError('#landingError',e.message);}};
+  $('#joinBtn').onclick=async()=>{const name=$('#joinName').value.trim()||'플레이어';const code=$('#roomCodeInput').value.trim().toUpperCase();try{const s=await rpc('join_game_room',{p_code:code,p_name:name});enterRoom(s,name);}catch(e){setError('#landingError',e.message);}};
+  $('#startBtn').onclick=async()=>{try{state=await rpc('start_game',{p_room_id:roomId});setError('#lobbyError','');render();}catch(e){setError('#lobbyError',e.message);}};
+  $('#deleteRoomBtn').onclick=async()=>{
+    if(!state || !isHost() || state.phase!=='lobby' || state.players.length!==1) return;
+    if(!confirm('아직 아무도 참가하지 않았습니다. 이 방을 삭제하고 처음 화면으로 돌아갈까요?')) return;
+    $('#deleteRoomBtn').disabled=true;
+    try{
+      const {error}=await sb.rpc('delete_empty_room',{p_room_id:roomId});
+      if(error) throw new Error(error.message||'방 삭제에 실패했습니다.');
+      returnToLanding();
+    }catch(e){
+      setError('#lobbyError',e.message);
+      $('#deleteRoomBtn').disabled=false;
+      await refreshState();
+    }
+  };
+  $('#submitPlanBtn').onclick=async()=>{setError('#planError','');try{state=await rpc('submit_move',{p_room_id:roomId,p_cells:[...picks],p_votes:[votes[0]||0,votes[1]||0]});if(me()?.submitted){picks=[];votes=[0,0];}render();}catch(e){setError('#planError',e.message);}};
+  $('#clearBtn').onclick=()=>{picks=[];votes=[0,0];renderGame();};
+  $('#restartBtn').onclick=async()=>{try{state=await rpc('restart_game',{p_room_id:roomId});render();}catch(e){alert(e.message);}};
+
+  async function copyText(text){try{await navigator.clipboard.writeText(text);return true;}catch{return false;}}
+  $('#copyCodeBtn').onclick=async()=>{if(state)await copyText(state.code);};
+  $('#copyInviteBtn').onclick=async()=>{if(!state)return;const u=new URL(location.href);u.searchParams.set('room',state.code);await copyText(u.toString());};
+  window.addEventListener('resize',()=>{if(state&&state.phase!=='lobby')renderBoard();});
+
+  async function autoRejoin(){
+    if(autoRejoinTried)return;autoRejoinTried=true;
+    const qRoom=(new URL(location.href).searchParams.get('room')||'').toUpperCase();const savedName=localStorage.getItem(nameKey);const savedId=localStorage.getItem(roomIdKey);const savedCode=(localStorage.getItem(roomCodeKey)||'').toUpperCase();
+    if(qRoom){
+      $('#joinTab').click();$('#roomCodeInput').value=qRoom;
+      if(savedName)$('#joinName').value=savedName;
+      if(savedName){try{const s=await rpc('join_game_room',{p_code:qRoom,p_name:savedName});enterRoom(s,savedName);return;}catch(e){setError('#landingError',e.message);}}
+      return;
+    }
+    if(savedId&&savedName){
+      try{const s=await rpc('get_room_state',{p_room_id:savedId});enterRoom(s,savedName);return;}catch{localStorage.removeItem(roomIdKey);localStorage.removeItem(roomCodeKey);}
+    }
+    if(savedCode)$('#roomCodeInput').value=savedCode;
+  }
+
+  initSupabase();
+})();
+</script>
+</body>
+</html>
