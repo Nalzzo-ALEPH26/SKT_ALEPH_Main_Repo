@@ -14,12 +14,13 @@ export function winningCells(cells:number[],size:number){
  }}return [...result];
 }
 export function wins(cells:number[],size:number){return winningCells(cells,size).length>0;}
-export function placementLimit(round:number,positions:number[],version=4){return round===1||positions.length===0?3:version>=4?6:5;}
-export function validPlacement(round:number,positions:number[],cells:number[],size:number,blocked:number[]=[],version=4){return cells.length<=placementLimit(round,positions,version)&&new Set(cells).size===cells.length&&cells.every(c=>Number.isInteger(c)&&c>=0&&c<size*size&&!blocked.includes(c))&&(positions.length===0||cells.some(c=>positions.includes(c)));}
+export function placementLimit(round:number,positions:number[],version=5){return round===1||positions.length===0?3:version>=4?6:5;}
+export function requiredAnchors(positions:number[],version=5){return Math.min(positions.length,version>=5?2:1);}
+export function validPlacement(round:number,positions:number[],cells:number[],size:number,blocked:number[]=[],version=5){return cells.length<=placementLimit(round,positions,version)&&new Set(cells).size===cells.length&&cells.every(c=>Number.isInteger(c)&&c>=0&&c<size*size&&!blocked.includes(c))&&cells.filter(c=>positions.includes(c)).length>=requiredAnchors(positions,version);}
 export function boardSizeForPlayers(count:number):number|null {if(!Number.isInteger(count)||count<2||count>6)return null;return count<=3?7:count===4?8:9;}
 export function forbidden(r:Room){return [...(r.blocked||[]),...(r.closed||[])];}
 export function initMatch(r:Room){
- r.rulesVersion=4;r.startCount=r.players.filter(p=>p.active).length;r.minArea=r.startCount<=3?5:r.startCount===4?6:7;
+ r.rulesVersion=5;r.startCount=r.players.filter(p=>p.active).length;r.minArea=r.startCount<=3?5:r.startCount===4?6:7;
  r.bounds={top:0,left:0,bottom:r.size-1,right:r.size-1};r.closed=[];r.matchId=crypto.randomUUID();r.resolvedRounds=0;r.lastReplay=undefined;
 }
 export function makeBomb(kind:Bomb['kind'],index:number,size:number):Bomb {
@@ -94,5 +95,5 @@ export function tick(r:Room,now:number){
 }
 export function view(r:Room,token:string,now:number){
  const me=r.players.find(p=>p.token===token);const {edgeBag,revealPositions,lastReplay,...publicRoom}=r;
- return {...publicRoom,stoneLimit:me?placementLimit(r.round,me.positions,r.rulesVersion||3):3,selectionSeconds:(r.rulesVersion||0)>=4?25:15,revealPositions:r.phase==='reveal'?revealPositions:undefined,now,nextBoardSize:r.phase==='lobby'?boardSizeForPlayers(r.players.filter(p=>p.active).length):null,me:me?.id,players:r.players.map(({token,draft,...p})=>({...p,...(p.id===me?.id?{draft}: {})}))};
+ return {...publicRoom,anchorMinimum:me?requiredAnchors(me.positions,r.rulesVersion||3):0,stoneLimit:me?placementLimit(r.round,me.positions,r.rulesVersion||3):3,selectionSeconds:(r.rulesVersion||0)>=4?25:15,revealPositions:r.phase==='reveal'?revealPositions:undefined,now,nextBoardSize:r.phase==='lobby'?boardSizeForPlayers(r.players.filter(p=>p.active).length):null,me:me?.id,players:r.players.map(({token,draft,...p})=>({...p,...(p.id===me?.id?{draft}: {})}))};
 }

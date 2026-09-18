@@ -4,7 +4,7 @@ const compile=s=>ts.transpileModule(s,{compilerOptions:{module:ts.ModuleKind.ES2
 const url=s=>'data:text/javascript;base64,'+Buffer.from(s).toString('base64');const gameURL=url(compile(fs.readFileSync('lib/game.ts','utf8')));
 const {validPlacement,placementLimit,wins,tick}=await import(gameURL);
 assert.equal(placementLimit(1,[]),3);assert.equal(placementLimit(4,[]),3);assert.equal(placementLimit(4,[2]),6);
-assert(!validPlacement(2,[0,1,2],[40,41,42,43,44],7));assert(validPlacement(2,[0,1,2],[2,3,4,5,6],7));assert(!validPlacement(2,[0],[0,0],7));assert(!validPlacement(4,[],[0,1,2,3],7));assert(!validPlacement(2,[0],[],7));
+assert(!validPlacement(2,[0,1,2],[40,41,42,43,44],7));assert(!validPlacement(2,[0,1,2],[2,3,4,5,6],7));assert(validPlacement(2,[0,1,2],[1,2,3,4,5,6],7));assert(!validPlacement(2,[0],[0,0],7));assert(!validPlacement(4,[],[0,1,2,3],7));assert(!validPlacement(2,[0],[],7));
 for(const cells of [[0,1,2,3,4],[0,7,14,21,28],[0,8,16,24,32],[4,10,16,22,28]])assert(wins(cells,7));assert(!wins([5,6,7,8,9],7));
 const sql=new DatabaseSync(':memory:');sql.exec(fs.readFileSync('drizzle/0000_deep_karnak.sql','utf8'));
 globalThis.testEnv={DB:testDB(sql)};

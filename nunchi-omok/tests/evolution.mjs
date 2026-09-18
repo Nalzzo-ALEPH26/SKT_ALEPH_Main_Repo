@@ -4,7 +4,7 @@ const compile=s=>ts.transpileModule(s,{compilerOptions:{module:ts.ModuleKind.ES2
 const url=s=>'data:text/javascript;base64,'+Buffer.from(s).toString('base64');const gameURL=url(compile(fs.readFileSync('lib/game.ts','utf8')));
 const {validPlacement,placementLimit,wins,tick,initMatch,startRound,pickBomb,makeBomb,forbidden,view,winningCells}=await import(gameURL);
 assert.equal(placementLimit(1,[]),3);assert.equal(placementLimit(4,[]),3);assert.equal(placementLimit(4,[2]),6);
-assert(!validPlacement(2,[0,1,2],[40,41,42,43,44],7));assert(validPlacement(2,[0,1,2],[2,3,4,5,6],7));assert(!validPlacement(2,[0],[0,0],7));assert(!validPlacement(4,[],[0,1,2,3],7));assert(!validPlacement(2,[0],[],7));
+assert(!validPlacement(2,[0,1,2],[40,41,42,43,44],7));assert(!validPlacement(2,[0,1,2],[2,3,4,5,6],7));assert(validPlacement(2,[0,1,2],[1,2,3,4,5,6],7));assert(!validPlacement(2,[0],[0,0],7));assert(!validPlacement(4,[],[0,1,2,3],7));assert(!validPlacement(2,[0],[],7));
 for(const cells of [[0,1,2,3,4],[0,7,14,21,28],[0,8,16,24,32],[4,10,16,22,28]])assert(wins(cells,7));assert(!wins([5,6,7,8,9],7));
 const sql=new DatabaseSync(':memory:');sql.exec(fs.readFileSync('drizzle/0000_deep_karnak.sql','utf8'));
 globalThis.testEnv={DB:testDB(sql)};
@@ -45,7 +45,7 @@ assert.deepEqual(replayStage(r.lastReplay,0)['0'],[0]);assert.deepEqual(replaySt
 const collisionFrame={...r.lastReplay,collisions:[1],placed:{a:[0,1,2],b:[1,20]}};assert.deepEqual(replayStage(collisionFrame,2),{a:[0,2],b:[20]});
 // API + D1 transaction: failed archive insertion rolls back room resolution.
 const a=await call('create',{}, {name:'A'}),A={code:a.room.code,token:a.token};const b=await call('join',{}, {code:A.code,name:'B'}),B={code:A.code,token:b.token};
-await call('ready',A);await call('ready',B);let out=await call('start',A);assert.equal(out.room.rulesVersion,4);assert.equal(out.room.selectionSeconds,25);const matchId=out.room.matchId;
+await call('ready',A);await call('ready',B);let out=await call('start',A);assert.equal(out.room.rulesVersion,5);assert.equal(out.room.selectionSeconds,25);const matchId=out.room.matchId;
 assert.equal((await call('replay',A,{matchId})).status,409);
 await call('draft',A,{round:1,cells:[0,1,2],submit:true});
 sql.exec("CREATE TRIGGER fail_replay BEFORE INSERT ON game_replays BEGIN SELECT RAISE(ABORT,'test rollback'); END");
