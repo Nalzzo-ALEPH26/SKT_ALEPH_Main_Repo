@@ -13,4 +13,5 @@ reply(pending[0],[0]);await settle();assert.deepEqual(h.local.current.cells,[0,1
 h.choose(2);h.acceptRoom({...base,now:Date.now()});assert.deepEqual(h.local.current.cells,[0,1,2]);reply(pending[1],[0,1]);await settle();assert.deepEqual(pending[2].body.cells,[0,1,2]);reply(pending[2],[0,1,2]);await settle();assert.equal(h.local.current.seq,h.local.current.acked);
 h.queueDraft(h.local.current.cells,true);assert(h.local.current.locked);reply(pending[3],[0,1,2],true);await settle();assert(h.local.current.locked);
 h.acceptRoom({...base,round:2,players:[{...base.players[0],positions:[0],draft:[0]}]});h.choose(0);assert.deepEqual(h.local.current.cells,[0]);
+h.acceptRoom({...base,round:3,blocked:[4],players:[{...base.players[0],positions:[],draft:[]}]});h.choose(4);assert.deepEqual(h.local.current.cells,[]);
 console.log('PASS client: instant consecutive clicks during pending save, latest-write coalescing, stale-response protection, submission lock, anchor guard');
