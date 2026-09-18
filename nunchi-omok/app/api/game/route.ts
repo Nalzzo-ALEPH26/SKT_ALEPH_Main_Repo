@@ -1,5 +1,5 @@
 import { env } from 'cloudflare:workers';
-import { Room,Player,startRound,tick,view,placementLimit,validPlacement } from '@/lib/game';
+import { Room,Player,startRound,tick,view,placementLimit,validPlacement,boardSizeForPlayers } from '@/lib/game';
 export const dynamic='force-dynamic';
 const response=(d:unknown,status=200)=>Response.json(d,{status,headers:{'Cache-Control':'no-store'}});
 function player(name:string,seat:number):Player{return {id:crypto.randomUUID(),token:crypto.randomUUID(),name:name.trim().slice(0,16)||'플레이어',seat,ready:false,submitted:false,positions:[],draft:[],seen:Date.now(),missed:0,active:true};}
@@ -7,10 +7,12 @@ export async function POST(req:Request){try{const b=await req.json();const db=en
 const code=String(b.code||'').toUpperCase();for(let attempt=0;attempt<12;attempt++){const row=await db.prepare('SELECT state,version FROM rooms WHERE code=?').bind(code).first<{state:string;version:number}>();if(!row)return response({error:'방 코드를 확인해주세요.'},404);const r:Room=JSON.parse(row.state);let p=r.players.find(p=>p.token===b.token);if(b.action!=='join'&&!p)return response({error:'참가 정보가 없습니다. 방에 다시 입장해주세요.'},401);if(p)p.seen=now;tick(r,now);let token=b.token;
 if(b.action==='join'&&!p){if(r.players.length>=6)return response({error:'방이 가득 찼습니다.'},409);const seat=[0,1,2,3,4,5].find(n=>!r.players.some(x=>x.seat===n))!;p=player(String(b.name||''),seat);p.active=r.phase==='lobby';r.players.push(p);token=p.token;}
 if(b.action==='ready'&&p&&r.phase==='lobby')p.ready=!p.ready;
-if(b.action==='start'){if(p?.id!==r.host||r.phase!=='lobby'||r.players.length<2||!r.players.every(x=>x.ready))return response({error:'2명 이상 모두 준비를 완료해야 시작할 수 있어요.'},409);r.size=r.players.length===2?7:r.players.length<=4?8:9;r.round=0;r.reason=undefined;r.winners=[];for(const x of r.players){x.positions=[];x.draft=[];x.active=true;x.missed=0;}startRound(r,now);}
+if(b.action==='start'){if(p?.id!==r.host||r.phase!=='lobby'||r.players.length<2||!r.players.every(x=>x.ready))return response({error:'2명 이상 모두 준비를 완료해야 시작할 수 있어요.'},409);r.size=boardSizeForPlayers(r.players.filter(x=>x.active).length)!;r.round=0;r.reason=undefined;r.winners=[];for(const x of r.players){x.positions=[];x.draft=[];x.active=true;x.missed=0;}startRound(r,now);}
 if(b.action==='draft'&&p){if(r.phase!=='select'||b.round!==r.round||!p.active)return response({room:view(r,token,now)});const cells=b.cells;if(!Array.isArray(cells)||!validPlacement(r.round,p.positions,cells,r.size))return response({error:p.positions.length?'기존 돌을 최소 1개 유지해주세요.':'첫 배치와 전멸 후 재시작은 최대 3개입니다.'},400);if(b.submit&&cells.length!==placementLimit(r.round,p.positions))return response({error:'돌을 모두 선택해주세요.'},400);p.draft=cells;p.submitted=Boolean(b.submit);tick(r,now);}
 if(b.action==='rematch'&&p?.id===r.host&&r.phase==='finished'){r.phase='lobby';r.round=0;r.winners=[];r.collisions=[];r.reason=undefined;r.players=r.players.filter(x=>now-x.seen<30000);for(const x of r.players){x.ready=false;x.positions=[];x.draft=[];x.active=true;}if(!r.players.some(x=>x.id===r.host))r.host=r.players[0]?.id;}
 if(b.action==='leave'&&p){r.players=r.players.filter(x=>x.id!==p!.id);if(r.host===p.id)r.host=r.players[0]?.id||'';if(r.phase!=='lobby'&&r.players.filter(x=>x.active).length<2){r.winners=r.players.filter(x=>x.active).map(x=>x.id);r.reason='다른 참가자가 퇴장하여 기권승';r.phase='finished';}}
 if(!r.players.some(x=>x.id===r.host&&now-x.seen<30000)){r.host=r.players.find(x=>now-x.seen<30000)?.id||r.host;}
+// Never resize an ongoing match: departing players and spectators do not change its coordinates.
+if(r.phase==='lobby')r.size=boardSizeForPlayers(r.players.filter(x=>x.active).length)??7;
 const result=await db.prepare('UPDATE rooms SET state=?,version=version+1 WHERE code=? AND version=?').bind(JSON.stringify(r),code,row.version).run();if(result.meta.changes)return response({room:view(r,token,now),...(b.action==='join'?{token}: {})});}return response({error:'접속이 몰리고 있어요. 다시 시도해주세요.'},503);
 }catch(e){console.error(e);return response({error:'연결이 원활하지 않습니다. 다시 시도해주세요.'},503);}}
