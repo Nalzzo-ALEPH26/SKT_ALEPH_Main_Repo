@@ -92,6 +92,7 @@ export function startGame(room: Room, rng: () => number = Math.random, now = Dat
   room.conversionClaimedBy = null;
   room.players.forEach((player) => {
     player.ready = false;
+    player.conversionUsed = false;
   });
 
   // Keep now in the signature so deterministic callers can use one clock API for all transitions.
@@ -170,14 +171,17 @@ export function readyPlayer(
   const player = getPlayer(room, playerId);
   if (player.ready) throw new Error('ALREADY_READY');
 
-  // 전환권은 대상을 고른 순간이 아니라 LOCK을 확정한 순간 선착순으로 획득한다.
+  // 전환은 게임당 각 플레이어가 성공적으로 1회만 사용할 수 있다.
+  // 같은 라운드에서는 먼저 LOCK한 1명만 성공하며, 선점 실패자는 기회를 소모하지 않는다.
   if (targetPlayerId) {
+    if (player.conversionUsed) throw new Error('CONVERSION_ALREADY_USED');
     if (targetPlayerId === playerId) throw new Error('CANNOT_TARGET_SELF');
     getPlayer(room, targetPlayerId);
     if (room.conversionClaimedBy && room.conversionClaimedBy !== playerId) {
       throw new Error('CONVERSION_ALREADY_CLAIMED');
     }
     room.conversionClaimedBy = playerId;
+    player.conversionUsed = true;
     room.conversionTargets[playerId] = targetPlayerId;
     room.selections[playerId] = [];
   } else {
@@ -296,6 +300,7 @@ function createPlayer(id: PlayerId, nickname: string, colorIndex: number): Playe
     colorIndex,
     connected: true,
     ready: false,
+    conversionUsed: false,
   };
 }
 

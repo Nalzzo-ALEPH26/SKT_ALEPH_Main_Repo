@@ -21,6 +21,7 @@ export interface Player {
   colorIndex: number;
   connected: boolean;
   ready: boolean;
+  conversionUsed: boolean;
 }
 
 export interface Room {

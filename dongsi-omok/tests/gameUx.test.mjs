@@ -5,6 +5,12 @@ import { readFile } from 'node:fs/promises';
 const appSource = await readFile(new URL('../client/src/App.tsx', import.meta.url), 'utf8');
 const styles = await readFile(new URL('../client/src/styles.css', import.meta.url), 'utf8');
 
+const gameplayStart = appSource.indexOf('className="shell game-shell cockpit-grid gameplay-only"');
+const gameplaySource = appSource.slice(gameplayStart);
+const lobbyStart = appSource.indexOf("if (room.phase === 'LOBBY')");
+const lobbyEnd = gameplayStart;
+const lobbySource = appSource.slice(lobbyStart, lobbyEnd);
+
 test('finished game uses a persistent winner modal', () => {
   assert.match(appSource, /game-over-modal/);
   assert.match(appSource, /GAME OVER/);
@@ -12,11 +18,17 @@ test('finished game uses a persistent winner modal', () => {
   assert.match(styles, /\.game-over-modal/);
 });
 
-test('planning controls keep the lock action above the board and the timer in the header', () => {
-  assert.match(appSource, /round-control-bar/);
-  assert.match(appSource, /panel-header-actions/);
-  assert.match(appSource, /round-timer/);
-  assert.match(appSource, /LOCK COORDINATES/);
+test('planning controls keep lock and the single timer above the board', () => {
+  assert.ok(gameplayStart > -1);
+  const planningIndex = gameplaySource.indexOf('round-control-bar round-control-bar--planning');
+  const timerIndex = gameplaySource.indexOf('compact-round-timer', planningIndex);
+  const lockIndex = gameplaySource.indexOf('LOCK COORDINATES', planningIndex);
+  const boardIndex = gameplaySource.indexOf('<Board', planningIndex);
+
+  assert.ok(planningIndex > -1);
+  assert.ok(timerIndex > planningIndex);
+  assert.ok(lockIndex > timerIndex);
+  assert.ok(boardIndex > lockIndex);
   assert.match(styles, /\.round-control-bar/);
   assert.match(styles, /\.round-timer/);
 });
@@ -27,14 +39,15 @@ test('initial placement is selected locally and submitted as one three-stone bat
   assert.doesNotMatch(appSource, /emitAck\('initial:place',/);
 });
 
-test('placement controls are rendered at the top of the board panel before status and board', () => {
-  const headerIndex = appSource.indexOf('className="panel-header"');
-  const controlsIndex = appSource.indexOf('round-control-bar', headerIndex);
-  const statusIndex = appSource.indexOf('className="status-line"', headerIndex);
-  const boardIndex = appSource.indexOf('<Board', headerIndex);
-  assert.ok(headerIndex >= 0 && controlsIndex > headerIndex);
-  assert.ok(controlsIndex < statusIndex, 'round controls should appear before the status line');
-  assert.ok(controlsIndex < boardIndex, 'round controls should appear before the board');
+test('opening and planning controls are rendered before the board without the removed decorative header', () => {
+  const openingIndex = gameplaySource.indexOf('OPENING TURN');
+  const planningIndex = gameplaySource.indexOf('round-control-bar round-control-bar--planning');
+  const boardIndex = gameplaySource.indexOf('<Board');
+
+  assert.ok(openingIndex > -1 && openingIndex < boardIndex);
+  assert.ok(planningIndex > -1 && planningIndex < boardIndex);
+  assert.doesNotMatch(gameplaySource, /panel-header-actions/);
+  assert.doesNotMatch(gameplaySource, /className="status-line"/);
 });
 
 test('game over modal can be dismissed while a persistent result summary remains available', () => {
@@ -45,22 +58,15 @@ test('game over modal can be dismissed while a persistent result summary remains
   assert.match(styles, /\.game-result-summary/);
 });
 
-test('there is only one live round timer and it occupies the board header action slot', () => {
-  const timerMatches = appSource.match(/<div className=\{`round-timer/g) ?? [];
+test('there is only one live round timer in the gameplay planning bar', () => {
+  const timerMatches = appSource.match(/compact-round-timer/g) ?? [];
   assert.equal(timerMatches.length, 1, 'only one round timer should be rendered');
-  const panelHeaderIndex = appSource.indexOf('className="panel-header"');
-  const headerActionsIndex = appSource.indexOf('panel-header-actions', panelHeaderIndex);
-  const timerIndex = appSource.indexOf('`round-timer ${', panelHeaderIndex);
-  const boardIndex = appSource.indexOf('<Board', panelHeaderIndex);
-  assert.ok(headerActionsIndex > panelHeaderIndex, 'header actions should exist in board panel header');
-  assert.ok(timerIndex > headerActionsIndex && timerIndex < boardIndex, 'timer should live in the board header action area');
-  assert.doesNotMatch(appSource, /phase-box[\s\S]{0,250}secondsLeft/);
+  assert.match(gameplaySource, /TURN TIMER/);
+  assert.doesNotMatch(gameplaySource, /panel-header-actions/);
 });
 
-test('host start button uses the same upper-right board header action area as the timer', () => {
-  const panelHeaderIndex = appSource.indexOf('className="panel-header"');
-  const headerActionsIndex = appSource.indexOf('panel-header-actions', panelHeaderIndex);
-  const startButtonIndex = appSource.indexOf('INITIATE MISSION', headerActionsIndex);
-  const boardIndex = appSource.indexOf('<Board', panelHeaderIndex);
-  assert.ok(startButtonIndex > headerActionsIndex && startButtonIndex < boardIndex);
+test('game start stays in the dedicated lobby and the lobby does not render the board', () => {
+  assert.ok(lobbyStart > -1);
+  assert.match(lobbySource, /게임 시작/);
+  assert.doesNotMatch(lobbySource, /<Board/);
 });

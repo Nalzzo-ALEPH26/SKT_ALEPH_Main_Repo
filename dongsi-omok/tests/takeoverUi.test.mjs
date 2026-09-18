@@ -9,14 +9,16 @@ const styles = await readFile(new URL('../client/src/styles.css', import.meta.ur
 test('conversion target selection is local and the claim happens with LOCK', () => {
   assert.doesNotMatch(appSource, /round:set-conversion-target/);
   assert.match(appSource, /round:ready'[\s\S]*targetPlayerId: conversionTargetId \|\| null/);
-  assert.match(appSource, /LOCK 선착순 1명/);
+  assert.match(appSource, /먼저 LOCK한 1명만 성공/);
   assert.match(appSource, /CONVERSION_ALREADY_CLAIMED/);
 });
 
-test('planning UI explains two random converted stones and disables conversion after claim', () => {
+test('planning UI explains the one-use takeover and temporary preemption notice', () => {
   assert.match(appSource, /2 RANDOM/);
   assert.match(appSource, /선택 중 최대 2개를 내 돌로 전환/);
-  assert.match(appSource, /!room\.conversionAvailable/);
+  assert.match(appSource, /conversionUsed/);
+  assert.match(appSource, /takeoverNotice/);
+  assert.match(appSource, /다른 플레이어가 먼저 전환권을 선점했습니다/);
 });
 
 test('converted coordinates are passed to the board and visibly marked', () => {

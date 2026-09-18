@@ -22,7 +22,8 @@ const ERROR_TEXT: Record<string, string> = {
   HOST_ONLY: '방장만 실행할 수 있습니다.',
   CANNOT_KICK_SELF: '방장은 자기 자신을 강퇴할 수 없습니다.',
   CANNOT_TARGET_SELF: '자기 자신은 전환 대상으로 선택할 수 없습니다.',
-  CONVERSION_ALREADY_CLAIMED: '이번 라운드의 상대 돌 전환권은 다른 플레이어가 먼저 LOCK했습니다.',
+  CONVERSION_ALREADY_CLAIMED: '다른 플레이어가 먼저 전환권을 선점했습니다.',
+  CONVERSION_ALREADY_USED: '이번 게임에서 상대 돌 전환 기회를 이미 사용했습니다.',
   NOT_YOUR_TURN: '지금은 내 차례가 아닙니다.',
   CELL_OCCUPIED: '이미 돌이 놓인 칸입니다.',
   SELECTION_LIMIT: '한 라운드에는 최대 3곳까지 선택할 수 있습니다.',
@@ -43,6 +44,7 @@ export default function App() {
   const [now, setNow] = useState(Date.now());
   const [gameOverOpen, setGameOverOpen] = useState(false);
   const [conversionTargetId, setConversionTargetId] = useState('');
+  const [takeoverNotice, setTakeoverNotice] = useState('');
 
   useEffect(() => {
     const onState = (nextRoom: PublicRoom) => setRoom(nextRoom);
@@ -126,9 +128,15 @@ export default function App() {
     [room, session?.playerId],
   );
   useEffect(() => {
-    if (room?.phase !== 'PLANNING' || room.conversionAvailable || me?.ready) return;
+    if (!takeoverNotice) return;
+    const timer = window.setTimeout(() => setTakeoverNotice(''), 2000);
+    return () => window.clearTimeout(timer);
+  }, [takeoverNotice]);
+
+  useEffect(() => {
+    if (!me?.conversionUsed && !me?.ready) return;
     setConversionTargetId('');
-  }, [room?.phase, room?.conversionAvailable, me?.ready]);
+  }, [me?.conversionUsed, me?.ready]);
   const isHost = Boolean(room && session && room.hostId === session.playerId);
   const currentInitialId = room?.initialOrder[room.initialTurnIndex] ?? null;
   const isMyInitialTurn = room?.phase === 'INITIAL_PLACEMENT' && currentInitialId === session?.playerId;
@@ -143,7 +151,12 @@ export default function App() {
       await task();
     } catch (cause) {
       const code = cause instanceof Error ? cause.message : 'UNKNOWN_ERROR';
-      setError(ERROR_TEXT[code] ?? code);
+      if (code === 'CONVERSION_ALREADY_CLAIMED') {
+        setConversionTargetId('');
+        setTakeoverNotice('다른 플레이어가 먼저 전환권을 선점했습니다. 다음 라운드에 다시 시도할 수 있습니다.');
+      } else {
+        setError(ERROR_TEXT[code] ?? code);
+      }
     } finally {
       setBusy(false);
     }
@@ -237,6 +250,19 @@ export default function App() {
 
   const chooseConversionTarget = (targetPlayerId: string) => {
     setError('');
+
+    if (targetPlayerId && me?.conversionUsed) {
+      setConversionTargetId('');
+      setTakeoverNotice('이번 게임의 상대 돌 전환 기회는 이미 사용했습니다.');
+      return;
+    }
+
+    if (targetPlayerId && room && !room.conversionAvailable) {
+      setConversionTargetId('');
+      setTakeoverNotice('다른 플레이어가 먼저 전환권을 선점했습니다. 다음 라운드에 다시 시도할 수 있습니다.');
+      return;
+    }
+
     setConversionTargetId(targetPlayerId);
     if (!targetPlayerId) return;
 
@@ -503,7 +529,7 @@ export default function App() {
                   <span>상대 돌 전환</span>
                   <select
                     value={conversionTargetId}
-                    disabled={busy || Boolean(me?.ready) || !room.conversionAvailable}
+                    disabled={busy || Boolean(me?.ready) || Boolean(me?.conversionUsed)}
                     onChange={(event) => chooseConversionTarget(event.target.value)}
                   >
                     <option value="">사용 안 함</option>
@@ -515,14 +541,22 @@ export default function App() {
                   </select>
                 </label>
                 <small>
-                  {room.conversionAvailable
-                    ? '전환은 LOCK 선착순 1명만 사용 · 직접 3수를 포기하고 상대 선택 최대 2개를 가져옵니다.'
-                    : '이번 라운드의 전환권은 이미 사용됨 · 직접 3수만 가능합니다.'}
+                  {me?.conversionUsed
+                    ? '이번 게임의 전환 기회를 이미 사용했습니다.'
+                    : room.conversionAvailable
+                      ? '게임당 1회 사용 · 같은 라운드에서는 먼저 LOCK한 1명만 성공 · 직접 3수를 포기합니다.'
+                      : '이번 라운드는 다른 플레이어가 먼저 선점했습니다. 다음 라운드에 다시 시도할 수 있습니다.'}
                 </small>
               </div>
             </div>
           )}
           {error && <p className="error gameplay-error">{error}</p>}
+          {takeoverNotice && (
+            <div className="takeover-notice" role="status" aria-live="polite">
+              <strong>TAKEOVER BLOCKED</strong>
+              <span>{takeoverNotice}</span>
+            </div>
+          )}
 
           {room.phase === 'FINISHED' && (
             <div className="game-result-summary">

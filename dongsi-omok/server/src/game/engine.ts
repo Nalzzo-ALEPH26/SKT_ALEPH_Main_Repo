@@ -1,6 +1,6 @@
 import type { Board, PlayerId, Position, RoundResolution } from './types.js';
 
-export const BOARD_SIZE = 15;
+export const BOARD_SIZE = 14;
 
 export function createEmptyBoard(): Board {
   return Array.from({ length: BOARD_SIZE }, () => Array.from({ length: BOARD_SIZE }, () => null));

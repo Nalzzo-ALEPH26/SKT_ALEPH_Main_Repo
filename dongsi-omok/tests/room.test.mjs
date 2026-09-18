@@ -163,3 +163,43 @@ test('opening batch rejects partial placement without mutating the board', () =>
   assert.equal(room.board[0][0], null);
   assert.equal(room.board[0][1], null);
 });
+
+
+function makePlanningRoom(playerIds) {
+  const [host, ...guests] = playerIds;
+  const room = createRoom('FAIR', host, host.toUpperCase());
+  for (const guest of guests) joinRoom(room, guest, guest.toUpperCase());
+  startGame(room, () => 0, 1_000);
+  room.initialOrder.forEach((playerId, index) => {
+    const row = index * 2;
+    placeInitialStones(room, playerId, [pos(row, 0), pos(row, 1), pos(row, 2)], 2_000 + index);
+  });
+  return room;
+}
+
+test('conversion chance is successful once per player per game', () => {
+  const room = makePlanningRoom(['p1', 'p2']);
+
+  readyPlayer(room, 'p1', 'p2');
+  assert.equal(room.players.find((player) => player.id === 'p1').conversionUsed, true);
+  readyPlayer(room, 'p2');
+  resolveRound(room, 5_000, () => 0);
+
+  assert.equal(room.phase, 'PLANNING');
+  assert.throws(() => readyPlayer(room, 'p1', 'p2'), /CONVERSION_ALREADY_USED/);
+});
+
+test('losing the round takeover race does not consume the later player chance', () => {
+  const room = makePlanningRoom(['p1', 'p2', 'p3']);
+
+  readyPlayer(room, 'p1', 'p2');
+  assert.throws(() => readyPlayer(room, 'p3', 'p2'), /CONVERSION_ALREADY_CLAIMED/);
+  assert.equal(room.players.find((player) => player.id === 'p3').conversionUsed, false);
+
+  readyPlayer(room, 'p2');
+  readyPlayer(room, 'p3');
+  resolveRound(room, 5_000, () => 0);
+
+  readyPlayer(room, 'p3', 'p2');
+  assert.equal(room.players.find((player) => player.id === 'p3').conversionUsed, true);
+});

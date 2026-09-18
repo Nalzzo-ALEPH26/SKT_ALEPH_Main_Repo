@@ -9,6 +9,7 @@ export interface PublicPlayer {
   colorIndex: number;
   connected: boolean;
   ready: boolean;
+  conversionUsed: boolean;
 }
 
 export type RoomPhase = 'LOBBY' | 'INITIAL_PLACEMENT' | 'PLANNING' | 'RESOLVING' | 'FINISHED';
