@@ -438,8 +438,8 @@ button:not(:disabled):hover { border-color: rgba(103, 232, 249, .58); background
   text-transform: uppercase;
 }
 .mission-heading h1 span {
-  color: #67e8f9;
-  text-shadow: 0 0 30px rgba(103, 232, 249, .18);
+  color: #ccff00;
+  text-shadow: 0 0 30px rgba(204, 255, 0, .28);
 }
 .mission-heading .lead {
   max-width: 700px;
