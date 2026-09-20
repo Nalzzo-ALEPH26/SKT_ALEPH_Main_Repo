@@ -1,5 +1,7 @@
 export type PlayerId = string;
 
+export type EdgeSide = 'TOP' | 'RIGHT' | 'BOTTOM' | 'LEFT';
+
 export interface Position {
   row: number;
   col: number;
@@ -22,6 +24,7 @@ export interface Player {
   connected: boolean;
   ready: boolean;
   conversionUsed: boolean;
+  edgeSide: EdgeSide | null;
 }
 
 export interface Room {
@@ -52,6 +55,11 @@ export interface ConvertedStone {
   position: Position;
 }
 
+export interface EdgeRemovedStone {
+  playerId: PlayerId;
+  position: Position;
+}
+
 export interface RoundResolution {
   board: Board;
   collisions: Position[];
@@ -59,4 +67,6 @@ export interface RoundResolution {
   revealedSelections: Record<PlayerId, Position[]>;
   winners: PlayerId[];
   converted?: ConvertedStone[];
+  edgeRemoved?: EdgeRemovedStone[];
+  invalidFivePlayers?: PlayerId[];
 }

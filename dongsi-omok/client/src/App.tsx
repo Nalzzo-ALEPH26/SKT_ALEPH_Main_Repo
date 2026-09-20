@@ -45,6 +45,7 @@ export default function App() {
   const [gameOverOpen, setGameOverOpen] = useState(false);
   const [conversionTargetId, setConversionTargetId] = useState('');
   const [takeoverNotice, setTakeoverNotice] = useState('');
+  const [edgeRuleNotice, setEdgeRuleNotice] = useState('');
 
   useEffect(() => {
     const onState = (nextRoom: PublicRoom) => setRoom(nextRoom);
@@ -127,11 +128,29 @@ export default function App() {
     () => room?.players.find((player) => player.id === session?.playerId) ?? null,
     [room, session?.playerId],
   );
+  const myEdgeStoneCount = room && me?.edgeSide ? countEdgeStones(room, me.id, me.edgeSide) : 0;
   useEffect(() => {
     if (!takeoverNotice) return;
     const timer = window.setTimeout(() => setTakeoverNotice(''), 2000);
     return () => window.clearTimeout(timer);
   }, [takeoverNotice]);
+
+  useEffect(() => {
+    if (!edgeRuleNotice) return;
+    const timer = window.setTimeout(() => setEdgeRuleNotice(''), 2600);
+    return () => window.clearTimeout(timer);
+  }, [edgeRuleNotice]);
+
+  useEffect(() => {
+    if (!resolution || !session?.playerId) return;
+    const notices: string[] = [];
+    const removedMine = resolution.edgeRemoved?.filter((item) => item.playerId === session.playerId).length ?? 0;
+    if (removedMine > 0) notices.push(`가장자리 돌 ${removedMine}개가 양옆에 끼여 제거되었습니다.`);
+    if (resolution.invalidFivePlayers?.includes(session.playerId)) {
+      notices.push('5목은 완성됐지만 영역 조건이 부족해 승리로 인정되지 않습니다. 조건을 갖춘 뒤 새로운 5목이 필요합니다.');
+    }
+    if (notices.length > 0) setEdgeRuleNotice(notices.join(' '));
+  }, [resolution, session?.playerId]);
 
   useEffect(() => {
     if (!me?.conversionUsed && !me?.ready) return;
@@ -368,7 +387,7 @@ export default function App() {
           {error && <p className="error console-error">{error}</p>}
 
           <div className="telemetry-grid">
-            <div><small>GRID</small><strong>15 × 15</strong></div>
+            <div><small>GRID</small><strong>14 × 14</strong></div>
             <div><small>OPENING</small><strong>3 STONES</strong></div>
             <div><small>ROUND</small><strong>15 SEC</strong></div>
             <div><small>INPUT</small><strong>MAX 3</strong></div>
@@ -496,6 +515,9 @@ export default function App() {
                       ? `${playerName(room, conversionTargetId)}의 선택 중 최대 2개를 내 돌로 전환`
                       : `최대 ${MAX_SELECTIONS}곳 · 다시 누르면 취소`}
                 </span>
+                <span className={`edge-progress ${myEdgeStoneCount >= 2 ? 'edge-progress--ready' : ''}`}>
+                  EDGE {edgeLabel(me?.edgeSide ?? null)} · {Math.min(myEdgeStoneCount, 2)}/2
+                </span>
               </div>
               <div className={`round-timer compact-round-timer ${secondsLeft !== null && secondsLeft <= 5 ? 'round-timer--urgent' : ''}`} aria-live="polite">
                 <small>TURN TIMER</small>
@@ -557,6 +579,12 @@ export default function App() {
               <span>{takeoverNotice}</span>
             </div>
           )}
+          {edgeRuleNotice && (
+            <div className="edge-rule-notice" role="status" aria-live="polite">
+              <strong>EDGE RULE</strong>
+              <span>{edgeRuleNotice}</span>
+            </div>
+          )}
 
           {room.phase === 'FINISHED' && (
             <div className="game-result-summary">
@@ -606,6 +634,7 @@ export default function App() {
           <span>
             충돌 {resolution.collisions.length}곳 · 착수 성공 {resolution.placed.length}개
             {(resolution.converted?.length ?? 0) > 0 ? ` · 돌 전환 ${resolution.converted?.length ?? 0}개` : ''}
+            {(resolution.edgeRemoved?.length ?? 0) > 0 ? ` · 가장자리 제거 ${resolution.edgeRemoved?.length ?? 0}개` : ''}
           </span>
         </div>
       )}
@@ -624,7 +653,7 @@ export default function App() {
             <p className="game-over-kicker">GAME OVER</p>
             <h2 id="game-over-title">{winnerNames || '승자 확인 중'}</h2>
             <strong className="winner-label">{room.winners.length > 1 ? '공동 승리' : '승리'}</strong>
-            <p>오목이 완성되어 게임이 종료되었습니다.</p>
+            <p>지정 가장자리에 돌 2개 이상을 유지한 상태에서 새로운 오목이 완성되어 게임이 종료되었습니다.</p>
             {isHost ? (
               <button
                 className="primary game-over-action"
@@ -643,6 +672,29 @@ export default function App() {
       )}
     </main>
   );
+}
+
+
+function edgeLabel(side: PublicRoom['players'][number]['edgeSide']): string {
+  return ({ TOP: 'TOP', RIGHT: 'RIGHT', BOTTOM: 'BOTTOM', LEFT: 'LEFT' } as const)[side ?? ''] ?? 'UNASSIGNED';
+}
+
+function countEdgeStones(
+  room: PublicRoom,
+  playerId: string,
+  side: PublicRoom['players'][number]['edgeSide'],
+): number {
+  if (!side) return 0;
+  const last = room.board.length - 1;
+  let count = 0;
+  if (side === 'TOP' || side === 'BOTTOM') {
+    const row = side === 'TOP' ? 0 : last;
+    for (let col = 1; col < last; col += 1) if (room.board[row][col] === playerId) count += 1;
+  } else {
+    const col = side === 'LEFT' ? 0 : last;
+    for (let row = 1; row < last; row += 1) if (room.board[row][col] === playerId) count += 1;
+  }
+  return count;
 }
 
 function playerName(room: PublicRoom, playerId: string | null): string {

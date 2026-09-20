@@ -1,9 +1,19 @@
 import type { Board, PlayerId, Position, RoundResolution } from './types.js';
 
 export const BOARD_SIZE = 14;
+export const BLOCKER_ID = '__BLACK_CORNER__';
 
 export function createEmptyBoard(): Board {
-  return Array.from({ length: BOARD_SIZE }, () => Array.from({ length: BOARD_SIZE }, () => null));
+  const board: Board = Array.from(
+    { length: BOARD_SIZE },
+    () => Array.from({ length: BOARD_SIZE }, () => null),
+  );
+  const last = BOARD_SIZE - 1;
+  board[0][0] = BLOCKER_ID;
+  board[0][last] = BLOCKER_ID;
+  board[last][0] = BLOCKER_ID;
+  board[last][last] = BLOCKER_ID;
+  return board;
 }
 
 export function isInBounds(position: Position): boolean {
@@ -97,48 +107,63 @@ const DIRECTIONS: ReadonlyArray<readonly [number, number]> = [
   [1, -1],
 ];
 
-export function getWinners(board: Board): PlayerId[] {
-  const winners = new Set<PlayerId>();
+export function getWinningLineKeys(board: Board, playerId: PlayerId): string[] {
+  if (!playerId || playerId === BLOCKER_ID) return [];
 
-  for (let row = 0; row < BOARD_SIZE; row += 1) {
-    for (let col = 0; col < BOARD_SIZE; col += 1) {
-      const playerId = board[row][col];
-      if (!playerId || winners.has(playerId)) continue;
+  const size = board.length;
+  const lines = new Set<string>();
+
+  for (let row = 0; row < size; row += 1) {
+    for (let col = 0; col < size; col += 1) {
+      if (board[row][col] !== playerId) continue;
 
       for (const [dr, dc] of DIRECTIONS) {
         const previousRow = row - dr;
         const previousCol = col - dc;
         if (
           previousRow >= 0 &&
-          previousRow < BOARD_SIZE &&
+          previousRow < size &&
           previousCol >= 0 &&
-          previousCol < BOARD_SIZE &&
+          previousCol < size &&
           board[previousRow][previousCol] === playerId
         ) {
           continue;
         }
 
-        let count = 0;
+        const run: Position[] = [];
         let cursorRow = row;
         let cursorCol = col;
         while (
           cursorRow >= 0 &&
-          cursorRow < BOARD_SIZE &&
+          cursorRow < size &&
           cursorCol >= 0 &&
-          cursorCol < BOARD_SIZE &&
+          cursorCol < size &&
           board[cursorRow][cursorCol] === playerId
         ) {
-          count += 1;
+          run.push({ row: cursorRow, col: cursorCol });
           cursorRow += dr;
           cursorCol += dc;
         }
 
-        if (count >= 5) winners.add(playerId);
+        for (let offset = 0; offset <= run.length - 5; offset += 1) {
+          const start = run[offset];
+          lines.add(`${start.row}:${start.col}:${dr}:${dc}`);
+        }
       }
     }
   }
 
-  return [...winners];
+  return [...lines];
+}
+
+export function getWinners(board: Board): PlayerId[] {
+  const playerIds = new Set<PlayerId>();
+  for (const row of board) {
+    for (const playerId of row) {
+      if (playerId && playerId !== BLOCKER_ID) playerIds.add(playerId);
+    }
+  }
+  return [...playerIds].filter((playerId) => getWinningLineKeys(board, playerId).length > 0);
 }
 
 function comparePositions(a: Position, b: Position): number {

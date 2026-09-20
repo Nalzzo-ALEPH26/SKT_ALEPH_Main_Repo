@@ -10,6 +10,7 @@ export interface PublicPlayer {
   connected: boolean;
   ready: boolean;
   conversionUsed: boolean;
+  edgeSide: 'TOP' | 'RIGHT' | 'BOTTOM' | 'LEFT' | null;
 }
 
 export type RoomPhase = 'LOBBY' | 'INITIAL_PLACEMENT' | 'PLANNING' | 'RESOLVING' | 'FINISHED';
@@ -36,4 +37,6 @@ export interface RoundResolution {
   revealedSelections: Record<string, Position[]>;
   winners: string[];
   converted?: Array<{ fromPlayerId: string; toPlayerId: string; position: Position }>;
+  edgeRemoved?: Array<{ playerId: string; position: Position }>;
+  invalidFivePlayers?: string[];
 }

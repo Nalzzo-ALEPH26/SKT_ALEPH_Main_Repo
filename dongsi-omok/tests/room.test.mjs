@@ -69,10 +69,10 @@ test('requires at least two players and gives three sequential initial stones pe
   assert.equal(room.phase, 'INITIAL_PLACEMENT');
   const first = room.initialOrder[0];
   const second = room.initialOrder[1];
-  placeInitialStone(room, first, pos(0, 0));
-  assert.throws(() => placeInitialStone(room, second, pos(1, 0)), /NOT_YOUR_TURN/);
-  placeInitialStone(room, first, pos(0, 1));
-  placeInitialStone(room, first, pos(0, 2));
+  placeInitialStone(room, first, pos(1, 1));
+  assert.throws(() => placeInitialStone(room, second, pos(2, 1)), /NOT_YOUR_TURN/);
+  placeInitialStone(room, first, pos(1, 2));
+  placeInitialStone(room, first, pos(1, 3));
   assert.equal(room.initialTurnIndex, 1);
   assert.equal(room.initialPlaced[first], 3);
 });
@@ -83,10 +83,10 @@ test('starts a 15 second planning round after all initial placements', () => {
   startGame(room, () => 0, 5_000);
 
   for (const [index, playerId] of room.initialOrder.entries()) {
-    const row = index * 2;
-    placeInitialStone(room, playerId, pos(row, 0), 8_000);
+    const row = index * 2 + 1;
     placeInitialStone(room, playerId, pos(row, 1), 8_000);
     placeInitialStone(room, playerId, pos(row, 2), 8_000);
+    placeInitialStone(room, playerId, pos(row, 3), 8_000);
   }
 
   assert.equal(room.phase, 'PLANNING');
@@ -100,10 +100,10 @@ test('keeps selections private, allows up to three, and resolves collisions', ()
   startGame(room, () => 0, 0);
 
   for (const [index, playerId] of room.initialOrder.entries()) {
-    const row = index * 2;
-    placeInitialStone(room, playerId, pos(row, 0), 100);
+    const row = index * 2 + 1;
     placeInitialStone(room, playerId, pos(row, 1), 100);
     placeInitialStone(room, playerId, pos(row, 2), 100);
+    placeInitialStone(room, playerId, pos(row, 3), 100);
   }
 
   updateSelection(room, 'p1', [0, 1, 2].map((col) => pos(10, col)));
@@ -135,19 +135,19 @@ test('submits all three opening stones atomically and advances exactly one turn'
 
   const first = room.initialOrder[0];
   const second = room.initialOrder[1];
-  placeInitialStones(room, first, [pos(0, 0), pos(0, 1), pos(0, 2)], 2_000);
+  placeInitialStones(room, first, [pos(1, 1), pos(1, 2), pos(1, 3)], 2_000);
 
   assert.equal(room.initialPlaced[first], 3);
   assert.equal(room.initialTurnIndex, 1);
-  assert.equal(room.board[0][0], first);
-  assert.equal(room.board[0][1], first);
-  assert.equal(room.board[0][2], first);
+  assert.equal(room.board[1][1], first);
+  assert.equal(room.board[1][2], first);
+  assert.equal(room.board[1][3], first);
   assert.throws(
-    () => placeInitialStones(room, first, [pos(1, 0), pos(1, 1), pos(1, 2)], 2_100),
+    () => placeInitialStones(room, first, [pos(2, 1), pos(2, 2), pos(2, 3)], 2_100),
     /NOT_YOUR_TURN/,
   );
 
-  placeInitialStones(room, second, [pos(2, 0), pos(2, 1), pos(2, 2)], 3_000);
+  placeInitialStones(room, second, [pos(3, 1), pos(3, 2), pos(3, 3)], 3_000);
   assert.equal(room.phase, 'PLANNING');
   assert.equal(room.roundEndsAt, 3_000 + ROUND_DURATION_MS);
 });
@@ -158,10 +158,10 @@ test('opening batch rejects partial placement without mutating the board', () =>
   startGame(room, () => 0, 1_000);
   const first = room.initialOrder[0];
 
-  assert.throws(() => placeInitialStones(room, first, [pos(0, 0), pos(0, 1)]), /INITIAL_SELECTION_COUNT/);
+  assert.throws(() => placeInitialStones(room, first, [pos(1, 1), pos(1, 2)]), /INITIAL_SELECTION_COUNT/);
   assert.equal(room.initialPlaced[first], 0);
-  assert.equal(room.board[0][0], null);
-  assert.equal(room.board[0][1], null);
+  assert.equal(room.board[1][1], null);
+  assert.equal(room.board[1][2], null);
 });
 
 
@@ -171,8 +171,8 @@ function makePlanningRoom(playerIds) {
   for (const guest of guests) joinRoom(room, guest, guest.toUpperCase());
   startGame(room, () => 0, 1_000);
   room.initialOrder.forEach((playerId, index) => {
-    const row = index * 2;
-    placeInitialStones(room, playerId, [pos(row, 0), pos(row, 1), pos(row, 2)], 2_000 + index);
+    const row = index * 2 + 1;
+    placeInitialStones(room, playerId, [pos(row, 1), pos(row, 2), pos(row, 3)], 2_000 + index);
   });
   return room;
 }

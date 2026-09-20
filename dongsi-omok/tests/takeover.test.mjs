@@ -19,7 +19,8 @@ function makePlanningRoom() {
   joinRoom(room, 'p3', 'P3');
   startGame(room, () => 0, 0);
   room.initialOrder.forEach((id, index) => {
-    placeInitialStones(room, id, [pos(index * 2, 0), pos(index * 2, 1), pos(index * 2, 2)], 100);
+    const row = index * 2 + 1;
+    placeInitialStones(room, id, [pos(row, 1), pos(row, 2), pos(row, 3)], 100);
   });
   return room;
 }

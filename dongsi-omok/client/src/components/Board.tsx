@@ -12,6 +12,7 @@ interface BoardProps {
 }
 
 const SYMBOLS = ['●', '▲', '■', '◆', '★', '✚'];
+const BLOCKER_ID = '__BLACK_CORNER__';
 const BOARD_MARGIN_PERCENT = 5;
 const STAR_POINTS = [
   [3, 3],
@@ -77,7 +78,8 @@ export function Board({ board, players, selected, collisions, converted, disable
         {board.map((rowCells, row) =>
           rowCells.map((playerId, col) => {
             const key = `${row}:${col}`;
-            const player = playerId ? playerMap.get(playerId) : undefined;
+            const isBlocker = playerId === BLOCKER_ID;
+            const player = playerId && !isBlocker ? playerMap.get(playerId) : undefined;
             const isSelected = selectedKeys.has(key);
             const isCollision = collisionKeys.has(key);
             const isConverted = convertedKeys.has(key);
@@ -92,12 +94,14 @@ export function Board({ board, players, selected, collisions, converted, disable
                 role="gridcell"
                 aria-label={`${row + 1}행 ${col + 1}열 교차점`}
                 key={key}
-                className={`board-point ${isSelected ? 'board-point--selected' : ''} ${isCollision ? 'board-point--collision' : ''} ${isConverted ? 'board-point--converted' : ''}`}
+                className={`board-point ${isSelected ? 'board-point--selected' : ''} ${isCollision ? 'board-point--collision' : ''} ${isConverted ? 'board-point--converted' : ''} ${isBlocker ? 'board-point--blocker' : ''}`}
                 style={pointStyle}
                 disabled={disabled || Boolean(playerId)}
                 onClick={() => onCellClick({ row, col })}
               >
-                {player ? (
+                {isBlocker ? (
+                  <span className="blocker-stone" title="중립 검은 돌" aria-label="중립 검은 돌" />
+                ) : player ? (
                   <span className={`stone stone--${player.colorIndex}`} title={player.nickname}>
                     <span>{SYMBOLS[player.colorIndex] ?? '●'}</span>
                   </span>

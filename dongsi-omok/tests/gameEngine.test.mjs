@@ -11,11 +11,13 @@ import {
 
 const pos = (row, col) => ({ row, col });
 
-test('creates a 15x15 empty board', () => {
+test('creates a 14x14 board with blocked corners and playable interior', () => {
   const board = createEmptyBoard();
+  assert.equal(BOARD_SIZE, 14);
   assert.equal(board.length, BOARD_SIZE);
   assert.ok(board.every((row) => row.length === BOARD_SIZE));
-  assert.equal(isCellEmpty(board, pos(0, 0)), true);
+  assert.equal(isCellEmpty(board, pos(0, 0)), false);
+  assert.equal(isCellEmpty(board, pos(1, 1)), true);
 });
 
 test('rejects out-of-bounds, occupied, duplicate, and over-limit selections', () => {

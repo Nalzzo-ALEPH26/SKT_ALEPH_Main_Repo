@@ -1,11 +1,13 @@
 import {
+  BLOCKER_ID,
+  BOARD_SIZE,
   createEmptyBoard,
-  getWinners,
+  getWinningLineKeys,
   isCellEmpty,
   resolveSelections,
   validatePositions,
 } from './engine.js';
-import type { Player, PlayerId, Position, Room, RoundResolution } from './types.js';
+import type { EdgeSide, Player, PlayerId, Position, Room, RoundResolution } from './types.js';
 
 export const MIN_PLAYERS = 2;
 export const MAX_PLAYERS = 6;
@@ -93,6 +95,7 @@ export function startGame(room: Room, rng: () => number = Math.random, now = Dat
   room.players.forEach((player) => {
     player.ready = false;
     player.conversionUsed = false;
+    player.edgeSide = null;
   });
 
   // Keep now in the signature so deterministic callers can use one clock API for all transitions.
@@ -116,6 +119,7 @@ export function placeInitialStone(
   if (!isCellEmpty(room.board, position)) throw new Error('CELL_OCCUPIED');
 
   room.board[position.row][position.col] = playerId;
+  assignEdgeSideIfNeeded(getPlayer(room, playerId), position);
   room.initialPlaced[playerId] = (room.initialPlaced[playerId] ?? 0) + 1;
 
   if (room.initialPlaced[playerId] >= INITIAL_STONES_PER_PLAYER) {
@@ -141,8 +145,10 @@ export function placeInitialStones(
   // coordinate can never leave another client in a partially advanced turn.
   validatePositions(room.board, positions, INITIAL_STONES_PER_PLAYER);
 
+  const player = getPlayer(room, playerId);
   for (const position of positions) {
     room.board[position.row][position.col] = playerId;
+    assignEdgeSideIfNeeded(player, position);
   }
   room.initialPlaced[playerId] = INITIAL_STONES_PER_PLAYER;
   room.initialTurnIndex += 1;
@@ -201,6 +207,10 @@ export function resolveRound(
   rng: () => number = Math.random,
 ): RoundResolution {
   if (room.phase !== 'PLANNING') throw new Error('INVALID_PHASE');
+
+  const previousWinningLines = Object.fromEntries(
+    room.players.map((player) => [player.id, new Set(getWinningLineKeys(room.board, player.id))]),
+  );
   room.phase = 'RESOLVING';
 
   const activeSelections = Object.fromEntries(
@@ -245,8 +255,29 @@ export function resolveRound(
 
   const resolution = resolveSelections(room.board, activeSelections);
   resolution.converted = converted;
+
+  assignMissingEdgeSides(room, activeSelections, resolution.board);
+  resolution.edgeRemoved = removeFlankedEdgeStones(resolution.board);
   room.board = resolution.board;
-  room.winners = getWinners(room.board);
+
+  const winners: PlayerId[] = [];
+  const invalidFivePlayers: PlayerId[] = [];
+
+  for (const player of room.players) {
+    const currentLines = getWinningLineKeys(room.board, player.id);
+    const oldLines = previousWinningLines[player.id] ?? new Set<string>();
+    const newLines = currentLines.filter((line) => !oldLines.has(line));
+    const edgeCount = countPlayerEdgeStones(room.board, player.id, player.edgeSide);
+
+    if (player.edgeSide && edgeCount >= 2 && newLines.length > 0) {
+      winners.push(player.id);
+    } else if (newLines.length > 0) {
+      invalidFivePlayers.push(player.id);
+    }
+  }
+
+  room.winners = winners;
+  resolution.invalidFivePlayers = invalidFivePlayers;
   resolution.winners = [...room.winners];
 
   if (room.winners.length > 0) {
@@ -301,7 +332,105 @@ function createPlayer(id: PlayerId, nickname: string, colorIndex: number): Playe
     connected: true,
     ready: false,
     conversionUsed: false,
+    edgeSide: null,
   };
+}
+
+
+function edgeSideForPosition(position: Position): EdgeSide | null {
+  const last = BOARD_SIZE - 1;
+  if ((position.row === 0 || position.row === last) && (position.col === 0 || position.col === last)) {
+    return null;
+  }
+  if (position.row === 0) return 'TOP';
+  if (position.col === last) return 'RIGHT';
+  if (position.row === last) return 'BOTTOM';
+  if (position.col === 0) return 'LEFT';
+  return null;
+}
+
+function assignEdgeSideIfNeeded(player: Player, position: Position): void {
+  if (player.edgeSide) return;
+  const side = edgeSideForPosition(position);
+  if (side) player.edgeSide = side;
+}
+
+function assignMissingEdgeSides(
+  room: Room,
+  activeSelections: Record<PlayerId, Position[]>,
+  resolvedBoard: Room['board'],
+): void {
+  for (const player of room.players) {
+    if (player.edgeSide) continue;
+    for (const position of activeSelections[player.id] ?? []) {
+      if (resolvedBoard[position.row]?.[position.col] !== player.id) continue;
+      const side = edgeSideForPosition(position);
+      if (!side) continue;
+      player.edgeSide = side;
+      break;
+    }
+  }
+}
+
+function removeFlankedEdgeStones(board: Room['board']): NonNullable<RoundResolution['edgeRemoved']> {
+  const snapshot = board.map((row) => [...row]);
+  const last = BOARD_SIZE - 1;
+  const removals: NonNullable<RoundResolution['edgeRemoved']> = [];
+  const seen = new Set<string>();
+
+  const consider = (
+    row: number,
+    col: number,
+    firstNeighbor: PlayerId | null,
+    secondNeighbor: PlayerId | null,
+  ) => {
+    const playerId = snapshot[row][col];
+    if (!playerId || playerId === BLOCKER_ID) return;
+    const firstHostile = firstNeighbor !== null && firstNeighbor !== playerId;
+    const secondHostile = secondNeighbor !== null && secondNeighbor !== playerId;
+    if (!firstHostile || !secondHostile) return;
+    const key = `${row}:${col}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    removals.push({ playerId, position: { row, col } });
+  };
+
+  for (let col = 1; col < last; col += 1) {
+    consider(0, col, snapshot[0][col - 1], snapshot[0][col + 1]);
+    consider(last, col, snapshot[last][col - 1], snapshot[last][col + 1]);
+  }
+  for (let row = 1; row < last; row += 1) {
+    consider(row, 0, snapshot[row - 1][0], snapshot[row + 1][0]);
+    consider(row, last, snapshot[row - 1][last], snapshot[row + 1][last]);
+  }
+
+  for (const removal of removals) {
+    board[removal.position.row][removal.position.col] = null;
+  }
+  return removals;
+}
+
+function countPlayerEdgeStones(
+  board: Room['board'],
+  playerId: PlayerId,
+  side: EdgeSide | null,
+): number {
+  if (!side) return 0;
+  const last = BOARD_SIZE - 1;
+  let count = 0;
+
+  if (side === 'TOP' || side === 'BOTTOM') {
+    const row = side === 'TOP' ? 0 : last;
+    for (let col = 1; col < last; col += 1) {
+      if (board[row][col] === playerId) count += 1;
+    }
+  } else {
+    const col = side === 'LEFT' ? 0 : last;
+    for (let row = 1; row < last; row += 1) {
+      if (board[row][col] === playerId) count += 1;
+    }
+  }
+  return count;
 }
 
 function getPlayer(room: Room, playerId: PlayerId): Player {
