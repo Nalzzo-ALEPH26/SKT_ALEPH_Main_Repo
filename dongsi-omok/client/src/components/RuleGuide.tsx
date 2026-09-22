@@ -1,9 +1,107 @@
+import {
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
+
+type DragState = {
+  pointerId: number;
+  startX: number;
+  startY: number;
+  startLeft: number;
+  startTop: number;
+  originX: number;
+  originY: number;
+  width: number;
+};
+
+type GuideStyle = CSSProperties & {
+  '--rule-guide-x': string;
+  '--rule-guide-y': string;
+};
+
 export function RuleGuide() {
+  const guideRef = useRef<HTMLElement | null>(null);
+  const dragRef = useRef<DragState | null>(null);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
+
+  const beginDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return;
+    const panel = guideRef.current;
+    if (!panel) return;
+
+    const rect = panel.getBoundingClientRect();
+    dragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      startLeft: rect.left,
+      startTop: rect.top,
+      originX: offset.x,
+      originY: offset.y,
+      width: rect.width,
+    };
+
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setDragging(true);
+  };
+
+  const moveDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+
+    const dx = event.clientX - drag.startX;
+    const dy = event.clientY - drag.startY;
+    const minLeft = 8;
+    const minTop = 8;
+    const maxLeft = Math.max(minLeft, window.innerWidth - drag.width - 8);
+    const maxTop = Math.max(minTop, window.innerHeight - 48);
+    const nextLeft = Math.min(maxLeft, Math.max(minLeft, drag.startLeft + dx));
+    const nextTop = Math.min(maxTop, Math.max(minTop, drag.startTop + dy));
+
+    setOffset({
+      x: drag.originX + (nextLeft - drag.startLeft),
+      y: drag.originY + (nextTop - drag.startTop),
+    });
+  };
+
+  const endDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (dragRef.current?.pointerId !== event.pointerId) return;
+    dragRef.current = null;
+    setDragging(false);
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  };
+
+  const style: GuideStyle = {
+    '--rule-guide-x': `${offset.x}px`,
+    '--rule-guide-y': `${offset.y}px`,
+  };
+
   return (
-    <aside className="rule-guide" aria-label="게임 규칙 설명">
-      <div className="rule-guide__header">
-        <small>RULE GUIDE</small>
-        <h3>HOW TO WIN</h3>
+    <aside
+      ref={guideRef}
+      className={`rule-guide ${dragging ? 'rule-guide--dragging' : ''}`}
+      aria-label="게임 규칙 설명"
+      style={style}
+    >
+      <div
+        className="rule-guide__header"
+        onPointerDown={beginDrag}
+        onPointerMove={moveDrag}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+      >
+        <div className="rule-guide__header-row">
+          <div>
+            <small>RULE GUIDE</small>
+            <h3>HOW TO WIN</h3>
+          </div>
+          <span className="rule-guide__drag-hint">DRAG TO MOVE</span>
+        </div>
         <p>이미지로 핵심 규칙만 빠르게 확인하세요.</p>
       </div>
 
@@ -41,7 +139,7 @@ export function RuleGuide() {
         </div>
         <div className="rule-card__copy">
           <strong>TAKEOVER</strong>
-          <span>게임당 1번, 상대 선택 일부를 내 돌로 전환할 수 있습니다.</span>
+          <span>게임당 1번, 상대 선택 3돌 중 2돌을 내 돌로 전환 시킬 수 있습니다.</span>
         </div>
       </div>
 

@@ -1154,7 +1154,7 @@ button:not(:disabled):hover { border-color: rgba(103, 232, 249, .58); background
 /* v14 left rule guide */
 .rule-guide {
   position: fixed;
-  left: max(12px, calc(50vw - 660px));
+  left: max(8px, calc(50vw - 740px));
   top: 108px;
   z-index: 18;
   width: min(300px, calc(100vw - 24px));
@@ -1169,10 +1169,46 @@ button:not(:disabled):hover { border-color: rgba(103, 232, 249, .58); background
     0 18px 44px rgba(0, 0, 0, .42),
     inset 0 1px 0 rgba(255,255,255,.05);
   backdrop-filter: blur(12px);
+  transform: translate(var(--rule-guide-x, 0px), var(--rule-guide-y, 0px));
+  will-change: transform;
 }
 
 .rule-guide__header {
   margin-bottom: 12px;
+}
+
+
+.rule-guide__header {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.rule-guide--dragging .rule-guide__header {
+  cursor: grabbing;
+}
+
+.rule-guide__header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.rule-guide__drag-hint {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: rgba(204, 255, 0, .68);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .11em;
+}
+
+.rule-guide--dragging {
+  box-shadow:
+    0 24px 58px rgba(0, 0, 0, .54),
+    0 0 0 1px rgba(204, 255, 0, .12),
+    inset 0 1px 0 rgba(255,255,255,.05);
 }
 
 .rule-guide__header small {
@@ -1388,6 +1424,16 @@ button:not(:disabled):hover { border-color: rgba(103, 232, 249, .58); background
     width: auto;
     max-height: none;
     margin: 0 0 14px;
+    transform: none !important;
+  }
+
+  .rule-guide__header {
+    cursor: default;
+    touch-action: auto;
+  }
+
+  .rule-guide__drag-hint {
+    display: none;
   }
 }
 
