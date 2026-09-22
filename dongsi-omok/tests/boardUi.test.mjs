@@ -5,8 +5,8 @@ import { readFile } from 'node:fs/promises';
 const boardSource = await readFile(new URL('../client/src/components/Board.tsx', import.meta.url), 'utf8');
 const styles = await readFile(new URL('../client/src/styles.css', import.meta.url), 'utf8');
 
-test('board renders stones on 15x15 line intersections instead of square cell centers', () => {
-  assert.match(boardSource, /className="board-stage"/);
+test('board renders stones on 14x14 line intersections instead of square cell centers', () => {
+  assert.match(boardSource, /className=\{`board-stage \$\{urgent \? 'board-stage--urgent' : ''\}`\}/);
   assert.match(boardSource, /board-grid-line board-grid-line--vertical/);
   assert.match(boardSource, /board-grid-line board-grid-line--horizontal/);
   assert.match(boardSource, /className={`board-point/);

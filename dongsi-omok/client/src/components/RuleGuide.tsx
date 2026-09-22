@@ -164,7 +164,7 @@ export function RuleGuide() {
         </div>
         <div className="rule-card__copy">
           <strong>EDGE CAPTURE</strong>
-          <span>가장자리 돌의 양옆이 모두 내 돌이 아니면 제거됩니다. 검은 코너도 적으로 취급합니다.</span>
+          <span>가장자리의 연속된 내 돌 묶음은 양끝이 상대 돌 또는 검은 돌에 막히면 묶음 전체가 제거됩니다.</span>
         </div>
       </div>
 

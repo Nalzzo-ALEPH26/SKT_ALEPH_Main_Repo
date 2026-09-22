@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Board } from './components/Board';
+import { PlayerLegend } from './components/PlayerLegend';
 import { RuleGuide } from './components/RuleGuide';
 import { emitAck, socket } from './socket';
 import type { Position, PublicRoom, RoundResolution } from './types';
@@ -47,6 +48,7 @@ export default function App() {
   const [conversionTargetId, setConversionTargetId] = useState('');
   const [takeoverNotice, setTakeoverNotice] = useState('');
   const [edgeRuleNotice, setEdgeRuleNotice] = useState('');
+  const restartInFlightRef = useRef(false);
 
   useEffect(() => {
     const onState = (nextRoom: PublicRoom) => setRoom(nextRoom);
@@ -121,8 +123,12 @@ export default function App() {
   }, [room?.round, room?.phase, room?.initialTurnIndex]);
 
   useEffect(() => {
-    if (room?.phase === 'FINISHED') setGameOverOpen(true);
-    else setGameOverOpen(false);
+    if (room?.phase === 'FINISHED') {
+      setGameOverOpen(true);
+    } else {
+      setGameOverOpen(false);
+      if (room?.phase === 'INITIAL_PLACEMENT') setError('');
+    }
   }, [room?.phase]);
 
   const me = useMemo(
@@ -180,6 +186,18 @@ export default function App() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const restartGame = () => {
+    if (restartInFlightRef.current) return;
+    restartInFlightRef.current = true;
+    void run(async () => {
+      try {
+        await emitAck('game:restart');
+      } finally {
+        restartInFlightRef.current = false;
+      }
+    });
   };
 
   const create = () =>
@@ -403,6 +421,8 @@ export default function App() {
     .map((id) => room.players.find((player) => player.id === id)?.nickname)
     .filter(Boolean)
     .join(', ');
+  const didIWin = room.winners.includes(session.playerId);
+  const personalResult = didIWin ? (room.winners.length > 1 ? '공동 승리' : '승리') : '패배';
 
   if (room.phase === 'LOBBY') {
     return (
@@ -591,12 +611,12 @@ export default function App() {
             <div className="game-result-summary">
               <div>
                 <small>MISSION RESULT</small>
-                <strong>{winnerNames || '승자 확인 중'} · {room.winners.length > 1 ? '공동 승리' : '승리'}</strong>
+                <strong>{personalResult} · 승자 {winnerNames || '확인 중'}</strong>
               </div>
               <div className="game-result-actions">
                 <button className="secondary" onClick={() => setGameOverOpen(true)}>결과 다시 보기</button>
                 {isHost && (
-                  <button className="primary" onClick={() => run(async () => { await emitAck('game:restart'); })}>
+                  <button className="primary" disabled={busy} onClick={restartGame}>
                     RESTART MISSION
                   </button>
                 )}
@@ -616,6 +636,7 @@ export default function App() {
             }
             collisions={resolution?.collisions ?? []}
             converted={resolution?.converted ?? []}
+            urgent={room.phase === 'PLANNING' && secondsLeft !== null && secondsLeft <= 5}
             disabled={
               room.phase === 'LOBBY' ||
               room.phase === 'FINISHED' ||
@@ -626,6 +647,7 @@ export default function App() {
             }
             onCellClick={handleBoardClick}
           />
+          <PlayerLegend players={room.players} myId={session.playerId} hostId={room.hostId} />
         </div>
       </section>
 
@@ -653,15 +675,17 @@ export default function App() {
             <button className="game-over-close" aria-label="결과 팝업 닫기" onClick={() => setGameOverOpen(false)}>×</button>
             <small>MISSION COMPLETE</small>
             <p className="game-over-kicker">GAME OVER</p>
-            <h2 id="game-over-title">{winnerNames || '승자 확인 중'}</h2>
-            <strong className="winner-label">{room.winners.length > 1 ? '공동 승리' : '승리'}</strong>
+            <h2 id="game-over-title">{didIWin ? 'VICTORY' : 'DEFEAT'}</h2>
+            <strong className={`winner-label ${didIWin ? '' : 'winner-label--loss'}`}>{personalResult}</strong>
+            <p className="game-over-winners">승자: {winnerNames || '확인 중'}</p>
             <p>지정 가장자리에 돌 2개 이상을 유지한 상태에서 새로운 오목이 완성되어 게임이 종료되었습니다.</p>
             {isHost ? (
               <button
                 className="primary game-over-action"
+                disabled={busy}
                 onClick={(event) => {
                   event.stopPropagation();
-                  void run(async () => { await emitAck('game:restart'); });
+                  restartGame();
                 }}
               >
                 RESTART MISSION

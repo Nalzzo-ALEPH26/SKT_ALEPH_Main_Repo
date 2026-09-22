@@ -50,7 +50,7 @@ export function joinRoom(room: Room, playerId: PlayerId, nickname: string): Play
 
 export function removeLobbyPlayer(room: Room, playerId: PlayerId): void {
   if (room.phase !== 'LOBBY') throw new Error('GAME_IN_PROGRESS');
-  if (room.hostId === playerId) throw new Error('HOST_CANNOT_LEAVE_WITHOUT_CLOSING_ROOM');
+  const wasHost = room.hostId === playerId;
   room.players = room.players.filter((player) => player.id !== playerId);
   room.players.forEach((player, index) => {
     player.colorIndex = index;
@@ -58,6 +58,10 @@ export function removeLobbyPlayer(room: Room, playerId: PlayerId): void {
   delete room.selections[playerId];
   delete room.conversionTargets[playerId];
   delete room.initialPlaced[playerId];
+
+  if (wasHost && room.players.length > 0) {
+    room.hostId = room.players.find((player) => player.connected)?.id ?? room.players[0].id;
+  }
 }
 
 export function kickLobbyPlayer(
@@ -120,6 +124,7 @@ export function placeInitialStone(
 
   room.board[position.row][position.col] = playerId;
   assignEdgeSideIfNeeded(getPlayer(room, playerId), position);
+  removeFlankedEdgeStones(room.board);
   room.initialPlaced[playerId] = (room.initialPlaced[playerId] ?? 0) + 1;
 
   if (room.initialPlaced[playerId] >= INITIAL_STONES_PER_PLAYER) {
@@ -150,6 +155,7 @@ export function placeInitialStones(
     room.board[position.row][position.col] = playerId;
     assignEdgeSideIfNeeded(player, position);
   }
+  removeFlankedEdgeStones(room.board);
   room.initialPlaced[playerId] = INITIAL_STONES_PER_PLAYER;
   room.initialTurnIndex += 1;
 
@@ -374,35 +380,46 @@ function assignMissingEdgeSides(
 
 function removeFlankedEdgeStones(board: Room['board']): NonNullable<RoundResolution['edgeRemoved']> {
   const snapshot = board.map((row) => [...row]);
-  const last = BOARD_SIZE - 1;
   const removals: NonNullable<RoundResolution['edgeRemoved']> = [];
-  const seen = new Set<string>();
 
-  const consider = (
-    row: number,
-    col: number,
-    firstNeighbor: PlayerId | null,
-    secondNeighbor: PlayerId | null,
-  ) => {
-    const playerId = snapshot[row][col];
-    if (!playerId || playerId === BLOCKER_ID) return;
-    const firstHostile = firstNeighbor !== null && firstNeighbor !== playerId;
-    const secondHostile = secondNeighbor !== null && secondNeighbor !== playerId;
-    if (!firstHostile || !secondHostile) return;
-    const key = `${row}:${col}`;
-    if (seen.has(key)) return;
-    seen.add(key);
-    removals.push({ playerId, position: { row, col } });
+  const scanEdge = (positions: Position[]) => {
+    let cursor = 0;
+    while (cursor < positions.length) {
+      const start = positions[cursor];
+      const playerId = snapshot[start.row][start.col];
+      if (!playerId || playerId === BLOCKER_ID) {
+        cursor += 1;
+        continue;
+      }
+
+      let end = cursor;
+      while (end + 1 < positions.length) {
+        const next = positions[end + 1];
+        if (snapshot[next.row][next.col] !== playerId) break;
+        end += 1;
+      }
+
+      const before = cursor > 0 ? positions[cursor - 1] : null;
+      const after = end + 1 < positions.length ? positions[end + 1] : null;
+      const beforeId = before ? snapshot[before.row][before.col] : null;
+      const afterId = after ? snapshot[after.row][after.col] : null;
+      const blockedBefore = beforeId !== null && beforeId !== playerId;
+      const blockedAfter = afterId !== null && afterId !== playerId;
+
+      if (blockedBefore && blockedAfter) {
+        for (let index = cursor; index <= end; index += 1) {
+          removals.push({ playerId, position: { ...positions[index] } });
+        }
+      }
+      cursor = end + 1;
+    }
   };
 
-  for (let col = 1; col < last; col += 1) {
-    consider(0, col, snapshot[0][col - 1], snapshot[0][col + 1]);
-    consider(last, col, snapshot[last][col - 1], snapshot[last][col + 1]);
-  }
-  for (let row = 1; row < last; row += 1) {
-    consider(row, 0, snapshot[row - 1][0], snapshot[row + 1][0]);
-    consider(row, last, snapshot[row - 1][last], snapshot[row + 1][last]);
-  }
+  const last = BOARD_SIZE - 1;
+  scanEdge(Array.from({ length: BOARD_SIZE }, (_, col) => ({ row: 0, col })));
+  scanEdge(Array.from({ length: BOARD_SIZE }, (_, col) => ({ row: last, col })));
+  scanEdge(Array.from({ length: BOARD_SIZE }, (_, row) => ({ row, col: 0 })));
+  scanEdge(Array.from({ length: BOARD_SIZE }, (_, row) => ({ row, col: last })));
 
   for (const removal of removals) {
     board[removal.position.row][removal.position.col] = null;

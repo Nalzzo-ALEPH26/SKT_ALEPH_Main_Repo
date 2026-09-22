@@ -89,16 +89,26 @@ export function createSocketServer(): SocketServerBundle {
       handle(ack, () => {
         const session = requireSession(socket.id);
         const room = requireRoom(session.roomId);
-        if (room.phase !== 'LOBBY') throw new Error('GAME_IN_PROGRESS');
 
-        if (room.hostId === session.playerId) {
-          clearRoundTimer(room.id);
-          rooms.delete(room.id);
-          io.to(room.id).emit('room:closed');
-        } else {
+        if (room.phase === 'LOBBY') {
           removeLobbyPlayer(room, session.playerId);
+          if (room.players.length === 0) {
+            clearRoundTimer(room.id);
+            rooms.delete(room.id);
+          } else {
+            broadcastRoom(room);
+          }
+        } else {
+          setPlayerConnected(room, session.playerId, false);
+          if (room.hostId === session.playerId) {
+            const replacement = room.players.find(
+              (player) => player.id !== session.playerId && player.connected,
+            );
+            if (replacement) room.hostId = replacement.id;
+          }
           broadcastRoom(room);
         }
+
         sessions.delete(socket.id);
         socket.leave(room.id);
         return { ok: true };
@@ -171,6 +181,7 @@ export function createSocketServer(): SocketServerBundle {
       handle(ack, () => {
         const { room, playerId } = roomForSocket(socket.id);
         if (room.hostId !== playerId) throw new Error('HOST_ONLY');
+        if (room.phase === 'INITIAL_PLACEMENT') return { ok: true, alreadyRestarted: true };
         if (room.phase !== 'FINISHED') throw new Error('INVALID_PHASE');
         startGame(room);
         clearRoundTimer(room.id);
@@ -187,6 +198,12 @@ export function createSocketServer(): SocketServerBundle {
       if (!room) return;
       try {
         setPlayerConnected(room, session.playerId, false);
+        if (room.hostId === session.playerId) {
+          const replacement = room.players.find(
+            (player) => player.id !== session.playerId && player.connected,
+          );
+          if (replacement) room.hostId = replacement.id;
+        }
         broadcastRoom(room);
         if (room.phase === 'PLANNING' && allPlayersReady(room)) resolveAndBroadcast(room);
       } catch {

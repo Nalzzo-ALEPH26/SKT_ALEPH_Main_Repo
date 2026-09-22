@@ -7,6 +7,7 @@ interface BoardProps {
   selected: Position[];
   collisions: Position[];
   converted: NonNullable<RoundResolution['converted']>;
+  urgent?: boolean;
   disabled?: boolean;
   onCellClick: (position: Position) => void;
 }
@@ -33,7 +34,16 @@ function axisPercent(index: number, size: number): string {
   return `${BOARD_MARGIN_PERCENT + (index / (size - 1)) * usable}%`;
 }
 
-export function Board({ board, players, selected, collisions, converted, disabled, onCellClick }: BoardProps) {
+export function Board({
+  board,
+  players,
+  selected,
+  collisions,
+  converted,
+  urgent = false,
+  disabled,
+  onCellClick,
+}: BoardProps) {
   const size = board.length;
   const selectedKeys = new Set(selected.map(({ row, col }) => `${row}:${col}`));
   const collisionKeys = new Set(collisions.map(({ row, col }) => `${row}:${col}`));
@@ -42,8 +52,8 @@ export function Board({ board, players, selected, collisions, converted, disable
   const indexes = Array.from({ length: size }, (_, index) => index);
 
   return (
-    <div className="board-frame">
-      <div className="board-stage" role="grid" aria-label={`${size} x ${size} 오목 교차점 보드`}>
+    <div className={`board-frame ${urgent ? 'board-frame--urgent' : ''}`}>
+      <div className={`board-stage ${urgent ? 'board-stage--urgent' : ''}`} role="grid" aria-label={`${size} x ${size} 오목 교차점 보드`}>
         <div className="board-scan" aria-hidden="true" />
 
         {indexes.map((index) => (
