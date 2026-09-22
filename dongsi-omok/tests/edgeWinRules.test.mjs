@@ -68,7 +68,7 @@ test('after edge requirement is met, a newly created five wins', () => {
   const p1 = room.players.find((p) => p.id === 'p1');
   p1.edgeSide = 'TOP';
   room.board[0][2] = 'p1';
-  room.board[0][6] = 'p1';
+  room.board[0][3] = 'p1';
   for (let col = 2; col <= 6; col += 1) room.board[7][col] = 'p1';
   for (let col = 2; col <= 5; col += 1) room.board[9][col] = 'p1';
   updateSelection(room, 'p1', [pos(9, 6)]);

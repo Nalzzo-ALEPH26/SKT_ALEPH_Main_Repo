@@ -135,7 +135,8 @@ export default function App() {
     () => room?.players.find((player) => player.id === session?.playerId) ?? null,
     [room, session?.playerId],
   );
-  const myEdgeStoneCount = room && me?.edgeSide ? countEdgeStones(room, me.id, me.edgeSide) : 0;
+  const myEdgeAdjacentProgress =
+    room && me?.edgeSide ? countAdjacentEdgeProgress(room, me.id, me.edgeSide) : 0;
   useEffect(() => {
     if (!takeoverNotice) return;
     const timer = window.setTimeout(() => setTakeoverNotice(''), 2000);
@@ -536,8 +537,8 @@ export default function App() {
                       ? `${playerName(room, conversionTargetId)}의 선택 중 최대 2개를 내 돌로 전환`
                       : `최대 ${MAX_SELECTIONS}곳 · 다시 누르면 취소`}
                 </span>
-                <span className={`edge-progress ${myEdgeStoneCount >= 2 ? 'edge-progress--ready' : ''}`}>
-                  EDGE {edgeLabel(me?.edgeSide ?? null)} · {Math.min(myEdgeStoneCount, 2)}/2
+                <span className={`edge-progress ${myEdgeAdjacentProgress >= 2 ? 'edge-progress--ready' : ''}`}>
+                  EDGE {edgeLabel(me?.edgeSide ?? null)} · {myEdgeAdjacentProgress}/2 ADJACENT
                 </span>
               </div>
               <div className={`round-timer compact-round-timer ${secondsLeft !== null && secondsLeft <= 5 ? 'round-timer--urgent' : ''}`} aria-live="polite">
@@ -673,12 +674,12 @@ export default function App() {
         >
           <div className="game-over-card">
             <button className="game-over-close" aria-label="결과 팝업 닫기" onClick={() => setGameOverOpen(false)}>×</button>
-            <small>MISSION COMPLETE</small>
+            <small>{didIWin ? 'MISSION COMPLETE' : 'MISSION FAILED'}</small>
             <p className="game-over-kicker">GAME OVER</p>
             <h2 id="game-over-title">{didIWin ? 'VICTORY' : 'DEFEAT'}</h2>
             <strong className={`winner-label ${didIWin ? '' : 'winner-label--loss'}`}>{personalResult}</strong>
             <p className="game-over-winners">승자: {winnerNames || '확인 중'}</p>
-            <p>지정 가장자리에 돌 2개 이상을 유지한 상태에서 새로운 오목이 완성되어 게임이 종료되었습니다.</p>
+            <p>지정 가장자리에 서로 붙어 있는 돌 2개를 유지한 상태에서 새로운 오목이 완성되어 게임이 종료되었습니다.</p>
             {isHost ? (
               <button
                 className="primary game-over-action"
@@ -705,22 +706,34 @@ function edgeLabel(side: PublicRoom['players'][number]['edgeSide']): string {
   return ({ TOP: 'TOP', RIGHT: 'RIGHT', BOTTOM: 'BOTTOM', LEFT: 'LEFT' } as const)[side ?? ''] ?? 'UNASSIGNED';
 }
 
-function countEdgeStones(
+function countAdjacentEdgeProgress(
   room: PublicRoom,
   playerId: string,
   side: PublicRoom['players'][number]['edgeSide'],
 ): number {
   if (!side) return 0;
   const last = room.board.length - 1;
-  let count = 0;
+  let bestRun = 0;
+  let currentRun = 0;
+
+  const visit = (owner: string | null) => {
+    if (owner === playerId) {
+      currentRun += 1;
+      bestRun = Math.max(bestRun, currentRun);
+    } else {
+      currentRun = 0;
+    }
+  };
+
   if (side === 'TOP' || side === 'BOTTOM') {
     const row = side === 'TOP' ? 0 : last;
-    for (let col = 1; col < last; col += 1) if (room.board[row][col] === playerId) count += 1;
+    for (let col = 1; col < last; col += 1) visit(room.board[row][col]);
   } else {
     const col = side === 'LEFT' ? 0 : last;
-    for (let row = 1; row < last; row += 1) if (room.board[row][col] === playerId) count += 1;
+    for (let row = 1; row < last; row += 1) visit(room.board[row][col]);
   }
-  return count;
+
+  return Math.min(bestRun, 2);
 }
 
 function playerName(room: PublicRoom, playerId: string | null): string {

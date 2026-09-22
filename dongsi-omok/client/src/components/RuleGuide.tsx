@@ -152,7 +152,7 @@ export function RuleGuide() {
         </div>
         <div className="rule-card__copy">
           <strong>EDGE TERRITORY</strong>
-          <span>처음 성공한 가장자리 변이 내 영역. 같은 변에 내 돌 2개가 살아 있어야 합니다.</span>
+          <span>처음 성공한 가장자리 변이 내 영역. 그 변에 서로 붙어 있는 내 돌 2개가 살아 있어야 합니다.</span>
         </div>
       </div>
 
@@ -181,7 +181,7 @@ export function RuleGuide() {
         </div>
         <div className="rule-card__copy">
           <strong>WIN</strong>
-          <span>영역 조건을 갖춘 뒤 새로운 5목을 만들어야 승리합니다. 먼저 만든 5목은 소급 승리되지 않습니다.</span>
+          <span>가장자리에 붙어 있는 내 돌 2개를 유지한 뒤 새로운 5목을 만들어야 승리합니다. 먼저 만든 5목은 소급 승리되지 않습니다.</span>
         </div>
       </div>
     </aside>

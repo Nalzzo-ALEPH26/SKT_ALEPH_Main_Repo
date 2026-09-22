@@ -273,9 +273,9 @@ export function resolveRound(
     const currentLines = getWinningLineKeys(room.board, player.id);
     const oldLines = previousWinningLines[player.id] ?? new Set<string>();
     const newLines = currentLines.filter((line) => !oldLines.has(line));
-    const edgeCount = countPlayerEdgeStones(room.board, player.id, player.edgeSide);
+    const edgePairReady = hasAdjacentEdgePair(room.board, player.id, player.edgeSide);
 
-    if (player.edgeSide && edgeCount >= 2 && newLines.length > 0) {
+    if (player.edgeSide && edgePairReady && newLines.length > 0) {
       winners.push(player.id);
     } else if (newLines.length > 0) {
       invalidFivePlayers.push(player.id);
@@ -427,27 +427,31 @@ function removeFlankedEdgeStones(board: Room['board']): NonNullable<RoundResolut
   return removals;
 }
 
-function countPlayerEdgeStones(
+function hasAdjacentEdgePair(
   board: Room['board'],
   playerId: PlayerId,
   side: EdgeSide | null,
-): number {
-  if (!side) return 0;
+): boolean {
+  if (!side) return false;
   const last = BOARD_SIZE - 1;
-  let count = 0;
 
   if (side === 'TOP' || side === 'BOTTOM') {
     const row = side === 'TOP' ? 0 : last;
-    for (let col = 1; col < last; col += 1) {
-      if (board[row][col] === playerId) count += 1;
+    for (let col = 1; col < last - 1; col += 1) {
+      if (board[row][col] === playerId && board[row][col + 1] === playerId) {
+        return true;
+      }
     }
-  } else {
-    const col = side === 'LEFT' ? 0 : last;
-    for (let row = 1; row < last; row += 1) {
-      if (board[row][col] === playerId) count += 1;
+    return false;
+  }
+
+  const col = side === 'LEFT' ? 0 : last;
+  for (let row = 1; row < last - 1; row += 1) {
+    if (board[row][col] === playerId && board[row + 1][col] === playerId) {
+      return true;
     }
   }
-  return count;
+  return false;
 }
 
 function getPlayer(room: Room, playerId: PlayerId): Player {
