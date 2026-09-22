@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Board } from './components/Board';
+import { RuleGuide } from './components/RuleGuide';
 import { emitAck, socket } from './socket';
 import type { Position, PublicRoom, RoundResolution } from './types';
 
@@ -603,6 +604,7 @@ export default function App() {
             </div>
           )}
 
+          <RuleGuide />
           <Board
             board={room.board}
             players={room.players}

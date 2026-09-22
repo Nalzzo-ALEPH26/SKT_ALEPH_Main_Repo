@@ -1149,3 +1149,264 @@ button:not(:disabled):hover { border-color: rgba(103, 232, 249, .58); background
 .edge-rule-notice strong { color:#67e8f9; font-size:10px; letter-spacing:.14em; }
 .edge-rule-notice span { color:#d7f6fb; font-size:12px; line-height:1.45; }
 .takeover-notice + .edge-rule-notice { top: 86px; }
+
+
+/* v14 left rule guide */
+.rule-guide {
+  position: fixed;
+  left: max(12px, calc(50vw - 660px));
+  top: 108px;
+  z-index: 18;
+  width: min(300px, calc(100vw - 24px));
+  max-height: calc(100vh - 132px);
+  overflow: auto;
+  padding: 16px 16px 14px;
+  border: 1px solid rgba(103, 232, 249, .28);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(8, 24, 33, .97), rgba(5, 16, 24, .94));
+  box-shadow:
+    0 18px 44px rgba(0, 0, 0, .42),
+    inset 0 1px 0 rgba(255,255,255,.05);
+  backdrop-filter: blur(12px);
+}
+
+.rule-guide__header {
+  margin-bottom: 12px;
+}
+
+.rule-guide__header small {
+  display: block;
+  margin-bottom: 4px;
+  color: #67e8f9;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .18em;
+}
+
+.rule-guide__header h3 {
+  margin: 0;
+  color: #e8fdff;
+  font-size: 20px;
+  letter-spacing: .04em;
+}
+
+.rule-guide__header p {
+  margin: 6px 0 0;
+  color: rgba(222, 244, 248, .78);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.rule-card {
+  display: grid;
+  grid-template-columns: 76px 1fr;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 0;
+  border-top: 1px solid rgba(121, 208, 226, .12);
+}
+
+.rule-card:first-of-type {
+  border-top: 0;
+}
+
+.rule-card__copy strong {
+  display: block;
+  margin-bottom: 4px;
+  color: #f5ffff;
+  font-size: 12px;
+  letter-spacing: .1em;
+}
+
+.rule-card__copy span {
+  display: block;
+  color: rgba(214, 239, 244, .82);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.rule-card__diagram {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 58px;
+  border: 1px solid rgba(103, 232, 249, .18);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(103,232,249,.06), transparent 56%),
+    linear-gradient(180deg, rgba(15, 32, 43, .88), rgba(6, 14, 22, .96));
+  overflow: hidden;
+}
+
+.rule-card__diagram--edge::before,
+.rule-card__diagram--capture::before,
+.rule-card__diagram--planning::before,
+.rule-card__diagram--opening::before,
+.rule-card__diagram--win::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(106, 188, 204, .14) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(106, 188, 204, .14) 1px, transparent 1px);
+  background-size: 18px 18px;
+  opacity: .7;
+}
+
+.stone-dot,
+.ghost-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  position: relative;
+  z-index: 1;
+}
+
+.stone-dot {
+  box-shadow: inset 0 1px 2px rgba(255,255,255,.22), 0 2px 10px rgba(0,0,0,.4);
+}
+
+.stone-dot--a {
+  background: linear-gradient(180deg, #bef264, #84cc16);
+}
+.stone-dot--b {
+  background: linear-gradient(180deg, #67e8f9, #0ea5e9);
+}
+.stone-dot--c {
+  background: linear-gradient(180deg, #fda4af, #fb7185);
+}
+
+.ghost-dot--pick {
+  border: 2px dashed rgba(204, 255, 0, .9);
+  background: rgba(204,255,0,.14);
+}
+
+.ghost-dot--collision {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  color: #ff7b7b;
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.rule-card__diagram--opening {
+  display: flex;
+  justify-content: center;
+  gap: 7px;
+}
+
+.rule-card__diagram--planning {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+}
+
+.rule-card__diagram--takeover {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+}
+
+.rule-arrow {
+  position: relative;
+  z-index: 1;
+  color: #e8fdff;
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.rule-badge,
+.win-pill {
+  position: relative;
+  z-index: 1;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(204,255,0,.35);
+  color: #ccff00;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  background: rgba(204,255,0,.08);
+}
+
+.rule-card__diagram--edge {
+  place-items: stretch;
+}
+
+.edge-strip {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 8px;
+  height: 16px;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  border-bottom: 2px solid rgba(204,255,0,.58);
+  z-index: 1;
+  padding-top: 2px;
+}
+
+.rule-card__diagram--capture {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+}
+
+.rule-card__diagram--capture .stone-dot--a {
+  outline: 2px solid rgba(255,255,255,.2);
+}
+
+.rule-card__diagram--win {
+  gap: 4px;
+}
+
+.five-line {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  justify-content: center;
+}
+
+.rule-card--win {
+  padding-bottom: 2px;
+}
+
+@media (max-width: 1260px) {
+  .rule-guide {
+    position: static;
+    width: auto;
+    max-height: none;
+    margin: 0 0 14px;
+  }
+}
+
+@media (max-width: 760px) {
+  .rule-guide {
+    padding: 14px 14px 12px;
+  }
+
+  .rule-card {
+    grid-template-columns: 68px 1fr;
+    gap: 10px;
+  }
+
+  .rule-card__diagram {
+    width: 68px;
+    height: 54px;
+  }
+
+  .rule-guide__header h3 {
+    font-size: 18px;
+  }
+}
