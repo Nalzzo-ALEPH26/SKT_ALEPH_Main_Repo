@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <!-- 모바일에서도 화면에 맞게 표시 -->
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>4인 힌트 오목</title>
+
+  <!-- CSS -->
+  <link
+    rel="stylesheet"
+    href="style.css"
+  >
+
+</head>
+
+
+<body>
+
+  <main class="container">
+
+    <h1>4인 힌트 오목</h1>
+
+
+    <!-- =====================================
+         로비 화면
+         ===================================== -->
+
+    <section id="lobbyScreen">
+
+      <div class="card">
+
+        <h2>게임 입장</h2>
+
+
+        <!-- 닉네임 -->
+        <input
+          id="nickname"
+          type="text"
+          maxlength="12"
+          placeholder="닉네임"
+        >
+
+
+        <!-- 방 만들기 -->
+        <button id="createRoomButton">
+          방 만들기
+        </button>
+
+
+        <div class="or">
+          또는
+        </div>
+
+
+        <!-- 방 코드 -->
+        <input
+          id="roomCodeInput"
+          type="text"
+          maxlength="6"
+          placeholder="방 코드"
+        >
+
+
+        <!-- 방 참가 -->
+        <button id="joinRoomButton">
+          방 참가
+        </button>
+
+
+        <p id="lobbyMessage"></p>
+
+      </div>
+
+    </section>
+
+
+
+    <!-- =====================================
+         게임 화면
+         ===================================== -->
+
+    <section
+      id="gameScreen"
+      class="hidden"
+    >
+
+
+      <!-- 방 정보 -->
+
+      <div class="card roomInfo">
+
+        <div>
+          방 코드
+          <strong id="roomCodeDisplay">
+            ------
+          </strong>
+        </div>
+
+        <div>
+          <span id="playerCount">
+            0
+          </span>
+          / 4명
+        </div>
+
+      </div>
+
+
+
+      <!-- 플레이어 목록 -->
+
+      <div class="card">
+
+        <h3>플레이어</h3>
+
+        <div id="playerList"></div>
+
+
+        <!-- 방장에게만 표시 -->
+
+        <button
+          id="startGameButton"
+          class="startButton hidden"
+        >
+          게임 시작
+        </button>
+
+      </div>
+
+
+
+      <!-- 게임 설명 -->
+
+      <div class="card">
+
+        <p id="gameMessage">
+          게임 정보를 불러오는 중입니다.
+        </p>
+
+
+        <!-- 힌트 -->
+
+        <div
+          id="hintBox"
+          class="hintBox hidden"
+        >
+
+          <h3>힌트</h3>
+
+          <div class="hintList">
+
+            <div
+              id="hint1"
+              class="hint"
+            ></div>
+
+            <div
+              id="hint2"
+              class="hint"
+            ></div>
+
+          </div>
+
+          <p class="hintNotice">
+            두 힌트 중 하나만 진짜입니다.
+          </p>
+
+        </div>
+
+      </div>
+
+
+
+      <!-- =================================
+           오목판
+           ================================= -->
+
+      <div class="boardWrapper">
+
+        <div id="board"></div>
+
+      </div>
+
+
+
+      <!-- =================================
+           게임 결과
+           ================================= -->
+
+      <div
+        id="resultBox"
+        class="resultBox hidden"
+      >
+
+        <h2 id="resultTitle"></h2>
+
+        <p id="resultText"></p>
+
+      </div>
+
+    </section>
+
+  </main>
+
+
+
+  <!-- =====================================
+       Firebase
+       ===================================== -->
+
+  <script type="module">
+
+    /*
+     * Firebase SDK
+     *
+     * GitHub Pages에서 별도의 서버 없이
+     * 실시간 데이터베이스를 사용하기 위해
+     * CDN에서 Firebase를 불러옵니다.
+     */
+
+    import {
+      initializeApp
+    }
+    from
+      "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+
+
+    import {
+      getDatabase,
+      ref,
+      set,
+      get,
+      update,
+      onValue
+    }
+    from
+      "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+
+
+    /*
+     * =====================================
+     * Firebase 설정
+     * =====================================
+     *
+     * Firebase 콘솔에서 자신의 프로젝트
+     * 설정값을 넣어주세요.
+     */
+
+    const firebaseConfig = {
+
+      apiKey:
+        "여기에_API_KEY",
+
+      authDomain:
+        "여기에_AUTH_DOMAIN",
+
+      databaseURL:
+        "여기에_DATABASE_URL",
+
+      projectId:
+        "여기에_PROJECT_ID",
+
+      storageBucket:
+        "여기에_STORAGE_BUCKET",
+
+      messagingSenderId:
+        "여기에_MESSAGING_SENDER_ID",
+
+      appId:
+        "여기에_APP_ID"
+
+    };
+
+
+
+    /*
+     * Firebase 초기화
+     */
+
+    const app =
+      initializeApp(
+        firebaseConfig
+      );
+
+
+    const database =
+      getDatabase(app);
+
+
+
+    /*
+     * game.js에서 사용할 수 있도록
+     * window에 저장
+     */
+
+    window.firebaseDatabase =
+      database;
+
+    window.firebaseRef =
+      ref;
+
+    window.firebaseSet =
+      set;
+
+    window.firebaseGet =
+      get;
+
+    window.firebaseUpdate =
+      update;
+
+    window.firebaseOnValue =
+      onValue;
+
+
+
+    /*
+     * Firebase 준비 완료
+     */
+
+    window.dispatchEvent(
+      new Event("firebaseReady")
+    );
+
+  </script>
+
+
+
+  <!-- 게임 JavaScript -->
+
+  <script
+    type="module"
+    src="game.js"
+  ></script>
+
+
+</body>
+
+</html>
