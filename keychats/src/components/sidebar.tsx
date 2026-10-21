@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { startDirectMessageAction } from '@/app/(workspace)/dm/dm-actions'
 import { Avatar } from '@/components/avatar'
 import type { KeychatsTheme } from '@/lib/settings/theme'
 
@@ -15,6 +16,11 @@ type DirectItem = {
   unreadCount: number
 }
 
+type DirectCandidate = {
+  userId: string
+  displayName: string
+}
+
 type SidebarProps = {
   profile: {
     displayName: string
@@ -22,6 +28,7 @@ type SidebarProps = {
   }
   channels: ChannelItem[]
   directMessages: DirectItem[]
+  directCandidates?: DirectCandidate[]
   theme?: KeychatsTheme
 }
 
@@ -35,7 +42,13 @@ function UnreadBadge({ count }: { count: number }) {
   )
 }
 
-export function Sidebar({ profile, channels, directMessages, theme = 'light' }: SidebarProps) {
+export function Sidebar({
+  profile,
+  channels,
+  directMessages,
+  directCandidates = [],
+  theme = 'light',
+}: SidebarProps) {
   const dark = theme === 'dark'
   const muted = dark ? 'text-white/45' : 'text-black/40'
   const item = dark ? 'text-white/75 hover:bg-white/5' : 'text-black/70 hover:bg-black/5'
@@ -46,15 +59,27 @@ export function Sidebar({ profile, channels, directMessages, theme = 'light' }: 
         dark ? 'border-white/10 bg-[#181818] text-white' : 'border-black/10 bg-[#f7f7f5] text-black'
       }`}
     >
-      <div className={`px-2 pb-5 pt-2 text-sm font-semibold tracking-[0.18em] ${dark ? 'text-white/75' : 'text-black/70'}`}>
+      <div
+        className={`px-2 pb-5 pt-2 text-sm font-semibold tracking-[0.18em] ${
+          dark ? 'text-white/75' : 'text-black/70'
+        }`}
+      >
         KEYCHATS
       </div>
 
       <nav className="flex-1 space-y-6 overflow-y-auto">
         <section>
-          <div className={`mb-2 flex items-center justify-between px-2 text-xs font-semibold tracking-[0.14em] ${muted}`}>
+          <div
+            className={`mb-2 flex items-center justify-between px-2 text-xs font-semibold tracking-[0.14em] ${muted}`}
+          >
             <span>CHANNELS</span>
-            <button type="button" aria-label="채널 만들기" className={dark ? 'text-lg leading-none text-white/50' : 'text-lg leading-none text-black/45'}>+</button>
+            <button
+              type="button"
+              aria-label="채널 만들기"
+              className={dark ? 'text-lg leading-none text-white/50' : 'text-lg leading-none text-black/45'}
+            >
+              +
+            </button>
           </div>
           <div className="space-y-1">
             {channels.map((channel) => (
@@ -71,7 +96,37 @@ export function Sidebar({ profile, channels, directMessages, theme = 'light' }: 
         </section>
 
         <section>
-          <div className={`mb-2 px-2 text-xs font-semibold tracking-[0.14em] ${muted}`}>DIRECT</div>
+          <div className={`mb-2 flex items-center justify-between px-2 text-xs font-semibold tracking-[0.14em] ${muted}`}>
+            <span>DIRECT</span>
+            {directCandidates.length > 0 ? (
+              <details className="relative">
+                <summary
+                  className={`cursor-pointer list-none rounded-md px-1.5 py-1 text-[11px] tracking-normal ${
+                    dark ? 'text-white/60 hover:bg-white/5' : 'text-black/55 hover:bg-black/5'
+                  }`}
+                >
+                  새 DM
+                </summary>
+                <div
+                  className={`absolute right-0 top-7 z-20 w-48 rounded-xl border p-1.5 shadow-lg ${
+                    dark ? 'border-white/10 bg-[#202020]' : 'border-black/10 bg-white'
+                  }`}
+                >
+                  {directCandidates.map((candidate) => (
+                    <form key={candidate.userId} action={startDirectMessageAction}>
+                      <input type="hidden" name="otherUserId" value={candidate.userId} />
+                      <button
+                        type="submit"
+                        className={`w-full truncate rounded-lg px-2.5 py-2 text-left text-sm ${item}`}
+                      >
+                        {candidate.displayName}
+                      </button>
+                    </form>
+                  ))}
+                </div>
+              </details>
+            ) : null}
+          </div>
           <div className="space-y-1">
             {directMessages.map((direct) => (
               <Link
