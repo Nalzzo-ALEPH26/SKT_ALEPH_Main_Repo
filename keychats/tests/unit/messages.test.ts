@@ -46,6 +46,7 @@ function repository(): MessageRepository {
     create: vi.fn().mockResolvedValue(message()),
     update: vi.fn().mockResolvedValue(message()),
     listChannel: vi.fn().mockResolvedValue([message()]),
+    listDm: vi.fn().mockResolvedValue([]),
   }
 }
 
