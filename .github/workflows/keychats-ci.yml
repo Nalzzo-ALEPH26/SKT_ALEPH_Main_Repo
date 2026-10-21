@@ -26,13 +26,19 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Install
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Verify Supabase CLI and initialize local config
         run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install
+          supabase --version
+          supabase --help >/tmp/supabase-help.txt
+          supabase init --help >/tmp/supabase-init-help.txt
+          if [ ! -f supabase/config.toml ]; then
+            supabase init
           fi
+      - name: Install
+        run: npm ci
       - name: Unit tests
         run: npm test
       - name: Production build
@@ -41,13 +47,13 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: E2E smoke test
         run: npm run test:e2e
-      - name: Commit generated lockfile
+      - name: Commit generated Supabase config
         if: github.event_name == 'push'
         run: |
-          if ! git ls-files --error-unmatch package-lock.json >/dev/null 2>&1; then
+          if ! git ls-files --error-unmatch supabase/config.toml >/dev/null 2>&1; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add package-lock.json
-            git commit -m "chore: lock keychats dependencies"
+            git add supabase/config.toml
+            git commit -m "chore: initialize keychats supabase"
             git push
           fi
