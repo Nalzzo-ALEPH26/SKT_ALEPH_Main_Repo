@@ -1,13 +1,17 @@
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+
+vi.mock('@/app/(workspace)/dm/dm-actions', () => ({
+  startDirectMessageAction: vi.fn(),
+}))
 
 import { AppShell } from '@/components/app-shell'
 import { Avatar } from '@/components/avatar'
 import { ThemeToggle } from '@/components/theme-toggle'
 
 describe('workspace shell', () => {
-  it('renders channel/direct sections and a mobile navigation trigger', () => {
+  it('renders channel/direct sections, new-DM candidates and a mobile navigation trigger', () => {
     const html = renderToStaticMarkup(
       createElement(
         AppShell,
@@ -15,6 +19,12 @@ describe('workspace shell', () => {
           profile: { displayName: 'Miles', avatarPath: null },
           channels: [{ id: 'general', name: 'general', unreadCount: 2 }],
           directMessages: [{ id: 'dm-1', displayName: 'Teammate', unreadCount: 1 }],
+          directCandidates: [
+            {
+              userId: '33333333-3333-3333-3333-333333333333',
+              displayName: 'New Teammate',
+            },
+          ],
         },
         createElement('div', null, 'conversation'),
       ),
@@ -25,6 +35,10 @@ describe('workspace shell', () => {
     expect(html).toContain('DIRECT')
     expect(html).toContain('#general')
     expect(html).toContain('Teammate')
+    expect(html).toContain('새 DM')
+    expect(html).toContain('New Teammate')
+    expect(html).toContain('name="otherUserId"')
+    expect(html).toContain('value="33333333-3333-3333-3333-333333333333"')
     expect(html).toContain('data-mobile-menu-trigger="true"')
     expect(html).toContain('conversation')
   })
