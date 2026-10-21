@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(11);
+select plan(15);
 
 insert into auth.users (id, email) values
   ('11111111-1111-1111-1111-111111111111', 'member1@keychats.test'),
@@ -135,6 +135,40 @@ select set_config(
   'request.jwt.claims',
   '{"sub":"55555555-5555-5555-5555-555555555555","role":"authenticated","app_metadata":{"role":"admin"}}',
   true
+);
+
+select is(
+  (select count(*) from public.messages where channel_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
+  1::bigint,
+  'admin can read a channel message for moderation even when not a channel member'
+);
+
+select is(
+  (select count(*) from public.messages where dm_thread_id = 'cccccccc-cccc-cccc-cccc-cccccccccccc'),
+  0::bigint,
+  'admin gets no implicit access to a one-to-one DM'
+);
+
+select results_eq(
+  $$
+    update public.messages
+    set body = null, deleted_at = now()
+    where channel_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+    returning channel_id
+  $$,
+  $$ values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid) $$,
+  'admin can soft delete a channel message for moderation'
+);
+
+select results_eq(
+  $$
+    update public.messages
+    set body = null, deleted_at = now()
+    where dm_thread_id = 'cccccccc-cccc-cccc-cccc-cccccccccccc'
+    returning dm_thread_id
+  $$,
+  $$ select null::uuid where false $$,
+  'admin cannot modify a DM they do not participate in'
 );
 
 select results_eq(
