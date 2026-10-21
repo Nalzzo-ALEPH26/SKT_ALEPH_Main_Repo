@@ -29,9 +29,21 @@ Runtime values are configured outside Git. The repository contains placeholders 
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 SUPABASE_SECRET_KEY
+KEYCHATS_ADMIN_PASSWORD
+KEYCHATS_ADMIN_DISPLAY_NAME
 ```
 
-`SUPABASE_SECRET_KEY` is server-only and must never be exposed through a `NEXT_PUBLIC_` variable, browser bundle, client component, log, or committed file.
+`SUPABASE_SECRET_KEY` and `KEYCHATS_ADMIN_PASSWORD` are server/runtime-only and must never be exposed through a `NEXT_PUBLIC_` variable, browser bundle, client component, log, or committed file.
+
+## Sole admin bootstrap
+
+The fixed Keychats admin login ID is `cxu1344`. `npm run bootstrap:admin` creates or updates only that account and sets authorization in `app_metadata.role = 'admin'`.
+
+The script refuses to start unless `NEXT_PUBLIC_SUPABASE_URL` is exactly the Keychats project URL. This is an additional guard against accidentally provisioning Auth/profile data into PlanDoSee.
+
+Run it only with runtime environment values, for example from a trusted local shell or protected deployment environment. Do not put the actual admin password in a committed `.env` file, workflow YAML, command history shared with others, or chat transcript.
+
+Bootstrap also creates/updates the admin profile and settings and ensures membership in `#general`. It does not print the password.
 
 ## Applied hosted migrations
 
