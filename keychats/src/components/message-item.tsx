@@ -24,9 +24,19 @@ type MessageItemProps = {
   message: MessageListItem
   currentUserId: string
   isAdmin: boolean
+  onReply?: (messageId: number) => void
+  onEdit?: (messageId: number) => void
+  onDelete?: (messageId: number) => void
 }
 
-export function MessageItem({ message, currentUserId, isAdmin }: MessageItemProps) {
+export function MessageItem({
+  message,
+  currentUserId,
+  isAdmin,
+  onReply,
+  onEdit,
+  onDelete,
+}: MessageItemProps) {
   const isDeleted = Boolean(message.deletedAt)
   const canEdit = !isDeleted && message.sender.userId === currentUserId
   const canDelete = !isDeleted && (message.sender.userId === currentUserId || isAdmin)
@@ -70,9 +80,19 @@ export function MessageItem({ message, currentUserId, isAdmin }: MessageItemProp
 
         {!isDeleted ? (
           <div className="mt-1 flex gap-3 text-xs text-zinc-400 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
-            <button type="button" data-reply-to={message.id}>답글</button>
-            {canEdit ? <button type="button" data-edit-message={message.id}>수정</button> : null}
-            {canDelete ? <button type="button" data-delete-message={message.id}>삭제</button> : null}
+            <button type="button" data-reply-to={message.id} onClick={() => onReply?.(message.id)}>
+              답글
+            </button>
+            {canEdit ? (
+              <button type="button" data-edit-message={message.id} onClick={() => onEdit?.(message.id)}>
+                수정
+              </button>
+            ) : null}
+            {canDelete ? (
+              <button type="button" data-delete-message={message.id} onClick={() => onDelete?.(message.id)}>
+                삭제
+              </button>
+            ) : null}
           </div>
         ) : null}
       </div>
