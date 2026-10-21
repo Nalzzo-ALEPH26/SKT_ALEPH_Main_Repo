@@ -1,0 +1,32 @@
+name: Keychats Bootstrap Dependencies Temp
+
+on:
+  push:
+    branches:
+      - 'feature/keychats-v1'
+    paths:
+      - '.github/workflows/keychats-bootstrap-deps-temp.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Add pinned tsx and bootstrap script
+        working-directory: keychats
+        run: |
+          npm install --save-dev --save-exact tsx@4.23.15
+          npm pkg set 'scripts.bootstrap:admin=tsx scripts/bootstrap-admin.ts'
+      - name: Commit package files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add keychats/package.json keychats/package-lock.json
+          git commit -m "chore: add pinned keychats bootstrap runner"
+          git push
