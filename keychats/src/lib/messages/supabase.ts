@@ -37,6 +37,10 @@ function fail(error: { message?: string } | null, fallback: string): never {
   throw new Error(error?.message || fallback)
 }
 
+function mapHistory(rows: MessageRow[] | null): MessageRecord[] {
+  return (rows ?? []).map(mapMessage).reverse()
+}
+
 export function createSupabaseMessageRepository(client: SupabaseClient): MessageRepository {
   return {
     async getById(id) {
@@ -99,7 +103,25 @@ export function createSupabaseMessageRepository(client: SupabaseClient): Message
       const { data, error } = await query
       if (error) fail(error, 'MESSAGE_LIST_FAILED')
 
-      return ((data ?? []) as MessageRow[]).map(mapMessage).reverse()
+      return mapHistory((data ?? []) as MessageRow[])
+    },
+
+    async listDm({ dmThreadId, beforeId, limit }) {
+      let query = client
+        .from('messages')
+        .select(MESSAGE_COLUMNS)
+        .eq('dm_thread_id', dmThreadId)
+        .order('id', { ascending: false })
+        .limit(limit)
+
+      if (beforeId !== null) {
+        query = query.lt('id', beforeId)
+      }
+
+      const { data, error } = await query
+      if (error) fail(error, 'MESSAGE_LIST_FAILED')
+
+      return mapHistory((data ?? []) as MessageRow[])
     },
   }
 }
