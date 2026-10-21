@@ -83,6 +83,13 @@ async function login(page: Page, loginId: string) {
 
 async function openChannel(context: BrowserContext, channelId: string, loginId: string) {
   const page = await context.newPage()
+  page.on('pageerror', (error) => console.log(`[pageerror:${loginId}] ${error.stack ?? error.message}`))
+  page.on('console', (message) => {
+    if (message.type() === 'error' || message.type() === 'warning') {
+      console.log(`[console:${loginId}:${message.type()}] ${message.text()}`)
+    }
+  })
+
   await login(page, loginId)
   await page.goto(`/chats/channel/${channelId}`)
   await expect(page.locator('[data-channel-message-pane]')).toBeVisible()
@@ -103,8 +110,26 @@ test('syncs channel send, reply, edit and soft-delete across two signed-in brows
     await secondPage.waitForTimeout(750)
 
     const original = `hello-${Date.now()}`
-    await firstPage.getByLabel('메시지 입력').fill(original)
-    await firstPage.locator('[data-send-message]').click()
+    const firstInput = firstPage.getByLabel('메시지 입력')
+    const firstSend = firstPage.locator('[data-send-message]')
+    await firstInput.fill(original)
+    await expect(firstInput).toHaveValue(original)
+
+    const composerSnapshot = await firstPage.evaluate(() => {
+      const input = document.querySelector<HTMLTextAreaElement>('#keychats-message-input')
+      const send = document.querySelector<HTMLButtonElement>('[data-send-message]')
+      return {
+        inputValue: input?.value ?? null,
+        inputDisabled: input?.disabled ?? null,
+        sendDisabled: send?.disabled ?? null,
+        sendText: send?.textContent ?? null,
+        panePresent: Boolean(document.querySelector('[data-channel-message-pane]')),
+      }
+    })
+    console.log(`[composer-snapshot] ${JSON.stringify(composerSnapshot)}`)
+
+    await expect(firstSend).toBeEnabled({ timeout: 5_000 })
+    await firstSend.click()
     await expect(secondPage.getByText(original, { exact: true })).toBeVisible({ timeout: 10_000 })
 
     const firstArticleOnSecond = secondPage.locator('article').filter({ hasText: original })
@@ -122,7 +147,7 @@ test('syncs channel send, reply, edit and soft-delete across two signed-in brows
 
     const edited = `${original}-edited`
     await firstPage.getByLabel('메시지 입력').fill(edited)
-    await firstPage.getByRole('button', { name: '수정' }).click()
+    await firstPage.locator('[data-send-message]').click()
 
     const editedOnSecond = secondPage.locator('article').filter({ hasText: edited }).first()
     await expect(editedOnSecond).toContainText('(수정됨)', { timeout: 10_000 })
