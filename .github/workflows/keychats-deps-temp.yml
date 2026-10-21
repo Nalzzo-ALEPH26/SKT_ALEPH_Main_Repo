@@ -1,0 +1,30 @@
+name: Keychats Dependencies Temp
+
+on:
+  push:
+    branches:
+      - 'feature/keychats-v1'
+    paths:
+      - '.github/workflows/keychats-deps-temp.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned Supabase dependencies
+        working-directory: keychats
+        run: npm install --save-exact @supabase/ssr@0.12.7 @supabase/supabase-js@2.118.0
+      - name: Commit lockfile update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add keychats/package.json keychats/package-lock.json
+          git commit -m "chore: add pinned supabase auth dependencies"
+          git push
