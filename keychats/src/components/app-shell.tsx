@@ -19,7 +19,7 @@ type AppShellProps = {
     unreadCount: number
   }>
   theme?: KeychatsTheme
-  children: ReactNode
+  children?: ReactNode
 }
 
 export function AppShell({
