@@ -43,11 +43,19 @@ The script refuses to start unless `NEXT_PUBLIC_SUPABASE_URL` is exactly the Key
 
 Run it only with runtime environment values, for example from a trusted local shell or protected deployment environment. Do not put the actual admin password in a committed `.env` file, workflow YAML, command history shared with others, or chat transcript.
 
-Bootstrap also creates/updates the admin profile and settings and ensures membership in `#general`. It does not print the password.
+Bootstrap also creates/updates the admin profile and settings and ensures membership in `#general`. It marks that room as the default channel and does not print the password.
 
 ## Applied hosted migrations
 
-The hosted Keychats project currently includes the core schema, RLS policies, advisor indexes, and the invite-claim migration. The invite-claim migration adds the atomic claim/finalize/release state used by invite-only registration.
+The hosted Keychats project currently includes:
+
+- core schema
+- RLS policies
+- advisor indexes
+- atomic invite claim/finalize/release state
+- channel constraints for the default room and normalized channel names
+
+The channel-constraint migration adds `channels.is_default`, enforces case-insensitive/trimmed channel-name uniqueness, marks `#general` as the default room, prevents ordinary users from creating another `general` room, and prevents even the administrator from deleting the default `#general` channel.
 
 Invite contract:
 
