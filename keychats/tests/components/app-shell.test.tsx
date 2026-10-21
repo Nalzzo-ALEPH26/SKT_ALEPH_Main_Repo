@@ -29,6 +29,24 @@ describe('workspace shell', () => {
     expect(html).toContain('conversation')
   })
 
+  it('marks and styles the selected workspace theme', () => {
+    const html = renderToStaticMarkup(
+      createElement(
+        AppShell,
+        {
+          profile: { displayName: 'Miles', avatarPath: null },
+          channels: [],
+          directMessages: [],
+          theme: 'dark',
+        },
+        createElement('div', null, 'conversation'),
+      ),
+    )
+
+    expect(html).toContain('data-theme="dark"')
+    expect(html).toContain('bg-[#111111]')
+  })
+
   it('uses the default avatar when no custom avatar exists', () => {
     const html = renderToStaticMarkup(
       createElement(Avatar, { displayName: 'Miles', avatarPath: null }),
