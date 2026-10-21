@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(7);
+select plan(11);
 
 insert into auth.users (id, email) values
   ('11111111-1111-1111-1111-111111111111', 'member1@keychats.test'),
@@ -19,11 +19,13 @@ insert into public.profiles (user_id, username, display_name, status) values
 
 insert into public.channels (id, name, created_by) values
   ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'private-a', '11111111-1111-1111-1111-111111111111'),
-  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'admin-delete-target', '22222222-2222-2222-2222-222222222222');
+  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'admin-delete-target', '22222222-2222-2222-2222-222222222222'),
+  ('dddddddd-dddd-dddd-dddd-dddddddddddd', 'general', '55555555-5555-5555-5555-555555555555');
 
 insert into public.channel_members (channel_id, user_id, role) values
   ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11111111-1111-1111-1111-111111111111', 'owner'),
-  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '44444444-4444-4444-4444-444444444444', 'member');
+  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '44444444-4444-4444-4444-444444444444', 'member'),
+  ('dddddddd-dddd-dddd-dddd-dddddddddddd', '55555555-5555-5555-5555-555555555555', 'owner');
 
 insert into public.dm_threads (id, user_low, user_high) values
   ('cccccccc-cccc-cccc-cccc-cccccccccccc', '11111111-1111-1111-1111-111111111111', '33333333-3333-3333-3333-333333333333');
@@ -55,6 +57,27 @@ select is(
 
 select results_eq(
   $$
+    insert into public.channel_members (channel_id, user_id, role)
+    values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '22222222-2222-2222-2222-222222222222', 'member')
+    returning user_id
+  $$,
+  $$ values ('22222222-2222-2222-2222-222222222222'::uuid) $$,
+  'channel creator can add an active member'
+);
+
+select results_eq(
+  $$
+    delete from public.channel_members
+    where channel_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+      and user_id = '22222222-2222-2222-2222-222222222222'
+    returning user_id
+  $$,
+  $$ values ('22222222-2222-2222-2222-222222222222'::uuid) $$,
+  'channel creator can remove a member'
+);
+
+select results_eq(
+  $$
     delete from public.channels
     where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
     returning id
@@ -70,6 +93,12 @@ select set_config(
   'request.jwt.claims',
   '{"sub":"22222222-2222-2222-2222-222222222222","role":"authenticated","app_metadata":{"role":"member"}}',
   true
+);
+
+select is(
+  (select count(*) from public.channels where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
+  0::bigint,
+  'non-member cannot discover private channel metadata by known UUID'
 );
 
 select is(
@@ -115,7 +144,17 @@ select results_eq(
     returning id
   $$,
   $$ values ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid) $$,
-  'admin can delete any channel'
+  'admin can delete any ordinary channel'
+);
+
+select results_eq(
+  $$
+    delete from public.channels
+    where id = 'dddddddd-dddd-dddd-dddd-dddddddddddd'
+    returning id
+  $$,
+  $$ select null::uuid where false $$,
+  'admin cannot delete the default general channel'
 );
 
 select * from finish();
