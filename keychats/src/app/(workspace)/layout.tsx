@@ -20,13 +20,18 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
     throw error
   }
 
-  const { data: settings, error: settingsError } = await client
-    .from('user_settings')
-    .select('theme')
-    .eq('user_id', profile.user_id)
-    .maybeSingle()
+  const [{ data: settings, error: settingsError }, { data: channels, error: channelsError }] =
+    await Promise.all([
+      client
+        .from('user_settings')
+        .select('theme')
+        .eq('user_id', profile.user_id)
+        .maybeSingle(),
+      client.from('channels').select('id,name').order('is_default', { ascending: false }).order('name'),
+    ])
 
   if (settingsError) throw settingsError
+  if (channelsError) throw channelsError
 
   let theme: KeychatsTheme = 'light'
   if (settings?.theme) {
@@ -36,7 +41,11 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
   return (
     <AppShell
       profile={{ displayName: profile.display_name, avatarPath: profile.avatar_path }}
-      channels={[]}
+      channels={(channels ?? []).map((channel) => ({
+        id: channel.id as string,
+        name: channel.name as string,
+        unreadCount: 0,
+      }))}
       directMessages={[]}
       theme={theme}
     >
