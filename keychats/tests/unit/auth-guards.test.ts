@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   requireActiveUser,
   requireAdmin,
-  type AuthGuardClient,
+  type AuthGuardAccess,
 } from '@/lib/auth/guards'
 
 type FakeOptions = {
@@ -13,12 +13,12 @@ type FakeOptions = {
   userRole?: 'admin' | 'member'
 }
 
-function fakeClient({
+function fakeAccess({
   sub = '11111111-1111-1111-1111-111111111111',
   status = 'active',
   appRole = 'member',
   userRole = 'member',
-}: FakeOptions = {}): AuthGuardClient {
+}: FakeOptions = {}): AuthGuardAccess {
   const claims = sub
     ? {
         sub,
@@ -28,33 +28,25 @@ function fakeClient({
     : null
 
   return {
-    auth: {
-      getClaims: async () => ({ data: { claims }, error: null }),
-    },
-    from: () => ({
-      select: () => ({
-        eq: () => ({
-          maybeSingle: async () => ({
-            data: sub
-              ? {
-                  user_id: sub,
-                  username: 'member1',
-                  display_name: 'Member One',
-                  avatar_path: null,
-                  status,
-                }
-              : null,
-            error: null,
-          }),
-        }),
-      }),
+    getClaims: async () => ({ data: { claims }, error: null }),
+    getProfile: async () => ({
+      data: sub
+        ? {
+            user_id: sub,
+            username: 'member1',
+            display_name: 'Member One',
+            avatar_path: null,
+            status,
+          }
+        : null,
+      error: null,
     }),
   }
 }
 
 describe('requireActiveUser', () => {
   it('accepts a verified JWT only when the database profile is active', async () => {
-    const result = await requireActiveUser(fakeClient())
+    const result = await requireActiveUser(fakeAccess())
 
     expect(result.profile.status).toBe('active')
     expect(result.claims.sub).toBe('11111111-1111-1111-1111-111111111111')
@@ -63,14 +55,14 @@ describe('requireActiveUser', () => {
   it.each(['disabled', 'expelled'] as const)(
     'rejects a %s profile even when the JWT is still valid',
     async (status) => {
-      await expect(requireActiveUser(fakeClient({ status }))).rejects.toMatchObject({
+      await expect(requireActiveUser(fakeAccess({ status }))).rejects.toMatchObject({
         code: 'USER_INACTIVE',
       })
     },
   )
 
   it('rejects a request without verified claims', async () => {
-    await expect(requireActiveUser(fakeClient({ sub: '' }))).rejects.toMatchObject({
+    await expect(requireActiveUser(fakeAccess({ sub: '' }))).rejects.toMatchObject({
       code: 'UNAUTHENTICATED',
     })
   })
@@ -78,13 +70,13 @@ describe('requireActiveUser', () => {
 
 describe('requireAdmin', () => {
   it('accepts the admin role only from app_metadata', async () => {
-    const result = await requireAdmin(fakeClient({ appRole: 'admin', userRole: 'member' }))
+    const result = await requireAdmin(fakeAccess({ appRole: 'admin', userRole: 'member' }))
     expect(result.profile.status).toBe('active')
   })
 
   it('does not trust a user-editable user_metadata admin role', async () => {
     await expect(
-      requireAdmin(fakeClient({ appRole: 'member', userRole: 'admin' })),
+      requireAdmin(fakeAccess({ appRole: 'member', userRole: 'admin' })),
     ).rejects.toMatchObject({ code: 'ADMIN_REQUIRED' })
   })
 })
