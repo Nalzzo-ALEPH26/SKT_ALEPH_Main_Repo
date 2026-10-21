@@ -178,7 +178,8 @@ revoke all on sequence public.messages_id_seq from anon, authenticated;
 grant select on table public.profiles to authenticated;
 grant update (display_name, avatar_path, updated_at) on table public.profiles to authenticated;
 
-grant select, insert, update, delete on table public.channels to authenticated;
+grant select, insert, delete on table public.channels to authenticated;
+grant update (name, updated_at) on table public.channels to authenticated;
 grant select, insert, delete on table public.channel_members to authenticated;
 grant select, insert on table public.dm_threads to authenticated;
 
