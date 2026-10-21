@@ -24,7 +24,7 @@ type BootstrapAdminDependencies = {
     status: 'active'
   }) => Promise<void>
   upsertSettings: (userId: string) => Promise<void>
-  ensureGeneralMembership: (userId: string) => Promise<void>
+  ensureGeneralMembership: (userId: string, options: { isDefault: true }) => Promise<void>
   log?: (message: string, context?: Record<string, unknown>) => void
 }
 
@@ -59,7 +59,7 @@ export async function bootstrapAdmin(
     status: 'active',
   })
   await dependencies.upsertSettings(userId)
-  await dependencies.ensureGeneralMembership(userId)
+  await dependencies.ensureGeneralMembership(userId, { isDefault: true })
 
   dependencies.log?.('Keychats admin bootstrap complete', { userId, loginId })
 
