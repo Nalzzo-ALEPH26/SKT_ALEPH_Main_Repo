@@ -13,8 +13,10 @@ The app should be simple and modern, with invite-only accounts, private member-o
 
 ## Repository and deployment
 
+Application source lives in the shared team repository:
+
 ```text
-SKT_ALEPH_Main_Repo/
+Nalzzo-ALEPH26/SKT_ALEPH_Main_Repo/
 ├─ democracy-omok/
 ├─ dongsi-omok/
 ├─ hint-omok/
@@ -22,7 +24,28 @@ SKT_ALEPH_Main_Repo/
 └─ keychats/
 ```
 
-`keychats/` will be a standalone **Next.js + TypeScript** application with its own Vercel project. The existing `aleph` Vercel project keeps ownership of `whogh.vercel.app`; `/chats/*` will rewrite/proxy to the Keychats deployment without affecting the rest of the site.
+`keychats/` will be a standalone **Next.js + TypeScript** application with its own Vercel project.
+
+The public host `whogh.vercel.app` is owned by the separate Vercel `aleph` project backed by `graypork/aleph`. That host remains the front door. The `graypork/aleph` project will contain only the routing configuration needed to rewrite/proxy `/chats` and `/chats/*` to the Keychats deployment without changing the rest of the site.
+
+Keychats itself must be configured to operate under the `/chats` base path so assets, navigation, authentication redirects, and deep links work through the public host.
+
+## Infrastructure isolation
+
+Keychats uses a **dedicated Supabase project named `keychats`**.
+
+The existing Supabase project currently used for PlanDoSee Diary (`graypork's Project`) is outside Keychats scope and must not be modified, migrated, reused, or share Auth/Storage/data with Keychats.
+
+The separation is intentional:
+
+- independent `auth.users`
+- independent Postgres database and migrations
+- independent Storage buckets
+- independent RLS policies and database functions
+- independent API keys and Vercel environment variables
+- independent Realtime configuration
+
+No Keychats migration or bootstrap script may target the PlanDoSee project reference.
 
 ## Users and roles
 
@@ -46,7 +69,7 @@ PASSWORD
 
 Supabase Auth is used internally. Passwords are never stored in app tables, source code, Git, migrations, or logs.
 
-The administrator account uses login ID `cxu1344`. Its initial password must be provisioned directly in the authentication system and changed after setup.
+The administrator account uses login ID `cxu1344`. Its initial password must be provisioned directly in the Keychats authentication system and changed after setup.
 
 ### Invite-only registration
 
@@ -180,7 +203,7 @@ Historical messages remain if a user is disabled or expelled.
 
 ## Supabase data model
 
-Planned tables:
+Planned tables in the dedicated Keychats project:
 
 - `profiles`
 - `invites`
@@ -212,7 +235,8 @@ All exposed tables use RLS.
 - only admin can delete channels
 - only admin can create/revoke invites and manage accounts
 - disabled/expelled users cannot perform normal workspace actions
-- the browser never receives a Supabase service-role key
+- the browser never receives a Supabase secret/service-role key
+- authorization must never rely on user-editable `user_metadata`
 
 Invite consume must be atomic to prevent reuse races.
 
@@ -283,21 +307,23 @@ Secrets and `.env` files stay out of Git.
 15. Desktop and mobile layouts are usable.
 16. RLS/storage authorization tests pass.
 17. PRs can be previewed before production merge.
+18. Keychats uses a separate Supabase project and no operation modifies the PlanDoSee Supabase project.
 
 ## Implementation order
 
 1. scaffold `keychats/`
-2. configure `/chats` routing
-3. create/configure Supabase project
-4. schema migrations
-5. auth, invite signup, admin provisioning
-6. RLS/storage security tests
-7. channels and membership
-8. realtime messaging
-9. 1:1 DMs
-10. attachments/GIF/image paste
-11. reactions/replies/pins/read state
-12. URL preview service
-13. admin tools
-14. light/dark + responsive polish
-15. Vercel/GitHub preview workflow and production verification
+2. create a dedicated Keychats Supabase project
+3. schema migrations
+4. auth, invite signup, admin provisioning
+5. RLS/storage security tests
+6. channels and membership
+7. realtime messaging
+8. 1:1 DMs
+9. attachments/GIF/image paste
+10. reactions/replies/pins/read state
+11. URL preview service
+12. admin tools
+13. light/dark + responsive polish
+14. create/link Keychats Vercel project
+15. configure `graypork/aleph` `/chats` routing
+16. GitHub Preview workflow and production verification
