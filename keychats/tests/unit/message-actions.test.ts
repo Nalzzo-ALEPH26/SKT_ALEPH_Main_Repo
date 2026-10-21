@@ -2,22 +2,29 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('server-only', () => ({}))
 
-const repo = {
-  getById: vi.fn(),
-  create: vi.fn(),
-  update: vi.fn(),
-  listChannel: vi.fn(),
-}
+const mocks = vi.hoisted(() => {
+  const repo = {
+    getById: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    listChannel: vi.fn(),
+  }
 
-const createClient = vi.fn(async () => ({ auth: {}, from: vi.fn() }))
-const createAuthGuardAccess = vi.fn(() => ({ guard: true }))
-const requireActiveUser = vi.fn()
-const createSupabaseMessageRepository = vi.fn(() => repo)
+  return {
+    repo,
+    createClient: vi.fn(async () => ({ auth: {}, from: vi.fn() })),
+    createAuthGuardAccess: vi.fn(() => ({ guard: true })),
+    requireActiveUser: vi.fn(),
+    createSupabaseMessageRepository: vi.fn(() => repo),
+  }
+})
 
-vi.mock('@/lib/supabase/server', () => ({ createClient }))
-vi.mock('@/lib/auth/server-access', () => ({ createAuthGuardAccess }))
-vi.mock('@/lib/auth/guards', () => ({ requireActiveUser }))
-vi.mock('@/lib/messages/supabase', () => ({ createSupabaseMessageRepository }))
+vi.mock('@/lib/supabase/server', () => ({ createClient: mocks.createClient }))
+vi.mock('@/lib/auth/server-access', () => ({ createAuthGuardAccess: mocks.createAuthGuardAccess }))
+vi.mock('@/lib/auth/guards', () => ({ requireActiveUser: mocks.requireActiveUser }))
+vi.mock('@/lib/messages/supabase', () => ({
+  createSupabaseMessageRepository: mocks.createSupabaseMessageRepository,
+}))
 
 import {
   deleteChannelMessageAction,
@@ -31,12 +38,12 @@ const userId = '11111111-1111-1111-1111-111111111111'
 
 beforeEach(() => {
   vi.clearAllMocks()
-  requireActiveUser.mockResolvedValue({
+  mocks.requireActiveUser.mockResolvedValue({
     claims: { sub: userId, app_metadata: { role: 'admin' } },
     profile: { user_id: userId, status: 'active' },
   })
-  repo.getById.mockResolvedValue(null)
-  repo.create.mockResolvedValue({
+  mocks.repo.getById.mockResolvedValue(null)
+  mocks.repo.create.mockResolvedValue({
     id: 1,
     channelId,
     dmThreadId: null,
@@ -47,7 +54,7 @@ beforeEach(() => {
     editedAt: null,
     deletedAt: null,
   })
-  repo.update.mockImplementation(async (_id, patch) => ({
+  mocks.repo.update.mockImplementation(async (_id, patch) => ({
     id: 1,
     channelId,
     dmThreadId: null,
@@ -58,15 +65,15 @@ beforeEach(() => {
     editedAt: patch.editedAt ?? null,
     deletedAt: patch.deletedAt ?? null,
   }))
-  repo.listChannel.mockResolvedValue([])
+  mocks.repo.listChannel.mockResolvedValue([])
 })
 
 describe('channel message server actions', () => {
   it('derives sender/admin identity from verified auth state when sending', async () => {
     await sendChannelMessageAction({ channelId, body: ' hello ', replyToId: null })
 
-    expect(requireActiveUser).toHaveBeenCalledOnce()
-    expect(repo.create).toHaveBeenCalledWith({
+    expect(mocks.requireActiveUser).toHaveBeenCalledOnce()
+    expect(mocks.repo.create).toHaveBeenCalledWith({
       channelId,
       dmThreadId: null,
       senderId: userId,
@@ -76,7 +83,7 @@ describe('channel message server actions', () => {
   })
 
   it('uses the authenticated actor for edit and delete authorization', async () => {
-    repo.getById.mockResolvedValue({
+    mocks.repo.getById.mockResolvedValue({
       id: 1,
       channelId,
       dmThreadId: null,
@@ -91,12 +98,12 @@ describe('channel message server actions', () => {
     await editChannelMessageAction({ channelId, messageId: 1, body: 'changed' })
     await deleteChannelMessageAction({ channelId, messageId: 1 })
 
-    expect(repo.update).toHaveBeenCalledTimes(2)
+    expect(mocks.repo.update).toHaveBeenCalledTimes(2)
   })
 
   it('loads older history only through the authenticated repository', async () => {
     await loadOlderChannelMessagesAction({ channelId, beforeId: 120 })
 
-    expect(repo.listChannel).toHaveBeenCalledWith({ channelId, beforeId: 120, limit: 50 })
+    expect(mocks.repo.listChannel).toHaveBeenCalledWith({ channelId, beforeId: 120, limit: 50 })
   })
 })
