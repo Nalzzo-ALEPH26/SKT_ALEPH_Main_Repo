@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(19);
+select plan(21);
 
 select has_table('public', 'profiles', 'profiles table exists');
 select has_table('public', 'invites', 'invites table exists');
@@ -97,6 +97,20 @@ select has_index(
   'read_states',
   'read_states_last_read_message_id_idx',
   'read_states.last_read_message_id has a covering index'
+);
+
+select has_column(
+  'public',
+  'channels',
+  'is_default',
+  'channels marks the undeletable default room explicitly'
+);
+
+select has_index(
+  'public',
+  'channels',
+  'channels_normalized_name_uidx',
+  'channel names are unique after trim/lower normalization'
 );
 
 select * from finish();
