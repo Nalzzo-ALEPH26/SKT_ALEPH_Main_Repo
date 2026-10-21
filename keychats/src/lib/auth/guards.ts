@@ -28,17 +28,9 @@ type ProfileResult = {
   error: unknown
 }
 
-export type AuthGuardClient = {
-  auth: {
-    getClaims: () => Promise<ClaimsResult>
-  }
-  from: (table: 'profiles') => {
-    select: (columns: string) => {
-      eq: (column: 'user_id', value: string) => {
-        maybeSingle: () => PromiseLike<ProfileResult>
-      }
-    }
-  }
+export type AuthGuardAccess = {
+  getClaims: () => Promise<ClaimsResult>
+  getProfile: (userId: string) => PromiseLike<ProfileResult>
 }
 
 export class AuthGuardError extends Error {
@@ -51,19 +43,15 @@ export class AuthGuardError extends Error {
   }
 }
 
-export async function requireActiveUser(client: AuthGuardClient) {
-  const { data, error } = await client.auth.getClaims()
+export async function requireActiveUser(access: AuthGuardAccess) {
+  const { data, error } = await access.getClaims()
   const claims = data?.claims
 
   if (error || !claims?.sub) {
     throw new AuthGuardError('UNAUTHENTICATED')
   }
 
-  const { data: profile, error: profileError } = await client
-    .from('profiles')
-    .select('user_id, username, display_name, avatar_path, status')
-    .eq('user_id', claims.sub)
-    .maybeSingle()
+  const { data: profile, error: profileError } = await access.getProfile(claims.sub)
 
   if (profileError || !profile) {
     throw new AuthGuardError('UNAUTHENTICATED')
@@ -76,8 +64,8 @@ export async function requireActiveUser(client: AuthGuardClient) {
   return { claims, profile }
 }
 
-export async function requireAdmin(client: AuthGuardClient) {
-  const result = await requireActiveUser(client)
+export async function requireAdmin(access: AuthGuardAccess) {
+  const result = await requireActiveUser(access)
 
   if (result.claims.app_metadata?.role !== 'admin') {
     throw new AuthGuardError('ADMIN_REQUIRED')
