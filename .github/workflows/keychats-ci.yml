@@ -33,8 +33,28 @@ jobs:
         run: |
           supabase --version
           supabase test db --help >/tmp/supabase-test-help.txt
+          supabase status --help >/tmp/supabase-status-help.txt
       - name: Start local Supabase
         run: supabase start
+      - name: Export local Supabase runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase status -o env >/tmp/keychats-supabase.env
+          set -a
+          source /tmp/keychats-supabase.env
+          set +a
+
+          test -n "${API_URL:-}"
+          test -n "${PUBLISHABLE_KEY:-}"
+          test -n "${SECRET_KEY:-}"
+
+          echo "::add-mask::$SECRET_KEY"
+          {
+            printf 'NEXT_PUBLIC_SUPABASE_URL=%s\n' "$API_URL"
+            printf 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=%s\n' "$PUBLISHABLE_KEY"
+            printf 'SUPABASE_SECRET_KEY=%s\n' "$SECRET_KEY"
+          } >> "$GITHUB_ENV"
       - name: Database security tests
         run: supabase test db
       - name: Install
