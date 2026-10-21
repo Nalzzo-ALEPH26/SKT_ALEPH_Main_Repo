@@ -66,7 +66,10 @@ describe('bootstrapAdmin', () => {
       status: 'active',
     })
     expect(deps.upsertSettings).toHaveBeenCalledWith('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
-    expect(deps.ensureGeneralMembership).toHaveBeenCalledWith('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
+    expect(deps.ensureGeneralMembership).toHaveBeenCalledWith(
+      'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      { isDefault: true },
+    )
   })
 
   it('never writes the password to logs', async () => {
