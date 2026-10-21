@@ -98,11 +98,11 @@ async function upsertSettings(userId: string) {
   if (error) throw error
 }
 
-async function ensureGeneralMembership(userId: string) {
+async function ensureGeneralMembership(userId: string, options: { isDefault: true }) {
   const { data: existingChannel, error: lookupError } = await admin
     .from('channels')
     .select('id')
-    .eq('name', 'general')
+    .ilike('name', 'general')
     .limit(1)
     .maybeSingle()
   if (lookupError) throw lookupError
@@ -111,11 +111,21 @@ async function ensureGeneralMembership(userId: string) {
   if (!channelId) {
     const { data: createdChannel, error: createError } = await admin
       .from('channels')
-      .insert({ name: 'general', created_by: userId })
+      .insert({
+        name: 'general',
+        created_by: userId,
+        is_default: options.isDefault,
+      })
       .select('id')
       .single()
     if (createError) throw createError
     channelId = createdChannel.id
+  } else {
+    const { error: defaultError } = await admin
+      .from('channels')
+      .update({ is_default: options.isDefault })
+      .eq('id', channelId)
+    if (defaultError) throw defaultError
   }
 
   const { error: membershipError } = await admin.from('channel_members').upsert(
