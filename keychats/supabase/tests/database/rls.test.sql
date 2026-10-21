@@ -53,16 +53,13 @@ select is(
   'active member sees active teammates but not disabled users'
 );
 
-select is(
-  (
-    with deleted as (
-      delete from public.channels
-      where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
-      returning 1
-    )
-    select count(*) from deleted
-  ),
-  0::bigint,
+select results_eq(
+  $$
+    delete from public.channels
+    where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+    returning id
+  $$,
+  $$ select null::uuid where false $$,
   'regular member cannot delete a channel'
 );
 
@@ -111,16 +108,13 @@ select set_config(
   true
 );
 
-select is(
-  (
-    with deleted as (
-      delete from public.channels
-      where id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
-      returning 1
-    )
-    select count(*) from deleted
-  ),
-  1::bigint,
+select results_eq(
+  $$
+    delete from public.channels
+    where id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
+    returning id
+  $$,
+  $$ values ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid) $$,
   'admin can delete any channel'
 );
 
