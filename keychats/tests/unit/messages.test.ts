@@ -116,6 +116,16 @@ describe('editMessage', () => {
     await expect(editMessage(repo, other, 41, 'changed')).rejects.toThrow('MESSAGE_EDIT_FORBIDDEN')
     expect(repo.update).not.toHaveBeenCalled()
   })
+
+  it('does not allow a deleted message to be edited again', async () => {
+    const repo = repository()
+    vi.mocked(repo.getById).mockResolvedValue(
+      message({ deletedAt: '2026-10-21T03:30:00.000Z', body: null }),
+    )
+
+    await expect(editMessage(repo, sender, 41, 'changed')).rejects.toThrow('MESSAGE_DELETED')
+    expect(repo.update).not.toHaveBeenCalled()
+  })
 })
 
 describe('deleteMessage', () => {
