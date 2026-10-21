@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(17);
+select plan(19);
 
 select has_table('public', 'profiles', 'profiles table exists');
 select has_table('public', 'invites', 'invites table exists');
@@ -83,6 +83,20 @@ select ok(
       and indexname in ('read_states_channel_user_uidx', 'read_states_dm_user_uidx')
   ),
   'read_states has per-room uniqueness indexes'
+);
+
+select has_index(
+  'public',
+  'invites',
+  'invites_used_by_idx',
+  'invites.used_by has a covering index'
+);
+
+select has_index(
+  'public',
+  'read_states',
+  'read_states_last_read_message_id_idx',
+  'read_states.last_read_message_id has a covering index'
 );
 
 select * from finish();
