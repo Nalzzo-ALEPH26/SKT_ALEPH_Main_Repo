@@ -4,9 +4,19 @@ type MessageListProps = {
   messages: MessageListItem[]
   currentUserId: string
   isAdmin: boolean
+  onReply?: (messageId: number) => void
+  onEdit?: (messageId: number) => void
+  onDelete?: (messageId: number) => void
 }
 
-export function MessageList({ messages, currentUserId, isAdmin }: MessageListProps) {
+export function MessageList({
+  messages,
+  currentUserId,
+  isAdmin,
+  onReply,
+  onEdit,
+  onDelete,
+}: MessageListProps) {
   if (messages.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center py-16 text-sm text-zinc-500">
@@ -23,6 +33,9 @@ export function MessageList({ messages, currentUserId, isAdmin }: MessageListPro
           message={message}
           currentUserId={currentUserId}
           isAdmin={isAdmin}
+          onReply={onReply}
+          onEdit={onEdit}
+          onDelete={onDelete}
         />
       ))}
     </div>
