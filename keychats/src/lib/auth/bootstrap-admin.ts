@@ -32,7 +32,7 @@ export async function bootstrapAdmin(
   dependencies: BootstrapAdminDependencies,
   input: BootstrapAdminInput,
 ) {
-  if (input.projectRef !== KEYCHATS_PROJECT_REF || input.projectRef === PLANDOSEE_PROJECT_REF) {
+  if (input.projectRef !== KEYCHATS_PROJECT_REF) {
     throw new Error('PROJECT_REF_NOT_KEYCHATS')
   }
 
