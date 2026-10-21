@@ -38,13 +38,25 @@ export type MessageRepository = {
     beforeId: number | null
     limit: number
   }) => Promise<MessageRecord[]>
+  listDm: (input: {
+    dmThreadId: string
+    beforeId: number | null
+    limit: number
+  }) => Promise<MessageRecord[]>
 }
 
-type SendChannelMessageInput = {
-  channelId: string
+type SendMessageBase = {
   body?: string | null
   replyToId?: number | null
   attachmentCount?: number
+}
+
+type SendChannelMessageInput = SendMessageBase & {
+  channelId: string
+}
+
+type SendDmMessageInput = SendMessageBase & {
+  dmThreadId: string
 }
 
 function normalizedBody(body: string | null | undefined): string | null {
@@ -58,30 +70,60 @@ function assertValidAttachmentCount(value: number | undefined): number {
   return count
 }
 
-export async function sendChannelMessage(
+async function assertReplyInRoom(
+  repository: MessageRepository,
+  replyToId: number | null,
+  target: { channelId: string | null; dmThreadId: string | null },
+) {
+  if (replyToId === null) return
+
+  const parent = await repository.getById(replyToId)
+  if (!parent || parent.deletedAt) throw new Error('MESSAGE_REPLY_INVALID')
+  if (parent.channelId !== target.channelId || parent.dmThreadId !== target.dmThreadId) {
+    throw new Error('MESSAGE_REPLY_ROOM_MISMATCH')
+  }
+}
+
+async function sendMessage(
   repository: MessageRepository,
   actor: MessageActor,
-  input: SendChannelMessageInput,
+  input: SendMessageBase,
+  target: { channelId: string | null; dmThreadId: string | null },
 ) {
   const body = normalizedBody(input.body)
   const attachmentCount = assertValidAttachmentCount(input.attachmentCount)
   if (!body && attachmentCount === 0) throw new Error('MESSAGE_EMPTY')
 
   const replyToId = input.replyToId ?? null
-  if (replyToId !== null) {
-    const parent = await repository.getById(replyToId)
-    if (!parent || parent.deletedAt) throw new Error('MESSAGE_REPLY_INVALID')
-    if (parent.channelId !== input.channelId || parent.dmThreadId !== null) {
-      throw new Error('MESSAGE_REPLY_ROOM_MISMATCH')
-    }
-  }
+  await assertReplyInRoom(repository, replyToId, target)
 
   return repository.create({
-    channelId: input.channelId,
-    dmThreadId: null,
+    ...target,
     senderId: actor.userId,
     body,
     replyToId,
+  })
+}
+
+export async function sendChannelMessage(
+  repository: MessageRepository,
+  actor: MessageActor,
+  input: SendChannelMessageInput,
+) {
+  return sendMessage(repository, actor, input, {
+    channelId: input.channelId,
+    dmThreadId: null,
+  })
+}
+
+export async function sendDmMessage(
+  repository: MessageRepository,
+  actor: MessageActor,
+  input: SendDmMessageInput,
+) {
+  return sendMessage(repository, actor, input, {
+    channelId: null,
+    dmThreadId: input.dmThreadId,
   })
 }
 
@@ -132,4 +174,12 @@ export async function loadChannelMessages(
   beforeId: number | null = null,
 ) {
   return repository.listChannel({ channelId, beforeId, limit: 50 })
+}
+
+export async function loadDmMessages(
+  repository: MessageRepository,
+  dmThreadId: string,
+  beforeId: number | null = null,
+) {
+  return repository.listDm({ dmThreadId, beforeId, limit: 50 })
 }
