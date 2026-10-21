@@ -1,9 +1,13 @@
 import { notFound } from 'next/navigation'
 
 import { ChannelDialog } from '@/components/channel-dialog'
+import { ChannelMessagePane } from '@/components/channel-message-pane'
 import { MemberDialog } from '@/components/member-dialog'
 import { requireActiveUser } from '@/lib/auth/guards'
 import { createAuthGuardAccess } from '@/lib/auth/server-access'
+import { messageRecordToRealtimeRow } from '@/lib/messages/presentation'
+import { loadChannelMessages } from '@/lib/messages/service'
+import { createSupabaseMessageRepository } from '@/lib/messages/supabase'
 import { createClient } from '@/lib/supabase/server'
 import {
   addChannelMemberAction,
@@ -20,6 +24,7 @@ type ProfileOption = {
   userId: string
   displayName: string
   username: string
+  avatarPath: string | null
 }
 
 export default async function ChannelPage({ params }: PageProps) {
@@ -46,7 +51,7 @@ export default async function ChannelPage({ params }: PageProps) {
   const memberIds = (memberships ?? []).map((membership) => membership.user_id as string)
   const { data: profiles, error: profilesError } = await client
     .from('profiles')
-    .select('user_id,username,display_name')
+    .select('user_id,username,display_name,avatar_path')
     .eq('status', 'active')
     .order('display_name')
 
@@ -56,12 +61,17 @@ export default async function ChannelPage({ params }: PageProps) {
     userId: item.user_id as string,
     username: item.username as string,
     displayName: item.display_name as string,
+    avatarPath: (item.avatar_path as string | null) ?? null,
   }))
   const memberSet = new Set(memberIds)
   const members = allProfiles.filter((item) => memberSet.has(item.userId))
   const candidates = allProfiles.filter((item) => !memberSet.has(item.userId))
   const isAdmin = claims.app_metadata?.role === 'admin'
   const canManage = isAdmin || channel.created_by === profile.user_id
+  const initialMessages = await loadChannelMessages(
+    createSupabaseMessageRepository(client),
+    channelId,
+  )
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-5 py-8 md:px-8">
@@ -91,12 +101,13 @@ export default async function ChannelPage({ params }: PageProps) {
         </div>
       </header>
 
-      <section className="flex flex-1 items-center justify-center py-12 text-center">
-        <div>
-          <p className="text-sm font-medium">채널이 준비되었습니다.</p>
-          <p className="mt-2 text-sm text-zinc-500">메시지는 다음 단계에서 이 공간에 실시간으로 표시됩니다.</p>
-        </div>
-      </section>
+      <ChannelMessagePane
+        channelId={channelId}
+        initialMessages={initialMessages.map(messageRecordToRealtimeRow)}
+        profiles={allProfiles}
+        currentUserId={profile.user_id}
+        isAdmin={isAdmin}
+      />
     </div>
   )
 }
