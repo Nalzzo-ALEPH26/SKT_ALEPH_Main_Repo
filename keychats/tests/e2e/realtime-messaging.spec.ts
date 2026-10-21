@@ -83,13 +83,6 @@ async function login(page: Page, loginId: string) {
 
 async function openChannel(context: BrowserContext, channelId: string, loginId: string) {
   const page = await context.newPage()
-  page.on('pageerror', (error) => console.log(`[pageerror:${loginId}] ${error.stack ?? error.message}`))
-  page.on('console', (message) => {
-    if (message.type() === 'error' || message.type() === 'warning') {
-      console.log(`[console:${loginId}:${message.type()}] ${message.text()}`)
-    }
-  })
-
   await login(page, loginId)
   await page.goto(`/chats/channel/${channelId}`)
   await expect(page.locator('[data-channel-message-pane]')).toBeVisible()
@@ -114,52 +107,40 @@ test('syncs channel send, reply, edit and soft-delete across two signed-in brows
     const firstSend = firstPage.locator('[data-send-message]')
     await firstInput.fill(original)
     await expect(firstInput).toHaveValue(original)
-
-    const composerSnapshot = await firstPage.evaluate(() => {
-      const input = document.querySelector<HTMLTextAreaElement>('#keychats-message-input')
-      const send = document.querySelector<HTMLButtonElement>('[data-send-message]')
-      return {
-        inputValue: input?.value ?? null,
-        inputDisabled: input?.disabled ?? null,
-        sendDisabled: send?.disabled ?? null,
-        sendText: send?.textContent ?? null,
-        panePresent: Boolean(document.querySelector('[data-channel-message-pane]')),
-      }
-    })
-    console.log(`[composer-snapshot] ${JSON.stringify(composerSnapshot)}`)
-
     await expect(firstSend).toBeEnabled({ timeout: 5_000 })
     await firstSend.click()
-    await expect(secondPage.getByText(original, { exact: true })).toBeVisible({ timeout: 10_000 })
 
-    const firstArticleOnSecond = secondPage.locator('article').filter({ hasText: original })
-    await firstArticleOnSecond.hover()
-    await firstArticleOnSecond.getByRole('button', { name: '답글' }).click()
+    const originalArticleOnSecond = secondPage.locator('article').filter({ hasText: original }).first()
+    await expect(originalArticleOnSecond).toBeVisible({ timeout: 10_000 })
+    const originalMessageId = await originalArticleOnSecond.getAttribute('data-message-id')
+    expect(originalMessageId).toBeTruthy()
+
+    await originalArticleOnSecond.hover()
+    await originalArticleOnSecond.getByRole('button', { name: '답글' }).click()
 
     const reply = `reply-${Date.now()}`
     await secondPage.getByLabel('메시지 입력').fill(reply)
     await secondPage.locator('[data-send-message]').click()
     await expect(firstPage.getByText(reply, { exact: true })).toBeVisible({ timeout: 10_000 })
 
-    const firstArticle = firstPage.locator('article').filter({ hasText: original })
-    await firstArticle.hover()
-    await firstArticle.getByRole('button', { name: '수정' }).click()
+    const originalArticleOnFirst = firstPage.locator(`article[data-message-id="${originalMessageId}"]`)
+    await expect(originalArticleOnFirst).toBeVisible()
+    await originalArticleOnFirst.hover()
+    await originalArticleOnFirst.getByRole('button', { name: '수정' }).click()
 
     const edited = `${original}-edited`
     await firstPage.getByLabel('메시지 입력').fill(edited)
     await firstPage.locator('[data-send-message]').click()
 
-    const editedOnSecond = secondPage.locator('article').filter({ hasText: edited }).first()
-    await expect(editedOnSecond).toContainText('(수정됨)', { timeout: 10_000 })
+    const editedOnSecond = secondPage.locator(`article[data-message-id="${originalMessageId}"]`)
+    await expect(editedOnSecond).toContainText(edited, { timeout: 10_000 })
+    await expect(editedOnSecond).toContainText('(수정됨)')
 
-    const editedOnFirst = firstPage.locator('article').filter({ hasText: edited }).first()
-    await editedOnFirst.hover()
-    await editedOnFirst.getByRole('button', { name: '삭제' }).click()
+    await originalArticleOnFirst.hover()
+    await originalArticleOnFirst.getByRole('button', { name: '삭제' }).click()
 
-    await expect(secondPage.getByText('삭제된 메시지입니다.', { exact: true }).first()).toBeVisible({
-      timeout: 10_000,
-    })
-    await expect(secondPage.getByText(edited, { exact: true })).toHaveCount(0)
+    await expect(editedOnSecond).toContainText('삭제된 메시지입니다.', { timeout: 10_000 })
+    await expect(editedOnSecond.getByText(edited, { exact: true })).toHaveCount(0)
   } finally {
     await firstContext.close()
     await secondContext.close()
