@@ -18,6 +18,10 @@ type AppShellProps = {
     displayName: string
     unreadCount: number
   }>
+  directCandidates?: Array<{
+    userId: string
+    displayName: string
+  }>
   theme?: KeychatsTheme
   children?: ReactNode
 }
@@ -26,6 +30,7 @@ export function AppShell({
   profile,
   channels,
   directMessages,
+  directCandidates = [],
   theme = 'light',
   children,
 }: AppShellProps) {
@@ -52,6 +57,7 @@ export function AppShell({
               profile={profile}
               channels={channels}
               directMessages={directMessages}
+              directCandidates={directCandidates}
               theme={theme}
             />
           </div>
@@ -65,6 +71,7 @@ export function AppShell({
               profile={profile}
               channels={channels}
               directMessages={directMessages}
+              directCandidates={directCandidates}
               theme={theme}
             />
           </div>
