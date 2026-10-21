@@ -1,0 +1,42 @@
+name: Keychats CI
+
+on:
+  push:
+    branches:
+      - 'feature/keychats-v1'
+    paths:
+      - 'keychats/**'
+      - '.github/workflows/keychats-ci.yml'
+  pull_request:
+    paths:
+      - 'keychats/**'
+      - '.github/workflows/keychats-ci.yml'
+
+jobs:
+  test-build-e2e:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: keychats
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install
+        run: npm install
+      - name: Unit tests
+        run: npm test
+      - name: Production build
+        run: npm run build
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: E2E smoke test
+        run: npm run test:e2e
+      - name: Upload lockfile
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: keychats-package-lock
+          path: keychats/package-lock.json
+          if-no-files-found: error
