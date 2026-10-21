@@ -35,7 +35,7 @@ export type AuthGuardClient = {
   from: (table: 'profiles') => {
     select: (columns: string) => {
       eq: (column: 'user_id', value: string) => {
-        maybeSingle: () => Promise<ProfileResult>
+        maybeSingle: () => PromiseLike<ProfileResult>
       }
     }
   }
