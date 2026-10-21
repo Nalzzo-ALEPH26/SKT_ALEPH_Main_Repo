@@ -38,20 +38,21 @@ export function reconcileMessageChange(
   )
 }
 
-export function subscribeToChannelMessages(
+function subscribeToMessages(
   client: MessageRealtimeClient,
-  channelId: string,
+  subscriptionName: string,
+  filter: string,
   onChange: (message: RealtimeMessageRow) => void,
 ) {
   const channel = client
-    .channel(`messages:channel:${channelId}`)
+    .channel(subscriptionName)
     .on(
       'postgres_changes',
       {
         event: 'INSERT',
         schema: 'public',
         table: 'messages',
-        filter: `channel_id=eq.${channelId}`,
+        filter,
       },
       (payload) => onChange(payload.new),
     )
@@ -61,7 +62,7 @@ export function subscribeToChannelMessages(
         event: 'UPDATE',
         schema: 'public',
         table: 'messages',
-        filter: `channel_id=eq.${channelId}`,
+        filter,
       },
       (payload) => onChange(payload.new),
     )
@@ -70,4 +71,30 @@ export function subscribeToChannelMessages(
   return () => {
     void client.removeChannel(channel)
   }
+}
+
+export function subscribeToChannelMessages(
+  client: MessageRealtimeClient,
+  channelId: string,
+  onChange: (message: RealtimeMessageRow) => void,
+) {
+  return subscribeToMessages(
+    client,
+    `messages:channel:${channelId}`,
+    `channel_id=eq.${channelId}`,
+    onChange,
+  )
+}
+
+export function subscribeToDmMessages(
+  client: MessageRealtimeClient,
+  dmThreadId: string,
+  onChange: (message: RealtimeMessageRow) => void,
+) {
+  return subscribeToMessages(
+    client,
+    `messages:dm:${dmThreadId}`,
+    `dm_thread_id=eq.${dmThreadId}`,
+    onChange,
+  )
 }
