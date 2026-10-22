@@ -33,5 +33,5 @@ export async function registerInvite(
     return { error: GENERIC_INVITE_ERROR }
   }
 
-  redirect('/chats/login?registered=1')
+  redirect('/login?registered=1')
 }
