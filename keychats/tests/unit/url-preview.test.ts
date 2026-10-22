@@ -5,6 +5,7 @@ import {
   isBlockedAddress,
   normalizePreviewUrl,
 } from '@/lib/url-preview/fetch-preview'
+import { extractFirstHttpUrl, splitMessageText } from '@/lib/url-preview/url'
 
 const publicResolver = async (_hostname: string) => ['93.184.216.34']
 
@@ -17,6 +18,23 @@ function htmlResponse(html: string, init: ResponseInit = {}) {
     },
   })
 }
+
+describe('URL preview message parsing', () => {
+  it('extracts only the first HTTP(S) URL and trims sentence punctuation', () => {
+    expect(
+      extractFirstHttpUrl('see https://example.com/a?x=1, then http://second.example/test.'),
+    ).toBe('https://example.com/a?x=1')
+    expect(extractFirstHttpUrl('ftp://example.com file')).toBeNull()
+  })
+
+  it('splits message text into safe text/url parts for automatic links', () => {
+    expect(splitMessageText('before https://example.com/a after')).toEqual([
+      { type: 'text', value: 'before ' },
+      { type: 'url', value: 'https://example.com/a' },
+      { type: 'text', value: ' after' },
+    ])
+  })
+})
 
 describe('URL preview SSRF boundary', () => {
   it.each([
