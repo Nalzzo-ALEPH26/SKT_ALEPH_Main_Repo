@@ -5,6 +5,8 @@ import { AuthGuardError, requireAdmin } from '@/lib/auth/guards'
 import { createAuthGuardAccess } from '@/lib/auth/server-access'
 import { listManagedUsers } from '@/lib/admin/service'
 import { createSupabaseAdminRepository } from '@/lib/admin/supabase'
+import { listPendingSignupRequests } from '@/lib/admin/signup-requests'
+import { createSupabaseSignupReviewRepository } from '@/lib/admin/signup-requests-supabase'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 
@@ -18,7 +20,11 @@ export default async function AdminPage() {
   }
 
   const admin = createAdminClient()
-  const users = await listManagedUsers(createSupabaseAdminRepository(admin))
+  const [users, signupRequests] = await Promise.all([
+    listManagedUsers(createSupabaseAdminRepository(admin)),
+    listPendingSignupRequests(createSupabaseSignupReviewRepository(admin)),
+  ])
+
   const { data: inviteRows, error: inviteError } = await admin
     .from('invites')
     .select('id,expires_at,used_at,revoked_at,created_at')
@@ -41,7 +47,7 @@ export default async function AdminPage() {
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Keychats Admin</p>
         <h1 className="mt-2 text-2xl font-semibold">관리자</h1>
       </div>
-      <AdminPanel initialUsers={users} initialInvites={invites} />
+      <AdminPanel initialUsers={users} initialInvites={invites} initialSignupRequests={signupRequests} />
     </main>
   )
 }

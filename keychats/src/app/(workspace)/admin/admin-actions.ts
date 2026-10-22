@@ -9,34 +9,62 @@ import {
   resetManagedUserPassword,
 } from '@/lib/admin/service'
 import { createSupabaseAdminRepository } from '@/lib/admin/supabase'
+import {
+  approveSignupRequest,
+  listPendingSignupRequests,
+  rejectSignupRequest,
+} from '@/lib/admin/signup-requests'
+import { createSupabaseSignupReviewRepository } from '@/lib/admin/signup-requests-supabase'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 
-async function requireAdminRepository() {
+async function requireAdminContext() {
   const userClient = await createClient()
-  await requireAdmin(createAuthGuardAccess(userClient))
-  return createSupabaseAdminRepository(createAdminClient())
+  const { claims } = await requireAdmin(createAuthGuardAccess(userClient))
+  const admin = createAdminClient()
+  return {
+    reviewerId: claims.sub,
+    userRepository: createSupabaseAdminRepository(admin),
+    signupRepository: createSupabaseSignupReviewRepository(admin),
+  }
 }
 
 export async function listUsersAction() {
-  const repository = await requireAdminRepository()
-  return listManagedUsers(repository)
+  const { userRepository } = await requireAdminContext()
+  return listManagedUsers(userRepository)
+}
+
+export async function listSignupRequestsAction() {
+  const { signupRepository } = await requireAdminContext()
+  return listPendingSignupRequests(signupRepository)
+}
+
+export async function approveSignupRequestAction(requestId: string) {
+  const { signupRepository, reviewerId } = await requireAdminContext()
+  await approveSignupRequest(signupRepository, requestId, reviewerId)
+  return { status: 'approved' as const }
+}
+
+export async function rejectSignupRequestAction(requestId: string) {
+  const { signupRepository, reviewerId } = await requireAdminContext()
+  await rejectSignupRequest(signupRepository, requestId, reviewerId)
+  return { status: 'rejected' as const }
 }
 
 export async function resetUserPasswordAction(userId: string) {
-  const repository = await requireAdminRepository()
-  const temporaryPassword = await resetManagedUserPassword(repository, userId)
+  const { userRepository } = await requireAdminContext()
+  const temporaryPassword = await resetManagedUserPassword(userRepository, userId)
   return { temporaryPassword }
 }
 
 export async function disableUserAction(userId: string) {
-  const repository = await requireAdminRepository()
-  await disableManagedUser(repository, userId)
+  const { userRepository } = await requireAdminContext()
+  await disableManagedUser(userRepository, userId)
   return { status: 'disabled' as const }
 }
 
 export async function expelUserAction(userId: string) {
-  const repository = await requireAdminRepository()
-  await expelManagedUser(repository, userId)
+  const { userRepository } = await requireAdminContext()
+  await expelManagedUser(userRepository, userId)
   return { status: 'expelled' as const }
 }
