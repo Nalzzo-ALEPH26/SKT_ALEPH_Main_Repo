@@ -35,10 +35,7 @@ export default async function DmPage({ params }: PageProps) {
   if (!thread) notFound()
 
   const otherUserId = counterpartUserId(
-    {
-      userLow: thread.user_low as string,
-      userHigh: thread.user_high as string,
-    },
+    { userLow: thread.user_low as string, userHigh: thread.user_high as string },
     profile.user_id,
   )
 
@@ -57,17 +54,12 @@ export default async function DmPage({ params }: PageProps) {
     avatarPath: (item.avatar_path as string | null) ?? null,
   }))
   const counterpart = allProfiles.find((item) => item.userId === otherUserId)
-  const initialMessages = await loadDmMessages(
-    createSupabaseMessageRepository(client),
-    threadId,
-  )
+  const initialMessages = await loadDmMessages(createSupabaseMessageRepository(client), threadId)
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-5 py-8 md:px-8">
-      <header className="border-b border-black/10 pb-5 dark:border-white/10">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">
-          DIRECT MESSAGE
-        </p>
+    <div className="mx-auto flex h-dvh w-full max-w-5xl flex-col overflow-hidden px-5 py-5 md:px-8">
+      <header className="shrink-0 border-b border-black/10 pb-4 dark:border-white/10">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">DIRECT MESSAGE</p>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight">
           {counterpart?.displayName ?? '알 수 없는 사용자'}
         </h1>

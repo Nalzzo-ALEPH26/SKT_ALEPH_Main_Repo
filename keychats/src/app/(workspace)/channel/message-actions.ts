@@ -19,61 +19,34 @@ async function getMessageContext() {
     userId: claims.sub,
     isAdmin: claims.app_metadata?.role === 'admin',
   }
-
-  return {
-    actor,
-    repository: createSupabaseMessageRepository(client),
-  }
+  return { actor, repository: createSupabaseMessageRepository(client) }
 }
 
-export async function sendChannelMessageAction(input: {
-  channelId: string
-  body: string
-  replyToId: number | null
-  attachmentCount?: number
-}) {
+export async function sendChannelMessageAction(input: { channelId: string; body: string; replyToId: number | null; attachmentCount?: number }) {
   const { actor, repository } = await getMessageContext()
-  return sendChannelMessage(repository, actor, {
-    channelId: input.channelId,
-    body: input.body,
-    replyToId: input.replyToId,
-    attachmentCount: input.attachmentCount,
-  })
+  return sendChannelMessage(repository, actor, input)
 }
 
-export async function editChannelMessageAction(input: {
-  channelId: string
-  messageId: number
-  body: string
-}) {
+export async function editChannelMessageAction(input: { channelId: string; messageId: number; body: string }) {
   const { actor, repository } = await getMessageContext()
   const message = await repository.getById(input.messageId)
-
-  if (!message || message.channelId !== input.channelId) {
-    throw new Error('MESSAGE_ROOM_MISMATCH')
-  }
-
+  if (!message || message.channelId !== input.channelId) throw new Error('MESSAGE_ROOM_MISMATCH')
   return editMessage(repository, actor, input.messageId, input.body)
 }
 
-export async function deleteChannelMessageAction(input: {
-  channelId: string
-  messageId: number
-}) {
+export async function deleteChannelMessageAction(input: { channelId: string; messageId: number }) {
   const { actor, repository } = await getMessageContext()
   const message = await repository.getById(input.messageId)
-
-  if (!message || message.channelId !== input.channelId) {
-    throw new Error('MESSAGE_ROOM_MISMATCH')
-  }
-
+  if (!message || message.channelId !== input.channelId) throw new Error('MESSAGE_ROOM_MISMATCH')
   return deleteMessage(repository, actor, input.messageId)
 }
 
-export async function loadOlderChannelMessagesAction(input: {
-  channelId: string
-  beforeId: number
-}) {
+export async function loadOlderChannelMessagesAction(input: { channelId: string; beforeId: number }) {
   const { repository } = await getMessageContext()
   return loadChannelMessages(repository, input.channelId, input.beforeId)
+}
+
+export async function loadLatestChannelMessagesAction(input: { channelId: string }) {
+  const { repository } = await getMessageContext()
+  return loadChannelMessages(repository, input.channelId)
 }

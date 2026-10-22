@@ -9,6 +9,8 @@ import {
   addChannelMember,
   createChannel,
   deleteChannel,
+  joinChannelByCode,
+  leaveChannel,
   removeChannelMember,
   type ChannelActor,
 } from '@/lib/channels/service'
@@ -47,6 +49,22 @@ export async function createChannelAction(formData: FormData) {
   const created = await createChannel(repository, actor, name, memberIds)
   revalidatePath('/')
   return { channelId: created.id }
+}
+
+export async function joinChannelByCodeAction(formData: FormData) {
+  const { actor, repository } = await channelContext()
+  const joinCode = requiredText(formData, 'joinCode')
+  const channel = await joinChannelByCode(repository, actor, joinCode)
+  revalidatePath('/')
+  redirect(`/channel/${channel.id}`)
+}
+
+export async function leaveChannelAction(formData: FormData) {
+  const { actor, repository } = await channelContext()
+  const channelId = requiredText(formData, 'channelId')
+  await leaveChannel(repository, actor, channelId)
+  revalidatePath('/')
+  redirect('/settings')
 }
 
 export async function addChannelMemberAction(formData: FormData) {

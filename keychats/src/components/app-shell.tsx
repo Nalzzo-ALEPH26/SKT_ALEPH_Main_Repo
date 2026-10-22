@@ -8,6 +8,12 @@ type AppShellProps = {
     displayName: string
     avatarPath: string | null
   }
+  currentUserId?: string
+  channelProfiles?: Array<{
+    userId: string
+    displayName: string
+    username: string
+  }>
   channels: Array<{
     id: string
     name: string
@@ -29,6 +35,8 @@ type AppShellProps = {
 
 export function AppShell({
   profile,
+  currentUserId = '',
+  channelProfiles = [],
   channels,
   directMessages,
   directCandidates = [],
@@ -37,6 +45,18 @@ export function AppShell({
   children,
 }: AppShellProps) {
   const dark = theme === 'dark'
+  const sidebar = (
+    <Sidebar
+      profile={profile}
+      currentUserId={currentUserId}
+      channelProfiles={channelProfiles}
+      channels={channels}
+      directMessages={directMessages}
+      directCandidates={directCandidates}
+      theme={theme}
+      isAdmin={isAdmin}
+    />
+  )
 
   return (
     <div
@@ -54,33 +74,14 @@ export function AppShell({
           메뉴
         </summary>
         <div className="fixed inset-0 z-30 bg-black/40">
-          <div className="h-full w-[min(18rem,85vw)] shadow-xl">
-            <Sidebar
-              profile={profile}
-              channels={channels}
-              directMessages={directMessages}
-              directCandidates={directCandidates}
-              theme={theme}
-              isAdmin={isAdmin}
-            />
-          </div>
+          <div className="h-full w-[min(18rem,85vw)] shadow-xl">{sidebar}</div>
         </div>
       </details>
 
       <div className="grid min-h-screen md:grid-cols-[18rem_minmax(0,1fr)]">
         <div className="hidden md:block">
-          <div className="sticky top-0 h-screen">
-            <Sidebar
-              profile={profile}
-              channels={channels}
-              directMessages={directMessages}
-              directCandidates={directCandidates}
-              theme={theme}
-              isAdmin={isAdmin}
-            />
-          </div>
+          <div className="sticky top-0 h-screen">{sidebar}</div>
         </div>
-
         <main className={`min-w-0 pt-16 md:pt-0 ${dark ? 'bg-[#111111]' : 'bg-white'}`}>
           {children}
         </main>

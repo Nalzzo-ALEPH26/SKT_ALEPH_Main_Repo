@@ -22,10 +22,43 @@ function render(messages: Parameters<typeof MessageList>[0]['messages']) {
 }
 
 describe('MessageList', () => {
-  it('shows the exact edited indicator for a live edited message', () => {
+  it('places the current users message and profile on the right', () => {
     const html = render([
       {
         id: 1,
+        body: 'mine',
+        sender,
+        replyTo: null,
+        createdAt: '2026-10-21T00:00:00.000Z',
+        editedAt: null,
+        deletedAt: null,
+      },
+    ])
+    expect(html).toContain('data-own-message="true"')
+    expect(html).toContain('justify-end')
+    expect(html).toContain('data-message-avatar-side="right"')
+  })
+
+  it('keeps other users messages on the left', () => {
+    const html = render([
+      {
+        id: 2,
+        body: 'theirs',
+        sender: { ...sender, userId: '22222222-2222-2222-2222-222222222222' },
+        replyTo: null,
+        createdAt: '2026-10-21T00:00:00.000Z',
+        editedAt: null,
+        deletedAt: null,
+      },
+    ])
+    expect(html).toContain('data-own-message="false"')
+    expect(html).toContain('data-message-avatar-side="left"')
+  })
+
+  it('shows the exact edited indicator for a live edited message', () => {
+    const html = render([
+      {
+        id: 3,
         body: 'changed',
         sender,
         replyTo: null,
@@ -42,7 +75,7 @@ describe('MessageList', () => {
   it('renders an exact tombstone and hides the deleted body', () => {
     const html = render([
       {
-        id: 2,
+        id: 4,
         body: 'secret old body',
         sender,
         replyTo: null,
@@ -59,7 +92,7 @@ describe('MessageList', () => {
   it('shows the referenced message excerpt for replies', () => {
     const html = render([
       {
-        id: 3,
+        id: 5,
         body: 'answer',
         sender,
         replyTo: {
@@ -81,7 +114,7 @@ describe('MessageList', () => {
   it('renders reaction counts, the current users reaction state and a pinned marker', () => {
     const html = render([
       {
-        id: 4,
+        id: 6,
         body: 'react to me',
         sender,
         replyTo: null,

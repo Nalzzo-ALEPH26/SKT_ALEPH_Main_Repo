@@ -13,6 +13,7 @@ import {
   addChannelMemberAction,
   createChannelAction,
   deleteChannelAction,
+  leaveChannelAction,
   removeChannelMemberAction,
 } from '../channel-actions'
 
@@ -34,7 +35,7 @@ export default async function ChannelPage({ params }: PageProps) {
 
   const { data: channel, error: channelError } = await client
     .from('channels')
-    .select('id,name,created_by,is_default')
+    .select('id,name,created_by,is_default,join_code')
     .eq('id', channelId)
     .maybeSingle()
 
@@ -68,35 +69,32 @@ export default async function ChannelPage({ params }: PageProps) {
   const candidates = allProfiles.filter((item) => !memberSet.has(item.userId))
   const isAdmin = claims.app_metadata?.role === 'admin'
   const canManage = isAdmin || channel.created_by === profile.user_id
-  const initialMessages = await loadChannelMessages(
-    createSupabaseMessageRepository(client),
-    channelId,
-  )
+  const initialMessages = await loadChannelMessages(createSupabaseMessageRepository(client), channelId)
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-5 py-8 md:px-8">
-      <header className="flex flex-wrap items-start justify-between gap-4 border-b border-black/10 pb-5 dark:border-white/10">
+    <div className="mx-auto flex h-dvh w-full max-w-5xl flex-col overflow-hidden px-5 py-5 md:px-8">
+      <header className="shrink-0 flex flex-wrap items-start justify-between gap-4 border-b border-black/10 pb-4 dark:border-white/10">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">CHANNEL</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">#{channel.name}</h1>
-          <p className="mt-1 text-sm text-zinc-500">멤버 {members.length}명</p>
+          <p className="mt-1 text-sm text-zinc-500">
+            멤버 {members.length}명 · 입장 코드 <span className="font-mono">{channel.join_code}</span>
+          </p>
         </div>
         <div className="flex w-full max-w-sm flex-col gap-2 sm:w-auto">
-          <ChannelDialog
-            profiles={allProfiles}
-            currentUserId={profile.user_id}
-            action={createChannelAction}
-          />
+          <ChannelDialog profiles={allProfiles} currentUserId={profile.user_id} action={createChannelAction} />
           <MemberDialog
             channelId={channel.id}
             members={members}
             candidates={candidates}
             canManage={canManage}
             canDelete={isAdmin}
+            canLeave={memberSet.has(profile.user_id)}
             isDefault={Boolean(channel.is_default)}
             addAction={addChannelMemberAction}
             removeAction={removeChannelMemberAction}
             deleteAction={deleteChannelAction}
+            leaveAction={leaveChannelAction}
           />
         </div>
       </header>

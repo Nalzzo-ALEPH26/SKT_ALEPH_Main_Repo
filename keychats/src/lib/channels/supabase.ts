@@ -13,38 +13,48 @@ function toRecord(row: {
   name: string
   created_by: string
   is_default: boolean
+  join_code: string
 }): ChannelRecord {
   return {
     id: row.id,
     name: row.name,
     createdBy: row.created_by,
     isDefault: row.is_default,
+    joinCode: row.join_code,
   }
 }
+
+const CHANNEL_COLUMNS = 'id,name,created_by,is_default,join_code'
 
 export function createSupabaseChannelRepository(admin: SupabaseClient): ChannelRepository {
   return {
     async findByNormalizedName(name) {
-      const { data, error } = await admin
-        .from('channels')
-        .select('id,name,created_by,is_default')
+      const { data, error } = await admin.from('channels').select(CHANNEL_COLUMNS)
       assertNoError(error, 'CHANNEL_LOOKUP_FAILED')
-
       const found = (data ?? []).find(
         (row) => String(row.name).trim().toLocaleLowerCase('en-US') === name,
       )
+      return found ? toRecord(found as never) : null
+    },
 
-      return found ? toRecord(found) : null
+    async findByJoinCode(joinCode) {
+      const { data, error } = await admin
+        .from('channels')
+        .select(CHANNEL_COLUMNS)
+        .eq('join_code', joinCode)
+        .maybeSingle()
+      assertNoError(error, 'CHANNEL_LOOKUP_FAILED')
+      return data ? toRecord(data as never) : null
     },
 
     async getById(channelId) {
       const { data, error } = await admin
         .from('channels')
-        .select('id,name,created_by,is_default')
+        .select(CHANNEL_COLUMNS)
         .eq('id', channelId)
         .maybeSingle()
       assertNoError(error, 'CHANNEL_LOOKUP_FAILED')
-      return data ? toRecord(data) : null
+      return data ? toRecord(data as never) : null
     },
 
     async activeUserIds(userIds) {
@@ -61,11 +71,7 @@ export function createSupabaseChannelRepository(admin: SupabaseClient): ChannelR
     async create(input) {
       const { data, error } = await admin
         .from('channels')
-        .insert({
-          name: input.name,
-          created_by: input.createdBy,
-          is_default: false,
-        })
+        .insert({ name: input.name, created_by: input.createdBy, is_default: false })
         .select('id')
         .single()
       assertNoError(error, 'CHANNEL_CREATE_FAILED')
@@ -75,11 +81,7 @@ export function createSupabaseChannelRepository(admin: SupabaseClient): ChannelR
 
     async addMember(channelId, userId, role) {
       const { error } = await admin.from('channel_members').upsert(
-        {
-          channel_id: channelId,
-          user_id: userId,
-          role,
-        },
+        { channel_id: channelId, user_id: userId, role },
         { onConflict: 'channel_id,user_id' },
       )
       assertNoError(error, 'CHANNEL_MEMBER_ADD_FAILED')
