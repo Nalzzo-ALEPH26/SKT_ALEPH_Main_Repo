@@ -1,4 +1,6 @@
 import { lookup } from 'node:dns/promises'
+import { request as httpRequest } from 'node:http'
+import { request as httpsRequest, type RequestOptions as HttpsRequestOptions } from 'node:https'
 import { isIP } from 'node:net'
 
 export type UrlPreview = {
@@ -10,10 +12,17 @@ export type UrlPreview = {
 
 type ResolveHost = (hostname: string) => Promise<string[]>
 type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
+type RequestLimits = { timeoutMs: number; maxBytes: number }
+type RequestTransport = (
+  url: URL,
+  validatedAddresses: string[],
+  limits: RequestLimits,
+) => Promise<Response>
 
 export type FetchUrlPreviewOptions = {
   resolveHost?: ResolveHost
   fetchImpl?: FetchLike
+  requestImpl?: RequestTransport
   timeoutMs?: number
   maxRedirects?: number
   maxBytes?: number
@@ -165,6 +174,140 @@ async function assertSafeTarget(url: URL, resolveHost: ResolveHost) {
   if (addresses.length === 0 || addresses.some(isBlockedAddress)) {
     throw new Error('URL_PREVIEW_ADDRESS_BLOCKED')
   }
+
+  return addresses
+}
+
+function responseHeaders(headers: Record<string, string | string[] | undefined>) {
+  const result = new Headers()
+  for (const [name, value] of Object.entries(headers)) {
+    if (Array.isArray(value)) {
+      for (const item of value) result.append(name, item)
+    } else if (value !== undefined) {
+      result.set(name, value)
+    }
+  }
+  return result
+}
+
+function createPinnedLookup(validatedAddresses: string[]): HttpsRequestOptions['lookup'] {
+  const candidates = validatedAddresses
+    .map((address) => ({ address, family: isIP(address) }))
+    .filter((candidate): candidate is { address: string; family: 4 | 6 } => candidate.family === 4 || candidate.family === 6)
+
+  if (candidates.length === 0) throw new Error('URL_PREVIEW_ADDRESS_BLOCKED')
+
+  return ((_hostname, options, callback) => {
+    const requestedFamily = typeof options === 'number' ? options : options.family
+    const matching = requestedFamily === 4 || requestedFamily === 6
+      ? candidates.filter((candidate) => candidate.family === requestedFamily)
+      : candidates
+
+    if (matching.length === 0) {
+      const error = new Error('No validated address for requested family') as NodeJS.ErrnoException
+      error.code = 'ENOTFOUND'
+      callback(error, '', 0)
+      return
+    }
+
+    if (typeof options === 'object' && options.all) {
+      callback(null, matching)
+      return
+    }
+
+    callback(null, matching[0].address, matching[0].family)
+  }) as HttpsRequestOptions['lookup']
+}
+
+async function pinnedNodeRequest(
+  url: URL,
+  validatedAddresses: string[],
+  { timeoutMs, maxBytes }: RequestLimits,
+): Promise<Response> {
+  return new Promise<Response>((resolve, reject) => {
+    let settled = false
+    let timer: ReturnType<typeof setTimeout> | undefined
+
+    const finishReject = (error: Error) => {
+      if (settled) return
+      settled = true
+      if (timer) clearTimeout(timer)
+      reject(error)
+    }
+
+    const requester = url.protocol === 'https:' ? httpsRequest : httpRequest
+    const hostname = url.hostname.replace(/^\[|\]$/g, '')
+    const options: HttpsRequestOptions = {
+      method: 'GET',
+      lookup: createPinnedLookup(validatedAddresses),
+      headers: {
+        accept: 'text/html,application/xhtml+xml;q=0.9',
+        'accept-encoding': 'identity',
+        'user-agent': 'KeychatsLinkPreview/1.0',
+      },
+      ...(url.protocol === 'https:' ? { servername: hostname } : {}),
+    }
+
+    const request = requester(url, options, (incoming) => {
+      const status = incoming.statusCode ?? 0
+      const headers = responseHeaders(incoming.headers)
+
+      if (status >= 300 && status < 400) {
+        incoming.resume()
+        if (!settled) {
+          settled = true
+          if (timer) clearTimeout(timer)
+          resolve(new Response(null, { status, headers }))
+        }
+        return
+      }
+
+      const contentLength = Number(headers.get('content-length'))
+      if (Number.isFinite(contentLength) && contentLength > maxBytes) {
+        incoming.destroy()
+        finishReject(new Error('URL_PREVIEW_TOO_LARGE'))
+        return
+      }
+
+      const contentEncoding = headers.get('content-encoding')?.toLowerCase()
+      if (contentEncoding && contentEncoding !== 'identity') {
+        incoming.destroy()
+        finishReject(new Error('URL_PREVIEW_ENCODING_UNSUPPORTED'))
+        return
+      }
+
+      const chunks: Buffer[] = []
+      let total = 0
+
+      incoming.on('data', (chunk: Buffer | string) => {
+        if (settled) return
+        const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
+        total += buffer.byteLength
+        if (total > maxBytes) {
+          incoming.destroy()
+          finishReject(new Error('URL_PREVIEW_TOO_LARGE'))
+          return
+        }
+        chunks.push(buffer)
+      })
+
+      incoming.on('end', () => {
+        if (settled) return
+        settled = true
+        if (timer) clearTimeout(timer)
+        resolve(new Response(Buffer.concat(chunks), { status, headers }))
+      })
+
+      incoming.on('error', (error) => finishReject(error))
+    })
+
+    timer = setTimeout(() => {
+      request.destroy(new Error('URL_PREVIEW_TIMEOUT'))
+    }, timeoutMs)
+
+    request.on('error', (error) => finishReject(error))
+    request.end()
+  })
 }
 
 async function fetchWithTimeout(
@@ -296,7 +439,7 @@ export async function fetchUrlPreview(
   options: FetchUrlPreviewOptions = {},
 ): Promise<UrlPreview | null> {
   const resolveHost = options.resolveHost ?? defaultResolveHost
-  const fetchImpl = options.fetchImpl ?? fetch
+  const requestImpl = options.requestImpl ?? pinnedNodeRequest
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS
   const maxRedirects = options.maxRedirects ?? DEFAULT_MAX_REDIRECTS
   const maxBytes = options.maxBytes ?? DEFAULT_MAX_BYTES
@@ -308,8 +451,10 @@ export async function fetchUrlPreview(
     let redirects = 0
 
     while (true) {
-      await assertSafeTarget(current, resolveHost)
-      const response = await fetchWithTimeout(fetchImpl, current, timeoutMs)
+      const validatedAddresses = await assertSafeTarget(current, resolveHost)
+      const response = options.fetchImpl
+        ? await fetchWithTimeout(options.fetchImpl, current, timeoutMs)
+        : await requestImpl(current, validatedAddresses, { timeoutMs, maxBytes })
 
       if (isRedirect(response.status)) {
         const location = response.headers.get('location')
