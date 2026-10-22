@@ -1,6 +1,13 @@
 'use client'
 
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ChangeEvent,
+  type ClipboardEvent,
+  type FormEvent,
+} from 'react'
 
 import {
   deleteChannelMessageAction,
@@ -21,6 +28,12 @@ import {
   toggleMessageReactionAction,
 } from '@/app/(workspace)/message-state-actions'
 import { MessageList } from '@/components/message-list'
+import {
+  loadAttachmentsForMessages,
+  uploadMessageAttachments,
+  type AttachmentMetadata,
+} from '@/lib/files/supabase'
+import { validateAttachmentFile } from '@/lib/files/validation'
 import {
   mergeMessageHistory,
   messageRecordToRealtimeRow,
@@ -59,6 +72,45 @@ type MessageStateSnapshot = Record<
   }
 >
 
+const FILE_ACCEPT = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'application/pdf',
+  'application/zip',
+  'text/plain',
+  '.docx',
+  '.xlsx',
+  '.pptx',
+].join(',')
+
+function validationMessage(code: string) {
+  if (code === 'FILE_TOO_LARGE') return '파일은 10MB 이하만 첨부할 수 있습니다.'
+  if (code === 'FILE_EMPTY') return '빈 파일은 첨부할 수 없습니다.'
+  if (code === 'FILE_TYPE_MISMATCH') return '파일 확장자와 형식이 일치하지 않습니다.'
+  return '지원하지 않는 파일 형식입니다.'
+}
+
+function clipboardFile(file: File) {
+  if (file.name.includes('.')) return file
+  const extension =
+    file.type === 'image/jpeg'
+      ? 'jpg'
+      : file.type === 'image/webp'
+        ? 'webp'
+        : file.type === 'image/gif'
+          ? 'gif'
+          : 'png'
+  return new File([file], `clipboard-${Date.now()}.${extension}`, { type: file.type })
+}
+
+function mergeAttachments(current: AttachmentMetadata[], incoming: AttachmentMetadata[]) {
+  const byId = new Map(current.map((attachment) => [attachment.id, attachment]))
+  for (const attachment of incoming) byId.set(attachment.id, attachment)
+  return [...byId.values()]
+}
+
 export function ConversationMessagePane({
   target,
   initialMessages,
@@ -69,6 +121,8 @@ export function ConversationMessagePane({
   const client = useMemo(() => createClient(), [])
   const [messages, setMessages] = useState(initialMessages)
   const [messageState, setMessageState] = useState<MessageStateSnapshot>({})
+  const [attachments, setAttachments] = useState<AttachmentMetadata[]>([])
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [draft, setDraft] = useState('')
   const [replyToId, setReplyToId] = useState<number | null>(null)
   const [editingMessageId, setEditingMessageId] = useState<number | null>(null)
@@ -87,17 +141,29 @@ export function ConversationMessagePane({
     setMessageState((current) => ({ ...current, ...snapshot }))
   }
 
+  const refreshAttachments = async (ids: number[]) => {
+    if (ids.length === 0) return
+    const next = await loadAttachmentsForMessages(client, ids)
+    setAttachments((current) => mergeAttachments(current, next))
+  }
+
   useEffect(() => {
     let active = true
 
     if (messageIds.length === 0) {
       setMessageState({})
+      setAttachments([])
       return
     }
 
-    void loadMessageStateAction({ messageIds })
-      .then((snapshot) => {
-        if (active) setMessageState(snapshot)
+    void Promise.all([
+      loadMessageStateAction({ messageIds }),
+      loadAttachmentsForMessages(client, messageIds),
+    ])
+      .then(([snapshot, nextAttachments]) => {
+        if (!active) return
+        setMessageState(snapshot)
+        setAttachments(nextAttachments)
       })
       .catch(() => {
         if (active) setError('메시지 상태를 불러오지 못했습니다.')
@@ -106,7 +172,7 @@ export function ConversationMessagePane({
     return () => {
       active = false
     }
-  }, [messageIdsKey])
+  }, [client, messageIdsKey])
 
   useEffect(() => {
     let active = true
@@ -154,9 +220,13 @@ export function ConversationMessagePane({
     let active = true
     let stateChannel: ReturnType<typeof client.channel> | null = null
 
-    const refresh = () => {
+    const refreshState = () => {
       if (!active) return
       void refreshMessageState(messageIds).catch(() => undefined)
+    }
+    const refreshFiles = () => {
+      if (!active) return
+      void refreshAttachments(messageIds).catch(() => undefined)
     }
 
     void (async () => {
@@ -173,12 +243,17 @@ export function ConversationMessagePane({
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'message_reactions' },
-          refresh,
+          refreshState,
         )
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'message_pins' },
-          refresh,
+          refreshState,
+        )
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'attachments' },
+          refreshFiles,
         )
         .subscribe()
     })()
@@ -199,14 +274,25 @@ export function ConversationMessagePane({
     }).catch(() => undefined)
   }, [latestMessageId, target.id, target.kind])
 
+  const attachmentsByMessage = useMemo(() => {
+    const grouped = new Map<number, AttachmentMetadata[]>()
+    for (const attachment of attachments) {
+      const current = grouped.get(attachment.messageId) ?? []
+      current.push(attachment)
+      grouped.set(attachment.messageId, current)
+    }
+    return grouped
+  }, [attachments])
+
   const renderedMessages = useMemo(
     () =>
       toMessageListItems(messages, profiles).map((message) => ({
         ...message,
         isPinned: messageState[message.id]?.isPinned ?? false,
         reactions: messageState[message.id]?.reactions ?? [],
+        attachments: attachmentsByMessage.get(message.id) ?? [],
       })),
-    [messages, profiles, messageState],
+    [attachmentsByMessage, messages, profiles, messageState],
   )
   const replyTarget =
     replyToId === null ? null : renderedMessages.find((message) => message.id === replyToId) ?? null
@@ -219,6 +305,37 @@ export function ConversationMessagePane({
     setDraft('')
     setReplyToId(null)
     setEditingMessageId(null)
+    setSelectedFiles([])
+  }
+
+  const addFiles = (files: File[]) => {
+    if (files.length === 0) return
+
+    for (const file of files) {
+      const validation = validateAttachmentFile(file)
+      if (!validation.ok) {
+        setError(validationMessage(validation.code))
+        return
+      }
+    }
+
+    setError(null)
+    setSelectedFiles((current) => [...current, ...files])
+  }
+
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    addFiles(Array.from(event.target.files ?? []))
+    event.target.value = ''
+  }
+
+  const handlePaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
+    const images = Array.from(event.clipboardData.files)
+      .filter((file) => file.type.startsWith('image/'))
+      .map(clipboardFile)
+    if (images.length === 0) return
+
+    event.preventDefault()
+    addFiles(images)
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -227,6 +344,7 @@ export function ConversationMessagePane({
 
     setBusy(true)
     setError(null)
+    let createdMessageId: number | null = null
 
     try {
       const result =
@@ -241,6 +359,7 @@ export function ConversationMessagePane({
                 channelId: target.id,
                 body: draft,
                 replyToId,
+                attachmentCount: selectedFiles.length,
               })
           : editingMessageId
             ? await editDmMessageAction({
@@ -252,13 +371,44 @@ export function ConversationMessagePane({
                 dmThreadId: target.id,
                 body: draft,
                 replyToId,
+                attachmentCount: selectedFiles.length,
               })
 
+      createdMessageId = result.id
       const row = messageRecordToRealtimeRow(result)
       setMessages((current) => reconcileMessageChange(current, row))
+
+      if (!editingMessageId && selectedFiles.length > 0) {
+        const uploaded = await uploadMessageAttachments(client, {
+          userId: currentUserId,
+          messageId: result.id,
+          files: selectedFiles,
+        })
+        setAttachments((current) => mergeAttachments(current, uploaded))
+      }
+
       resetComposer()
     } catch {
-      setError('메시지를 처리하지 못했습니다. 다시 시도해 주세요.')
+      if (!editingMessageId && createdMessageId !== null) {
+        try {
+          const deleted =
+            target.kind === 'channel'
+              ? await deleteChannelMessageAction({
+                  channelId: target.id,
+                  messageId: createdMessageId,
+                })
+              : await deleteDmMessageAction({
+                  dmThreadId: target.id,
+                  messageId: createdMessageId,
+                })
+          setMessages((current) =>
+            reconcileMessageChange(current, messageRecordToRealtimeRow(deleted)),
+          )
+        } catch {
+          // RLS still prevents attachment visibility if finalization did not succeed.
+        }
+      }
+      setError('메시지 또는 파일을 처리하지 못했습니다. 다시 시도해 주세요.')
     } finally {
       setBusy(false)
     }
@@ -275,6 +425,7 @@ export function ConversationMessagePane({
 
     setEditingMessageId(messageId)
     setReplyToId(null)
+    setSelectedFiles([])
     setDraft(message.body ?? '')
   }
 
@@ -402,7 +553,43 @@ export function ConversationMessagePane({
           </div>
         ) : null}
 
+        {!editingTarget && selectedFiles.length > 0 ? (
+          <div className="mb-2 flex flex-wrap gap-2" data-selected-attachments>
+            {selectedFiles.map((file, index) => (
+              <span
+                key={`${file.name}-${file.size}-${index}`}
+                className="inline-flex max-w-full items-center gap-2 rounded-full bg-zinc-100 px-3 py-1.5 text-xs dark:bg-zinc-900"
+              >
+                <span className="max-w-48 truncate">{file.name}</span>
+                <button
+                  type="button"
+                  aria-label={`${file.name} 첨부 취소`}
+                  onClick={() =>
+                    setSelectedFiles((current) => current.filter((_, fileIndex) => fileIndex !== index))
+                  }
+                  className="text-zinc-500"
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        ) : null}
+
         <form onSubmit={handleSubmit} className="flex items-end gap-2" data-message-composer>
+          {!editingTarget ? (
+            <label className="flex h-12 cursor-pointer items-center rounded-2xl border border-black/10 px-3 text-sm dark:border-white/10">
+              첨부
+              <input
+                type="file"
+                multiple
+                accept={FILE_ACCEPT}
+                className="sr-only"
+                disabled={busy}
+                onChange={handleFileChange}
+              />
+            </label>
+          ) : null}
           <label className="sr-only" htmlFor="keychats-message-input">
             메시지 입력
           </label>
@@ -413,6 +600,7 @@ export function ConversationMessagePane({
             maxLength={20000}
             value={draft}
             disabled={busy}
+            onPaste={handlePaste}
             onChange={(event) => setDraft(event.target.value)}
             placeholder="메시지를 입력하세요"
             className="min-h-12 flex-1 resize-none rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:border-zinc-400 disabled:opacity-60 dark:border-white/10 dark:bg-zinc-950 dark:focus:border-zinc-600"
@@ -420,7 +608,7 @@ export function ConversationMessagePane({
           <button
             type="submit"
             data-send-message
-            disabled={busy || draft.trim().length === 0}
+            disabled={busy || (draft.trim().length === 0 && selectedFiles.length === 0)}
             className="h-12 rounded-2xl bg-zinc-950 px-5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40 dark:bg-white dark:text-zinc-950"
           >
             {editingMessageId ? '수정' : '전송'}
