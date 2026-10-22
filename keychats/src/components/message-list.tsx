@@ -7,6 +7,8 @@ type MessageListProps = {
   onReply?: (messageId: number) => void
   onEdit?: (messageId: number) => void
   onDelete?: (messageId: number) => void
+  onToggleReaction?: (messageId: number, emoji: string) => void
+  onTogglePin?: (messageId: number) => void
 }
 
 export function MessageList({
@@ -16,6 +18,8 @@ export function MessageList({
   onReply,
   onEdit,
   onDelete,
+  onToggleReaction,
+  onTogglePin,
 }: MessageListProps) {
   if (messages.length === 0) {
     return (
@@ -36,6 +40,8 @@ export function MessageList({
           onReply={onReply}
           onEdit={onEdit}
           onDelete={onDelete}
+          onToggleReaction={onToggleReaction}
+          onTogglePin={onTogglePin}
         />
       ))}
     </div>
