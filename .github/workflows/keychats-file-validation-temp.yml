@@ -1,5 +1,6 @@
 name: Keychats File Validation Temp
 
+# Focused GREEN verification for attachment validation only.
 on:
   push:
     branches:
