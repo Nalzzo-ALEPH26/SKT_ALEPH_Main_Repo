@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 
+const isGitHubActions = process.env.GITHUB_ACTIONS === 'true'
+
 export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: false,
@@ -14,7 +16,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: process.env.CI ? 'npm run start' : 'npm run dev',
+    command: isGitHubActions ? 'npm run start' : 'npm run dev',
     url: 'http://localhost:3000/chats',
     reuseExistingServer: false,
     timeout: 120000,
