@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import { expect, test, type BrowserContext, type Page } from '@playwright/test'
+import { expect, test, type BrowserContext, type Locator, type Page } from '@playwright/test'
 
 const password = 'E2eKeychats!2026'
 
@@ -20,6 +20,20 @@ function requiredEnv(name: string) {
   const value = process.env[name]
   if (!value) throw new Error(`E2E_ENV_MISSING:${name}`)
   return value
+}
+
+async function clickFirstVisible(locator: Locator) {
+  const count = await locator.count()
+
+  for (let index = 0; index < count; index += 1) {
+    const candidate = locator.nth(index)
+    if (await candidate.isVisible()) {
+      await candidate.click()
+      return
+    }
+  }
+
+  throw new Error('VISIBLE_DM_CONTROL_NOT_FOUND')
 }
 
 async function createFixture(): Promise<Fixture> {
@@ -89,8 +103,8 @@ async function login(page: Page, user: E2eUser) {
 async function startDm(context: BrowserContext, current: E2eUser, other: E2eUser) {
   const page = await context.newPage()
   await login(page, current)
-  await page.getByText('새 DM', { exact: true }).first().click()
-  await page.getByRole('button', { name: other.displayName, exact: true }).first().click()
+  await clickFirstVisible(page.getByText('새 DM', { exact: true }))
+  await clickFirstVisible(page.getByRole('button', { name: other.displayName, exact: true }))
   await expect(page).toHaveURL(/\/chats\/dm\/[0-9a-f-]+$/)
   const pane = page.locator('[data-dm-message-pane]')
   await expect(pane).toBeVisible()
