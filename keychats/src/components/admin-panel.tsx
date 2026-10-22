@@ -123,8 +123,12 @@ export function AdminPanel({ initialUsers, initialInvites, initialSignupRequests
     try {
       const result = await resetUserPasswordAction(user.userId)
       setTemporaryPassword({ username: user.username, password: result.temporaryPassword })
-    } catch {
-      setError('임시 비밀번호를 발급하지 못했습니다.')
+    } catch (caught) {
+      setError(
+        caught instanceof Error && caught.message === 'SOLE_ADMIN_PROTECTED'
+          ? 'cxu1344 관리자 본인에게는 임시 비밀번호를 발급할 수 없습니다.'
+          : '임시 비밀번호를 발급하지 못했습니다.',
+      )
     } finally {
       setBusy(null)
     }
@@ -249,7 +253,7 @@ export function AdminPanel({ initialUsers, initialInvites, initialSignupRequests
                   <div className="mt-1 text-xs text-zinc-500">상태: {user.status}{soleAdmin ? ' · 관리자' : ''}</div>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <button type="button" onClick={() => resetPassword(user)} disabled={busy !== null || user.status !== 'active'} className="rounded-lg border border-black/10 px-3 py-1.5 text-xs font-semibold disabled:opacity-40 dark:border-white/10">임시 비밀번호</button>
+                  <button type="button" onClick={() => resetPassword(user)} disabled={busy !== null || soleAdmin || user.status !== 'active'} title={soleAdmin ? '관리자 본인은 설정에서 비밀번호를 변경하세요.' : undefined} className="rounded-lg border border-black/10 px-3 py-1.5 text-xs font-semibold disabled:opacity-40 dark:border-white/10">임시 비밀번호</button>
                   <button type="button" onClick={() => changeStatus(user, 'disable')} disabled={busy !== null || soleAdmin || user.status !== 'active'} className="rounded-lg border border-black/10 px-3 py-1.5 text-xs font-semibold disabled:opacity-40 dark:border-white/10">비활성화</button>
                   <button type="button" onClick={() => changeStatus(user, 'expel')} disabled={busy !== null || soleAdmin || user.status === 'expelled'} className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 disabled:opacity-40 dark:border-red-900">퇴출</button>
                   <button type="button" onClick={() => deleteAccount(user)} disabled={busy !== null || soleAdmin} data-delete-user={user.userId} className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40">계정 삭제</button>
