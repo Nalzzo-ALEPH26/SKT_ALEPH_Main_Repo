@@ -56,15 +56,21 @@ export function ConversationMessagePane({
   const [hasMore, setHasMore] = useState(initialMessages.length === 50)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [realtimeStatus, setRealtimeStatus] = useState('connecting')
 
   useEffect(() => {
+    setRealtimeStatus('connecting')
+
     const onChange = (incoming: RealtimeMessageRow) => {
       setMessages((current) => reconcileMessageChange(current, incoming))
     }
+    const onStatus = (status: string) => {
+      setRealtimeStatus(status.toLowerCase())
+    }
 
     return target.kind === 'channel'
-      ? subscribeToChannelMessages(client as never, target.id, onChange)
-      : subscribeToDmMessages(client as never, target.id, onChange)
+      ? subscribeToChannelMessages(client as never, target.id, onChange, onStatus)
+      : subscribeToDmMessages(client as never, target.id, onChange, onStatus)
   }, [client, target.id, target.kind])
 
   const renderedMessages = useMemo(
@@ -192,6 +198,7 @@ export function ConversationMessagePane({
       data-conversation-message-pane
       data-channel-message-pane={target.kind === 'channel' ? true : undefined}
       data-dm-message-pane={target.kind === 'dm' ? true : undefined}
+      data-realtime-status={realtimeStatus}
     >
       {hasMore ? (
         <div className="flex justify-center pb-2">

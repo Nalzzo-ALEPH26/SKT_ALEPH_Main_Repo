@@ -92,7 +92,9 @@ async function startDm(context: BrowserContext, current: E2eUser, other: E2eUser
   await page.getByText('새 DM', { exact: true }).first().click()
   await page.getByRole('button', { name: other.displayName, exact: true }).first().click()
   await expect(page).toHaveURL(/\/chats\/dm\/[0-9a-f-]+$/)
-  await expect(page.locator('[data-dm-message-pane]')).toBeVisible()
+  const pane = page.locator('[data-dm-message-pane]')
+  await expect(pane).toBeVisible()
+  await expect(pane).toHaveAttribute('data-realtime-status', 'subscribed', { timeout: 10_000 })
   return page
 }
 
@@ -119,7 +121,6 @@ test('keeps one canonical 1:1 DM private while syncing messages in realtime', as
     expect(response?.status()).toBe(404)
     await expect(outsiderPage.locator('[data-dm-message-pane]')).toHaveCount(0)
 
-    await secondPage.waitForTimeout(750)
     const body = `private-${Date.now()}`
     await firstPage.getByLabel('메시지 입력').fill(body)
     await firstPage.locator('[data-send-message]').click()

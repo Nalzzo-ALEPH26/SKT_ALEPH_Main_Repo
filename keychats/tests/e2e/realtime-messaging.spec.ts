@@ -85,7 +85,9 @@ async function openChannel(context: BrowserContext, channelId: string, loginId: 
   const page = await context.newPage()
   await login(page, loginId)
   await page.goto(`/chats/channel/${channelId}`)
-  await expect(page.locator('[data-channel-message-pane]')).toBeVisible()
+  const pane = page.locator('[data-channel-message-pane]')
+  await expect(pane).toBeVisible()
+  await expect(pane).toHaveAttribute('data-realtime-status', 'subscribed', { timeout: 10_000 })
   return page
 }
 
@@ -98,9 +100,6 @@ test('syncs channel send, reply, edit and soft-delete across two signed-in brows
     fixture = await createFixture()
     const firstPage = await openChannel(firstContext, fixture.channelId, fixture.first.loginId)
     const secondPage = await openChannel(secondContext, fixture.channelId, fixture.second.loginId)
-
-    // Give both authenticated clients a moment to join their Realtime subscriptions.
-    await secondPage.waitForTimeout(750)
 
     const original = `hello-${Date.now()}`
     const firstInput = firstPage.getByLabel('메시지 입력')

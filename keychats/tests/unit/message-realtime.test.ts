@@ -26,19 +26,28 @@ function row(id: number, body: string): RealtimeMessageRow {
 
 function fakeRealtimeClient() {
   const handlers: Array<{ event: string; filter: string }> = []
+  let statusHandler: ((status: string) => void) | undefined
   const realtimeChannel = {
     on: vi.fn((_: string, options: { event: string; filter: string }) => {
       handlers.push({ event: options.event, filter: options.filter })
       return realtimeChannel
     }),
-    subscribe: vi.fn(() => realtimeChannel),
+    subscribe: vi.fn((callback?: (status: string) => void) => {
+      statusHandler = callback
+      return realtimeChannel
+    }),
   }
   const client = {
     channel: vi.fn(() => realtimeChannel),
     removeChannel: vi.fn(),
   }
 
-  return { client, realtimeChannel, handlers }
+  return {
+    client,
+    realtimeChannel,
+    handlers,
+    emitStatus: (status: string) => statusHandler?.(status),
+  }
 }
 
 describe('reconcileMessageChange', () => {
@@ -73,6 +82,16 @@ describe('subscribeToChannelMessages', () => {
 
     unsubscribe()
     expect(client.removeChannel).toHaveBeenCalledWith(realtimeChannel)
+  })
+
+  it('forwards realtime subscription status so callers can wait for readiness', () => {
+    const { client, emitStatus } = fakeRealtimeClient()
+    const onStatus = vi.fn()
+
+    subscribeToChannelMessages(client, channelId, vi.fn(), onStatus)
+    emitStatus('SUBSCRIBED')
+
+    expect(onStatus).toHaveBeenCalledWith('SUBSCRIBED')
   })
 })
 

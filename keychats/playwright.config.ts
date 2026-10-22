@@ -5,7 +5,6 @@ const isGitHubActions = process.env.GITHUB_ACTIONS === 'true'
 export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: false,
-  workers: isGitHubActions ? 1 : undefined,
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'retain-on-failure',

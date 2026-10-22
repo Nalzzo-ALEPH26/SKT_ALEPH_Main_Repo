@@ -21,7 +21,7 @@ type MessageRealtimeChannel = {
     },
     callback: (payload: { new: RealtimeMessageRow }) => void,
   ) => MessageRealtimeChannel
-  subscribe: () => MessageRealtimeChannel
+  subscribe: (callback?: (status: string) => void) => MessageRealtimeChannel
 }
 
 type MessageRealtimeClient = {
@@ -43,6 +43,7 @@ function subscribeToMessages(
   subscriptionName: string,
   filter: string,
   onChange: (message: RealtimeMessageRow) => void,
+  onStatus?: (status: string) => void,
 ) {
   const channel = client
     .channel(subscriptionName)
@@ -66,7 +67,7 @@ function subscribeToMessages(
       },
       (payload) => onChange(payload.new),
     )
-    .subscribe()
+    .subscribe((status) => onStatus?.(status))
 
   return () => {
     void client.removeChannel(channel)
@@ -77,12 +78,14 @@ export function subscribeToChannelMessages(
   client: MessageRealtimeClient,
   channelId: string,
   onChange: (message: RealtimeMessageRow) => void,
+  onStatus?: (status: string) => void,
 ) {
   return subscribeToMessages(
     client,
     `messages:channel:${channelId}`,
     `channel_id=eq.${channelId}`,
     onChange,
+    onStatus,
   )
 }
 
@@ -90,11 +93,13 @@ export function subscribeToDmMessages(
   client: MessageRealtimeClient,
   dmThreadId: string,
   onChange: (message: RealtimeMessageRow) => void,
+  onStatus?: (status: string) => void,
 ) {
   return subscribeToMessages(
     client,
     `messages:dm:${dmThreadId}`,
     `dm_thread_id=eq.${dmThreadId}`,
     onChange,
+    onStatus,
   )
 }
