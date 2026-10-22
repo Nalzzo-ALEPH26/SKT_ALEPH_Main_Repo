@@ -1,4 +1,5 @@
 import { AvatarUploader } from '@/components/avatar-uploader'
+import { PasswordChangeForm } from '@/components/password-change-form'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { requireActiveUser } from '@/lib/auth/guards'
 import { createAuthGuardAccess } from '@/lib/auth/server-access'
@@ -44,6 +45,12 @@ export default async function SettingsPage() {
         <form action={updateThemeAction} className="mt-4">
           <ThemeToggle theme={theme} />
         </form>
+      </section>
+
+      <section className="mt-4 rounded-2xl border border-current/10 p-5">
+        <h2 className="text-sm font-semibold">비밀번호</h2>
+        <p className="mt-1 text-sm opacity-55">현재 비밀번호를 확인한 뒤 새 비밀번호로 변경합니다.</p>
+        <PasswordChangeForm />
       </section>
     </div>
   )
