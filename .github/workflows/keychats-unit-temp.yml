@@ -1,6 +1,6 @@
 name: Keychats Unit Temp
 
-# Focused Task 10 + DM regression GREEN verification.
+# Focused message-state server action RED verification.
 on:
   push:
     branches:
@@ -23,4 +23,4 @@ jobs:
         with:
           node-version: '22'
       - run: npm ci
-      - run: npx vitest run tests/unit/dm-supabase.test.ts tests/unit/message-state-supabase.test.ts tests/components/message-list.test.tsx
+      - run: npx vitest run tests/unit/message-state-actions.test.ts
