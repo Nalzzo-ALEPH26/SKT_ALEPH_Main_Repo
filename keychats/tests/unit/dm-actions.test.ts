@@ -5,6 +5,8 @@ vi.mock('server-only', () => ({}))
 const mocks = vi.hoisted(() => {
   const repository = {
     getOrCreate: vi.fn(),
+    hide: vi.fn(),
+    unhide: vi.fn(),
   }
 
   return {
@@ -43,7 +45,7 @@ beforeEach(() => {
 })
 
 describe('startDirectMessageAction', () => {
-  it('derives the current participant from authenticated profile and redirects to the canonical thread', async () => {
+  it('derives the current participant from authenticated profile, restores a hidden thread and redirects', async () => {
     const formData = new FormData()
     formData.set('otherUserId', otherUserId)
 
@@ -54,6 +56,7 @@ describe('startDirectMessageAction', () => {
       userLow: otherUserId,
       userHigh: currentUserId,
     })
+    expect(mocks.repository.unhide).toHaveBeenCalledWith(threadId, currentUserId)
     expect(mocks.redirect).toHaveBeenCalledWith(`/dm/${threadId}`)
   })
 
