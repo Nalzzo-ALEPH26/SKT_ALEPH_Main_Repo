@@ -77,8 +77,10 @@ export default async function ChannelPage({ params }: PageProps) {
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">CHANNEL</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">#{channel.name}</h1>
-          <p className="mt-1 text-sm text-zinc-500">
-            멤버 {members.length}명 · 입장 코드 <span className="font-mono">{channel.join_code}</span>
+          <p className="mt-1 flex flex-wrap items-center gap-x-1 text-sm text-zinc-500">
+            <span>멤버 {members.length}명</span>
+            <span aria-hidden="true">·</span>
+            <span>입장 코드 <span className="font-mono">{channel.join_code}</span></span>
           </p>
         </div>
         <div className="flex w-full max-w-sm flex-col gap-2 sm:w-auto">
