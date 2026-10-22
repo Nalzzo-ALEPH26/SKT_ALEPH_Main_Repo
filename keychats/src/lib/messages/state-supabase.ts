@@ -38,6 +38,12 @@ type UnreadMessageRow = {
   deleted_at: string | null
 }
 
+export type UnreadCountRow = {
+  room_type: 'channel' | 'dm'
+  room_id: string
+  unread_count: number | string
+}
+
 export type ReactionSummary = {
   emoji: string
   count: number
@@ -223,6 +229,26 @@ export async function loadMessageStateSnapshot(
   }
 
   return snapshot
+}
+
+export function mapUnreadCountRows(rows: UnreadCountRow[]) {
+  const channels: Record<string, number> = {}
+  const directMessages: Record<string, number> = {}
+
+  for (const row of rows) {
+    const count = Number(row.unread_count)
+    if (!Number.isFinite(count) || count <= 0) continue
+    if (row.room_type === 'channel') channels[row.room_id] = count
+    if (row.room_type === 'dm') directMessages[row.room_id] = count
+  }
+
+  return { channels, directMessages }
+}
+
+export async function loadUnreadCounts(client: SupabaseClient) {
+  const { data, error } = await client.rpc('get_unread_counts')
+  if (error) fail(error, 'UNREAD_COUNTS_FAILED')
+  return mapUnreadCountRows((data ?? []) as UnreadCountRow[])
 }
 
 export async function loadUnreadInputs(client: SupabaseClient, currentUserId: string) {
