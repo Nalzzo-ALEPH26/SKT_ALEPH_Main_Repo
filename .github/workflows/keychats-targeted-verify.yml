@@ -27,3 +27,5 @@ jobs:
         run: npm test -- url-preview.test.ts admin-actions.test.ts admin-service.test.ts app-shell.test.tsx
       - name: Production build
         run: npm run build
+      - name: Verification marker
+        run: echo "validated url preview and admin controls"
