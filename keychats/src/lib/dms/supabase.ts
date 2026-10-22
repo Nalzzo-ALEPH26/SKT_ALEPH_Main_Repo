@@ -47,13 +47,15 @@ export function createSupabaseDmRepository(client: SupabaseClient): DmRepository
       const existing = await findThread(client, pair)
       if (existing) return existing
 
-      const { data, error } = await client
+      const { error } = await client
         .from('dm_threads')
         .insert({ user_low: pair.userLow, user_high: pair.userHigh })
-        .select(DM_COLUMNS)
-        .single()
 
-      if (!error && data) return mapThread(data as DmRow)
+      if (!error) {
+        const created = await findThread(client, pair)
+        if (created) return created
+        fail(null, 'DM_CREATE_READ_FAILED')
+      }
 
       if ((error as DatabaseError | null)?.code === '23505') {
         const raced = await findThread(client, pair)
