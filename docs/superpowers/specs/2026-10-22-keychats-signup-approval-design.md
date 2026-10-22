@@ -130,15 +130,15 @@ The profile/settings/membership/request-state updates should run through a datab
 
 ## Rejection Semantics
 
-Rejection is admin-only.
+Rejection is admin-only and must be retry-safe across the database/Auth boundary.
 
 Sequence:
-1. Require the request to be `pending`.
-2. Mark the request `rejected`, set reviewer metadata, and preserve username/display-name audit fields.
+1. Require the request to be `pending` (or already `rejected` with a remaining `auth_user_id` when retrying cleanup).
+2. Mark the request `rejected`, set reviewer metadata, and preserve username/display-name audit fields while retaining `auth_user_id`.
 3. Delete the corresponding Supabase Auth user.
-4. `auth_user_id` becomes `null` through `on delete set null`.
+4. `auth_user_id` becomes `null` automatically through `on delete set null`.
 
-The rejected request row remains as an audit record but does not prevent a later signup request with the same username.
+If Auth deletion fails temporarily, the request remains rejected and inaccessible but still retains `auth_user_id`, allowing the administrator/service to retry cleanup without recreating or reactivating the request. Once Auth deletion succeeds, the rejected request row remains as an audit record and no longer prevents a later signup request with the same username.
 
 ## Login and Access Control
 
@@ -164,7 +164,7 @@ The existing `/chats` external rewrite to the separate Keychats Vercel project r
 - Approval/rejection actions require `requireAdmin`.
 - Pending users receive no `profiles` row and therefore fail the existing active-user guard and RLS helper checks.
 - Approval provisioning is atomic.
-- Rejection preserves only the minimal audit record while deleting the Auth identity.
+- Rejection preserves only the minimal audit record while deleting the Auth identity, and a failed Auth deletion remains retryable.
 - Existing invite and user-management security tests must continue to pass.
 - No writes or migrations may target the PlanDoSee Supabase project.
 
@@ -180,6 +180,7 @@ Add pgTAP coverage for:
 - approval creates profile/settings/general membership atomically
 - duplicate approval is rejected/no-op safely
 - rejected requests retain audit data after Auth deletion
+- rejection cleanup remains retryable while `auth_user_id` is still present
 
 ### Unit tests
 
@@ -188,6 +189,7 @@ Add coverage for:
 - Auth user cleanup if request persistence fails
 - duplicate/pending request behavior
 - approval/rejection service behavior
+- Auth-deletion retry after rejection
 - admin authorization wrappers
 
 ### E2E
