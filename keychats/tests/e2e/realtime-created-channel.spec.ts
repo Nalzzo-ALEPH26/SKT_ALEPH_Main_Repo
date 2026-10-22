@@ -143,38 +143,45 @@ test('syncs a plain message in a channel created through the UI', async ({ brows
     }
     await receiver.realtime.setAuth(receiverAuth.session.access_token)
 
+    let resolveRawReady!: () => void
+    let rejectRawReady!: (error: Error) => void
     const rawReady = new Promise<void>((resolve, reject) => {
-      rawChannel = receiver
-        .channel(`diagnostic:${createdChannelId}`)
-        .on('system', '*', (payload) => {
-          const system = payload as { extension?: string; status?: string; message?: string }
-          if (system.extension !== 'postgres_changes') return
-          if (system.status === 'ok') resolve()
-          if (system.status === 'error' || system.status === 'timeout') {
-            reject(new Error(`RAW_POSTGRES_${system.status.toUpperCase()}:${system.message ?? ''}`))
-          }
-        })
-        .subscribe((status) => {
-          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-            reject(new Error(`RAW_CHANNEL_${status}`))
-          }
-        })
+      resolveRawReady = resolve
+      rejectRawReady = reject
     })
 
     let resolveRawMessage!: (value: { id: number; channel_id: string; body: string }) => void
     const rawMessage = new Promise<{ id: number; channel_id: string; body: string }>((resolve) => {
       resolveRawMessage = resolve
     })
-    rawChannel!.on(
-      'postgres_changes',
-      {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'messages',
-        filter: `channel_id=eq.${createdChannelId}`,
-      },
-      (payload) => resolveRawMessage(payload.new as { id: number; channel_id: string; body: string }),
-    )
+
+    rawChannel = receiver
+      .channel(`diagnostic:${createdChannelId}`)
+      .on('system', '*', (payload) => {
+        const system = payload as { extension?: string; status?: string; message?: string }
+        if (system.extension !== 'postgres_changes') return
+        if (system.status === 'ok') resolveRawReady()
+        if (system.status === 'error' || system.status === 'timeout') {
+          rejectRawReady(
+            new Error(`RAW_POSTGRES_${system.status.toUpperCase()}:${system.message ?? ''}`),
+          )
+        }
+      })
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `channel_id=eq.${createdChannelId}`,
+        },
+        (payload) => resolveRawMessage(payload.new as { id: number; channel_id: string; body: string }),
+      )
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          rejectRawReady(new Error(`RAW_CHANNEL_${status}`))
+        }
+      })
 
     await Promise.race([rawReady, timeoutAfter<void>(12_000, 'RAW_REALTIME_READY_TIMEOUT')])
 
