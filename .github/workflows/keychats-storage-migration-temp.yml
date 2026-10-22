@@ -1,0 +1,30 @@
+name: Keychats Storage Migration Temp
+
+on:
+  push:
+    branches:
+      - 'feature/keychats-v1'
+    paths:
+      - '.github/workflows/keychats-storage-migration-temp.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: '2.121.0'
+      - name: Generate storage migration
+        working-directory: keychats
+        run: supabase migration new secure_storage
+      - name: Commit generated migration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add keychats/supabase/migrations
+          git commit -m "chore: generate keychats storage migration [skip ci]"
+          git push
