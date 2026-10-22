@@ -16,7 +16,7 @@ type DmMessagePaneProps = {
 
 export function DmMessagePane({ dmThreadId, ...props }: DmMessagePaneProps) {
   const pathname = usePathname()
-  const isCurrentRoute = pathname.endsWith(`/dm/${dmThreadId}`)
+  const isCurrentRoute = pathname === null || pathname.endsWith(`/dm/${dmThreadId}`)
 
   if (!isCurrentRoute) {
     return (
