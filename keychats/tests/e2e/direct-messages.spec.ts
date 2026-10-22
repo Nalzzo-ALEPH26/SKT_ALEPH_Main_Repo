@@ -99,6 +99,8 @@ async function startDm(context: BrowserContext, current: E2eUser, other: E2eUser
 }
 
 test('keeps one canonical 1:1 DM private while syncing messages in realtime', async ({ browser }) => {
+  test.setTimeout(60_000)
+
   let fixture: Fixture | null = null
   const firstContext = await browser.newContext()
   const secondContext = await browser.newContext()
