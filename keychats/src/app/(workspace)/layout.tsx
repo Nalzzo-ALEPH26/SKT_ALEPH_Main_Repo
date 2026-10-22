@@ -5,8 +5,7 @@ import { AppShell } from '@/components/app-shell'
 import { AuthGuardError, requireActiveUser } from '@/lib/auth/guards'
 import { createAuthGuardAccess } from '@/lib/auth/server-access'
 import { buildDirectSidebarData } from '@/lib/dms/presentation'
-import { getUnreadCounts } from '@/lib/messages/service'
-import { loadUnreadInputs } from '@/lib/messages/state-supabase'
+import { loadUnreadCounts } from '@/lib/messages/state-supabase'
 import { normalizeTheme, type KeychatsTheme } from '@/lib/settings/theme'
 import { createClient } from '@/lib/supabase/server'
 
@@ -30,7 +29,7 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
     { data: channels, error: channelsError },
     { data: dmThreads, error: dmThreadsError },
     { data: activeProfiles, error: profilesError },
-    unreadInputs,
+    unread,
   ] = await Promise.all([
     client.from('user_settings').select('theme').eq('user_id', profile.user_id).maybeSingle(),
     client.from('channels').select('id,name').order('is_default', { ascending: false }).order('name'),
@@ -40,7 +39,7 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
       .select('user_id,display_name,username')
       .eq('status', 'active')
       .order('display_name'),
-    loadUnreadInputs(client, profile.user_id),
+    loadUnreadCounts(client),
   ])
 
   if (settingsError) throw settingsError
@@ -50,8 +49,6 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
 
   let theme: KeychatsTheme = 'light'
   if (settings?.theme) theme = normalizeTheme(settings.theme)
-
-  const unread = getUnreadCounts(unreadInputs.messages, unreadInputs.readStates, profile.user_id)
 
   const directProfiles = (activeProfiles ?? []).map((candidate) => ({
     userId: candidate.user_id as string,

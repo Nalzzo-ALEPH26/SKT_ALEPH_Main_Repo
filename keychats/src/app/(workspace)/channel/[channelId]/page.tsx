@@ -32,32 +32,37 @@ export default async function ChannelPage({ params }: PageProps) {
   const { channelId } = await params
   const client = await createClient()
   const { claims, profile } = await requireActiveUser(createAuthGuardAccess(client))
+  const messageRepository = createSupabaseMessageRepository(client)
 
-  const { data: channel, error: channelError } = await client
-    .from('channels')
-    .select('id,name,created_by,is_default,join_code')
-    .eq('id', channelId)
-    .maybeSingle()
+  const [
+    { data: channel, error: channelError },
+    { data: memberships, error: membershipError },
+    { data: profiles, error: profilesError },
+    initialMessages,
+  ] = await Promise.all([
+    client
+      .from('channels')
+      .select('id,name,created_by,is_default,join_code')
+      .eq('id', channelId)
+      .maybeSingle(),
+    client
+      .from('channel_members')
+      .select('user_id,role')
+      .eq('channel_id', channelId),
+    client
+      .from('profiles')
+      .select('user_id,username,display_name,avatar_path')
+      .eq('status', 'active')
+      .order('display_name'),
+    loadChannelMessages(messageRepository, channelId),
+  ])
 
   if (channelError) throw channelError
   if (!channel) notFound()
-
-  const { data: memberships, error: membershipError } = await client
-    .from('channel_members')
-    .select('user_id,role')
-    .eq('channel_id', channelId)
-
   if (membershipError) throw membershipError
-
-  const memberIds = (memberships ?? []).map((membership) => membership.user_id as string)
-  const { data: profiles, error: profilesError } = await client
-    .from('profiles')
-    .select('user_id,username,display_name,avatar_path')
-    .eq('status', 'active')
-    .order('display_name')
-
   if (profilesError) throw profilesError
 
+  const memberIds = (memberships ?? []).map((membership) => membership.user_id as string)
   const allProfiles: ProfileOption[] = (profiles ?? []).map((item) => ({
     userId: item.user_id as string,
     username: item.username as string,
@@ -69,7 +74,6 @@ export default async function ChannelPage({ params }: PageProps) {
   const candidates = allProfiles.filter((item) => !memberSet.has(item.userId))
   const isAdmin = claims.app_metadata?.role === 'admin'
   const canManage = isAdmin || channel.created_by === profile.user_id
-  const initialMessages = await loadChannelMessages(createSupabaseMessageRepository(client), channelId)
 
   return (
     <div className="mx-auto flex h-dvh w-full max-w-5xl flex-col overflow-hidden px-5 py-5 md:px-8">
