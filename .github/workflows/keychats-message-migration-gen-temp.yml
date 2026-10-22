@@ -19,14 +19,14 @@ jobs:
           ref: feature/keychats-v1
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: '2.121.0'
       - name: Generate migration
         working-directory: keychats
-        run: supabase migration new message_realtime_moderation
+        run: supabase migration new message_state_realtime
       - name: Commit generated migration
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add keychats/supabase/migrations
-          git commit -m "chore: generate keychats message migration"
+          git commit -m "chore: generate keychats message state migration"
           git push origin HEAD:feature/keychats-v1
