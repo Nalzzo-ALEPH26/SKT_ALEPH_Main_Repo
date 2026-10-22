@@ -16,7 +16,7 @@ type ChannelMessagePaneProps = {
 
 export function ChannelMessagePane({ channelId, ...props }: ChannelMessagePaneProps) {
   const pathname = usePathname()
-  const isCurrentRoute = pathname.endsWith(`/channel/${channelId}`)
+  const isCurrentRoute = pathname === null || pathname.endsWith(`/channel/${channelId}`)
 
   if (!isCurrentRoute) {
     return (
