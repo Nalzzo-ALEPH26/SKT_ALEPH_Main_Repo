@@ -1,10 +1,11 @@
 'use server'
 
+import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
 import { requireActiveUser } from '@/lib/auth/guards'
 import { createAuthGuardAccess } from '@/lib/auth/server-access'
-import { getOrCreateDm } from '@/lib/dms/service'
+import { getOrCreateDm, hideDirectMessages } from '@/lib/dms/service'
 import { createSupabaseDmRepository } from '@/lib/dms/supabase'
 import { createClient } from '@/lib/supabase/server'
 
@@ -14,15 +15,32 @@ function requiredText(formData: FormData, key: string) {
   return value
 }
 
-export async function startDirectMessageAction(formData: FormData) {
-  const otherUserId = requiredText(formData, 'otherUserId')
+async function dmContext() {
   const client = await createClient()
   const { profile } = await requireActiveUser(createAuthGuardAccess(client))
-  const thread = await getOrCreateDm(
-    createSupabaseDmRepository(client),
-    profile.user_id,
-    otherUserId,
-  )
+  return {
+    profile,
+    repository: createSupabaseDmRepository(client),
+  }
+}
 
+export async function startDirectMessageAction(formData: FormData) {
+  const otherUserId = requiredText(formData, 'otherUserId')
+  const { profile, repository } = await dmContext()
+  const thread = await getOrCreateDm(repository, profile.user_id, otherUserId)
+
+  revalidatePath('/')
   redirect(`/dm/${thread.id}`)
+}
+
+export async function manageDirectMessagesAction(formData: FormData) {
+  const threadIds = formData
+    .getAll('dmThreadIds')
+    .map((value) => String(value).trim())
+    .filter(Boolean)
+  const { profile, repository } = await dmContext()
+
+  await hideDirectMessages(repository, profile.user_id, threadIds)
+  revalidatePath('/')
+  redirect('/settings')
 }
