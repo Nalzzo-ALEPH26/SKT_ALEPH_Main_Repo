@@ -3,13 +3,17 @@
 import { useState } from 'react'
 
 import {
+  approveSignupRequestAction,
   disableUserAction,
   expelUserAction,
+  listSignupRequestsAction,
   listUsersAction,
+  rejectSignupRequestAction,
   resetUserPasswordAction,
 } from '@/app/(workspace)/admin/admin-actions'
 import { createInviteAction, revokeInviteAction } from '@/app/(workspace)/admin/invite-actions'
 import type { ManagedUser } from '@/lib/admin/service'
+import type { PendingSignupRequest } from '@/lib/admin/signup-requests'
 
 type InviteSummary = {
   id: string
@@ -22,6 +26,7 @@ type InviteSummary = {
 type AdminPanelProps = {
   initialUsers: ManagedUser[]
   initialInvites: InviteSummary[]
+  initialSignupRequests: PendingSignupRequest[]
 }
 
 function inviteState(invite: InviteSummary) {
@@ -31,19 +36,42 @@ function inviteState(invite: InviteSummary) {
   return '사용 가능'
 }
 
-export function AdminPanel({ initialUsers, initialInvites }: AdminPanelProps) {
+export function AdminPanel({ initialUsers, initialInvites, initialSignupRequests }: AdminPanelProps) {
   const [users, setUsers] = useState(initialUsers)
   const [invites, setInvites] = useState(initialInvites)
+  const [signupRequests, setSignupRequests] = useState(initialSignupRequests)
   const [createdInviteUrl, setCreatedInviteUrl] = useState<string | null>(null)
-  const [temporaryPassword, setTemporaryPassword] = useState<{
-    username: string
-    password: string
-  } | null>(null)
+  const [temporaryPassword, setTemporaryPassword] = useState<{ username: string; password: string } | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   async function refreshUsers() {
     setUsers(await listUsersAction())
+  }
+
+  async function refreshSignupRequests() {
+    setSignupRequests(await listSignupRequestsAction())
+  }
+
+  async function reviewSignup(request: PendingSignupRequest, mode: 'approve' | 'reject') {
+    const label = mode === 'approve' ? '승인' : '거절'
+    if (!window.confirm(`@${request.username} 가입 요청을 ${label}할까요?`)) return
+
+    setBusy(`signup:${request.id}`)
+    setError(null)
+    try {
+      if (mode === 'approve') {
+        await approveSignupRequestAction(request.id)
+        await Promise.all([refreshSignupRequests(), refreshUsers()])
+      } else {
+        await rejectSignupRequestAction(request.id)
+        await refreshSignupRequests()
+      }
+    } catch {
+      setError(`가입 요청을 ${label}하지 못했습니다.`)
+    } finally {
+      setBusy(null)
+    }
   }
 
   async function createInvite() {
@@ -52,16 +80,7 @@ export function AdminPanel({ initialUsers, initialInvites }: AdminPanelProps) {
     try {
       const result = await createInviteAction()
       setCreatedInviteUrl(`${window.location.origin}${result.invitePath}`)
-      setInvites((current) => [
-        {
-          id: result.inviteId,
-          expiresAt: result.expiresAt,
-          usedAt: null,
-          revokedAt: null,
-          createdAt: new Date().toISOString(),
-        },
-        ...current,
-      ])
+      setInvites((current) => [{ id: result.inviteId, expiresAt: result.expiresAt, usedAt: null, revokedAt: null, createdAt: new Date().toISOString() }, ...current])
     } catch {
       setError('초대 링크를 만들지 못했습니다.')
     } finally {
@@ -74,13 +93,7 @@ export function AdminPanel({ initialUsers, initialInvites }: AdminPanelProps) {
     setError(null)
     try {
       const result = await revokeInviteAction(inviteId)
-      if (result.revoked) {
-        setInvites((current) =>
-          current.map((invite) =>
-            invite.id === inviteId ? { ...invite, revokedAt: new Date().toISOString() } : invite,
-          ),
-        )
-      }
+      if (result.revoked) setInvites((current) => current.map((invite) => invite.id === inviteId ? { ...invite, revokedAt: new Date().toISOString() } : invite))
     } catch {
       setError('초대 링크를 취소하지 못했습니다.')
     } finally {
@@ -105,7 +118,6 @@ export function AdminPanel({ initialUsers, initialInvites }: AdminPanelProps) {
   async function changeStatus(user: ManagedUser, mode: 'disable' | 'expel') {
     const label = mode === 'disable' ? '비활성화' : '퇴출'
     if (!window.confirm(`@${user.username} 계정을 ${label}할까요?`)) return
-
     setBusy(`${mode}:${user.userId}`)
     setError(null)
     try {
@@ -113,9 +125,7 @@ export function AdminPanel({ initialUsers, initialInvites }: AdminPanelProps) {
       else await expelUserAction(user.userId)
       await refreshUsers()
     } catch (caught) {
-      setError(caught instanceof Error && caught.message === 'SOLE_ADMIN_PROTECTED'
-        ? '유일한 관리자 계정은 비활성화하거나 퇴출할 수 없습니다.'
-        : `계정을 ${label}하지 못했습니다.`)
+      setError(caught instanceof Error && caught.message === 'SOLE_ADMIN_PROTECTED' ? '유일한 관리자 계정은 비활성화하거나 퇴출할 수 없습니다.' : `계정을 ${label}하지 못했습니다.`)
     } finally {
       setBusy(null)
     }
@@ -123,64 +133,40 @@ export function AdminPanel({ initialUsers, initialInvites }: AdminPanelProps) {
 
   return (
     <div className="space-y-8">
-      {error ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-950 dark:bg-red-950/30 dark:text-red-300">
-          {error}
+      {error ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-950 dark:bg-red-950/30 dark:text-red-300">{error}</div> : null}
+
+      <section className="rounded-2xl border border-black/10 p-5 dark:border-white/10">
+        <div>
+          <h2 className="font-semibold">가입 요청</h2>
+          <p className="mt-1 text-sm text-zinc-500">승인하면 바로 Keychats를 사용할 수 있습니다.</p>
         </div>
-      ) : null}
+        <div className="mt-4 divide-y divide-black/5 dark:divide-white/5">
+          {signupRequests.map((request) => (
+            <div key={request.id} className="flex flex-wrap items-center justify-between gap-3 py-4">
+              <div>
+                <div className="text-sm font-semibold">{request.displayName} <span className="font-normal text-zinc-500">@{request.username}</span></div>
+                <div className="mt-1 text-xs text-zinc-500">요청: {new Date(request.requestedAt).toLocaleString('ko-KR')}</div>
+              </div>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => reviewSignup(request, 'approve')} disabled={busy !== null} className="rounded-lg bg-zinc-950 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40 dark:bg-white dark:text-zinc-950">승인</button>
+                <button type="button" onClick={() => reviewSignup(request, 'reject')} disabled={busy !== null} className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 disabled:opacity-40 dark:border-red-900">거절</button>
+              </div>
+            </div>
+          ))}
+          {signupRequests.length === 0 ? <p className="py-4 text-sm text-zinc-500">대기 중인 가입 요청이 없습니다.</p> : null}
+        </div>
+      </section>
 
       <section className="rounded-2xl border border-black/10 p-5 dark:border-white/10">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="font-semibold">초대 링크</h2>
-            <p className="mt-1 text-sm text-zinc-500">가입에만 1시간 동안 유효하며 한 번만 사용할 수 있습니다.</p>
-          </div>
-          <button
-            type="button"
-            onClick={createInvite}
-            disabled={busy !== null}
-            className="rounded-xl bg-zinc-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40 dark:bg-white dark:text-zinc-950"
-          >
-            새 초대 만들기
-          </button>
+          <div><h2 className="font-semibold">초대 링크 · 보조 기능</h2><p className="mt-1 text-sm text-zinc-500">기존 초대 방식은 필요할 때만 사용할 수 있습니다.</p></div>
+          <button type="button" onClick={createInvite} disabled={busy !== null} className="rounded-xl border border-black/10 px-4 py-2 text-sm font-semibold disabled:opacity-40 dark:border-white/10">새 초대 만들기</button>
         </div>
-
-        {createdInviteUrl ? (
-          <div className="mt-4 rounded-xl bg-zinc-100 p-3 text-sm dark:bg-zinc-900">
-            <div className="text-xs font-medium text-zinc-500">이번에 생성된 링크 · 이 화면에서 복사하세요</div>
-            <div className="mt-1 break-all font-mono text-xs">{createdInviteUrl}</div>
-            <button
-              type="button"
-              className="mt-2 text-xs font-semibold underline"
-              onClick={() => void navigator.clipboard.writeText(createdInviteUrl)}
-            >
-              링크 복사
-            </button>
-          </div>
-        ) : null}
-
+        {createdInviteUrl ? <div className="mt-4 rounded-xl bg-zinc-100 p-3 text-sm dark:bg-zinc-900"><div className="text-xs font-medium text-zinc-500">이번에 생성된 링크</div><div className="mt-1 break-all font-mono text-xs">{createdInviteUrl}</div><button type="button" className="mt-2 text-xs font-semibold underline" onClick={() => void navigator.clipboard.writeText(createdInviteUrl)}>링크 복사</button></div> : null}
         <div className="mt-4 divide-y divide-black/5 dark:divide-white/5">
           {invites.map((invite) => {
             const state = inviteState(invite)
-            const revocable = state === '사용 가능'
-            return (
-              <div key={invite.id} className="flex items-center justify-between gap-3 py-3 text-sm">
-                <div className="min-w-0">
-                  <div className="font-mono text-xs text-zinc-500">{invite.id}</div>
-                  <div className="mt-1">{state} · {new Date(invite.expiresAt).toLocaleString('ko-KR')} 만료</div>
-                </div>
-                {revocable ? (
-                  <button
-                    type="button"
-                    onClick={() => revokeInvite(invite.id)}
-                    disabled={busy !== null}
-                    className="shrink-0 text-xs font-semibold text-red-600 disabled:opacity-40"
-                  >
-                    취소
-                  </button>
-                ) : null}
-              </div>
-            )
+            return <div key={invite.id} className="flex items-center justify-between gap-3 py-3 text-sm"><div className="min-w-0"><div className="font-mono text-xs text-zinc-500">{invite.id}</div><div className="mt-1">{state} · {new Date(invite.expiresAt).toLocaleString('ko-KR')} 만료</div></div>{state === '사용 가능' ? <button type="button" onClick={() => revokeInvite(invite.id)} disabled={busy !== null} className="shrink-0 text-xs font-semibold text-red-600 disabled:opacity-40">취소</button> : null}</div>
           })}
           {invites.length === 0 ? <p className="py-4 text-sm text-zinc-500">생성된 초대가 없습니다.</p> : null}
         </div>
@@ -189,58 +175,11 @@ export function AdminPanel({ initialUsers, initialInvites }: AdminPanelProps) {
       <section className="rounded-2xl border border-black/10 p-5 dark:border-white/10">
         <h2 className="font-semibold">사용자 관리</h2>
         <p className="mt-1 text-sm text-zinc-500">비활성화·퇴출 후에도 과거 메시지는 유지됩니다.</p>
-
-        {temporaryPassword ? (
-          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/30">
-            <div className="text-xs font-semibold">@{temporaryPassword.username} 임시 비밀번호 · 지금 한 번만 전달하세요</div>
-            <code className="mt-2 block break-all text-sm">{temporaryPassword.password}</code>
-            <button
-              type="button"
-              className="mt-2 text-xs font-semibold underline"
-              onClick={() => void navigator.clipboard.writeText(temporaryPassword.password)}
-            >
-              비밀번호 복사
-            </button>
-          </div>
-        ) : null}
-
+        {temporaryPassword ? <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/30"><div className="text-xs font-semibold">@{temporaryPassword.username} 임시 비밀번호 · 지금 한 번만 전달하세요</div><code className="mt-2 block break-all text-sm">{temporaryPassword.password}</code><button type="button" className="mt-2 text-xs font-semibold underline" onClick={() => void navigator.clipboard.writeText(temporaryPassword.password)}>비밀번호 복사</button></div> : null}
         <div className="mt-4 divide-y divide-black/5 dark:divide-white/5">
           {users.map((user) => {
             const soleAdmin = user.username === 'cxu1344'
-            return (
-              <div key={user.userId} className="flex flex-wrap items-center justify-between gap-3 py-4">
-                <div>
-                  <div className="text-sm font-semibold">{user.displayName} <span className="font-normal text-zinc-500">@{user.username}</span></div>
-                  <div className="mt-1 text-xs text-zinc-500">상태: {user.status}{soleAdmin ? ' · 관리자' : ''}</div>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => resetPassword(user)}
-                    disabled={busy !== null || user.status !== 'active'}
-                    className="rounded-lg border border-black/10 px-3 py-1.5 text-xs font-semibold disabled:opacity-40 dark:border-white/10"
-                  >
-                    임시 비밀번호
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => changeStatus(user, 'disable')}
-                    disabled={busy !== null || soleAdmin || user.status !== 'active'}
-                    className="rounded-lg border border-black/10 px-3 py-1.5 text-xs font-semibold disabled:opacity-40 dark:border-white/10"
-                  >
-                    비활성화
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => changeStatus(user, 'expel')}
-                    disabled={busy !== null || soleAdmin || user.status === 'expelled'}
-                    className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 disabled:opacity-40 dark:border-red-900"
-                  >
-                    퇴출
-                  </button>
-                </div>
-              </div>
-            )
+            return <div key={user.userId} className="flex flex-wrap items-center justify-between gap-3 py-4"><div><div className="text-sm font-semibold">{user.displayName} <span className="font-normal text-zinc-500">@{user.username}</span></div><div className="mt-1 text-xs text-zinc-500">상태: {user.status}{soleAdmin ? ' · 관리자' : ''}</div></div><div className="flex flex-wrap gap-2"><button type="button" onClick={() => resetPassword(user)} disabled={busy !== null || user.status !== 'active'} className="rounded-lg border border-black/10 px-3 py-1.5 text-xs font-semibold disabled:opacity-40 dark:border-white/10">임시 비밀번호</button><button type="button" onClick={() => changeStatus(user, 'disable')} disabled={busy !== null || soleAdmin || user.status !== 'active'} className="rounded-lg border border-black/10 px-3 py-1.5 text-xs font-semibold disabled:opacity-40 dark:border-white/10">비활성화</button><button type="button" onClick={() => changeStatus(user, 'expel')} disabled={busy !== null || soleAdmin || user.status === 'expelled'} className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 disabled:opacity-40 dark:border-red-900">퇴출</button></div></div>
           })}
         </div>
       </section>
