@@ -1,4 +1,4 @@
-name: Keychats URL Rebinding RED
+name: Keychats URL Rebinding Verify
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 jobs:
-  red:
+  verify:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -24,14 +24,7 @@ jobs:
         with:
           node-version: '22'
       - run: npm ci
-      - name: Expect DNS rebinding regression test to fail before the fix
-        run: |
-          set +e
-          npm test -- url-preview.test.ts >/tmp/rebinding-red.log 2>&1
-          status=$?
-          set -e
-          cat /tmp/rebinding-red.log
-          if [ "$status" -eq 0 ]; then
-            echo 'Expected the new DNS rebinding regression test to fail before implementation.' >&2
-            exit 1
-          fi
+      - name: URL preview regression tests
+        run: npm test -- url-preview.test.ts
+      - name: Production build
+        run: npm run build
