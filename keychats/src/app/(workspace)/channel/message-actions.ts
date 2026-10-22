@@ -30,12 +30,14 @@ export async function sendChannelMessageAction(input: {
   channelId: string
   body: string
   replyToId: number | null
+  attachmentCount?: number
 }) {
   const { actor, repository } = await getMessageContext()
   return sendChannelMessage(repository, actor, {
     channelId: input.channelId,
     body: input.body,
     replyToId: input.replyToId,
+    attachmentCount: input.attachmentCount,
   })
 }
 
