@@ -32,16 +32,12 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
     { data: activeProfiles, error: profilesError },
     unreadInputs,
   ] = await Promise.all([
-    client
-      .from('user_settings')
-      .select('theme')
-      .eq('user_id', profile.user_id)
-      .maybeSingle(),
+    client.from('user_settings').select('theme').eq('user_id', profile.user_id).maybeSingle(),
     client.from('channels').select('id,name').order('is_default', { ascending: false }).order('name'),
     client.from('dm_threads').select('id,user_low,user_high').order('created_at', { ascending: false }),
     client
       .from('profiles')
-      .select('user_id,display_name')
+      .select('user_id,display_name,username')
       .eq('status', 'active')
       .order('display_name'),
     loadUnreadInputs(client, profile.user_id),
@@ -53,22 +49,17 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
   if (profilesError) throw profilesError
 
   let theme: KeychatsTheme = 'light'
-  if (settings?.theme) {
-    theme = normalizeTheme(settings.theme)
-  }
+  if (settings?.theme) theme = normalizeTheme(settings.theme)
 
-  const unread = getUnreadCounts(
-    unreadInputs.messages,
-    unreadInputs.readStates,
-    profile.user_id,
-  )
+  const unread = getUnreadCounts(unreadInputs.messages, unreadInputs.readStates, profile.user_id)
 
+  const directProfiles = (activeProfiles ?? []).map((candidate) => ({
+    userId: candidate.user_id as string,
+    displayName: candidate.display_name as string,
+  }))
   const direct = buildDirectSidebarData(
     profile.user_id,
-    (activeProfiles ?? []).map((candidate) => ({
-      userId: candidate.user_id as string,
-      displayName: candidate.display_name as string,
-    })),
+    directProfiles,
     (dmThreads ?? []).map((thread) => ({
       id: thread.id as string,
       userLow: thread.user_low as string,
@@ -79,6 +70,12 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
   return (
     <AppShell
       profile={{ displayName: profile.display_name, avatarPath: profile.avatar_path }}
+      currentUserId={profile.user_id}
+      channelProfiles={(activeProfiles ?? []).map((candidate) => ({
+        userId: candidate.user_id as string,
+        displayName: candidate.display_name as string,
+        username: candidate.username as string,
+      }))}
       channels={(channels ?? []).map((channel) => ({
         id: channel.id as string,
         name: channel.name as string,
