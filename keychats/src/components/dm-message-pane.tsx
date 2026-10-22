@@ -11,5 +11,11 @@ type DmMessagePaneProps = {
 }
 
 export function DmMessagePane({ dmThreadId, ...props }: DmMessagePaneProps) {
-  return <ConversationMessagePane target={{ kind: 'dm', id: dmThreadId }} {...props} />
+  return (
+    <ConversationMessagePane
+      key={dmThreadId}
+      target={{ kind: 'dm', id: dmThreadId }}
+      {...props}
+    />
+  )
 }
