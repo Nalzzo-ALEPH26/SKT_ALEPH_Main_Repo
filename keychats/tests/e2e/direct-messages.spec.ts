@@ -83,7 +83,7 @@ async function login(page: Page, user: E2eUser) {
   await page.getByLabel('아이디').fill(user.loginId)
   await page.getByLabel('비밀번호').fill(password)
   await page.getByRole('button', { name: '로그인' }).click()
-  await expect(page).toHaveURL(/\/chats$/)
+  await expect(page).toHaveURL('http://localhost:3000/chats/settings')
 }
 
 async function startDm(context: BrowserContext, current: E2eUser, other: E2eUser) {
