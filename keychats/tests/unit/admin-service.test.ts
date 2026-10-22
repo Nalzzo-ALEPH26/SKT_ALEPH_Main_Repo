@@ -48,6 +48,14 @@ describe('admin account controls', () => {
     expect(repo.setStatus).not.toHaveBeenCalled()
   })
 
+  it('blocks temporary password reset for the sole cxu1344 admin', async () => {
+    const repo = repository('cxu1344')
+    await expect(
+      resetManagedUserPassword(repo, adminId, () => Buffer.alloc(18, 9)),
+    ).rejects.toThrow('SOLE_ADMIN_PROTECTED')
+    expect(repo.updatePassword).not.toHaveBeenCalled()
+  })
+
   it('disables database access before banning future Auth sessions', async () => {
     const repo = repository()
     await disableManagedUser(repo, memberId)
