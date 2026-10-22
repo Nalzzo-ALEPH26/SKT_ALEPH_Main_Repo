@@ -15,13 +15,15 @@ export const dynamic = 'force-dynamic'
 export default async function WorkspaceLayout({ children }: { children: ReactNode }) {
   const client = await createClient()
 
-  let profile: Awaited<ReturnType<typeof requireActiveUser>>['profile']
+  let authResult: Awaited<ReturnType<typeof requireActiveUser>>
   try {
-    ;({ profile } = await requireActiveUser(createAuthGuardAccess(client)))
+    authResult = await requireActiveUser(createAuthGuardAccess(client))
   } catch (error) {
     if (error instanceof AuthGuardError) redirect('/login')
     throw error
   }
+
+  const { profile, claims } = authResult
 
   const [
     { data: settings, error: settingsError },
@@ -88,6 +90,7 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
       }))}
       directCandidates={direct.directCandidates}
       theme={theme}
+      isAdmin={claims.app_metadata?.role === 'admin'}
     >
       {children}
     </AppShell>
