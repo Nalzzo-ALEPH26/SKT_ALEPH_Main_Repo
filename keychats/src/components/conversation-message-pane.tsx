@@ -14,6 +14,12 @@ import {
   loadOlderDmMessagesAction,
   sendDmMessageAction,
 } from '@/app/(workspace)/dm/message-actions'
+import {
+  loadMessageStateAction,
+  markConversationReadAction,
+  toggleMessagePinAction,
+  toggleMessageReactionAction,
+} from '@/app/(workspace)/message-state-actions'
 import { MessageList } from '@/components/message-list'
 import {
   mergeMessageHistory,
@@ -41,6 +47,18 @@ type ConversationMessagePaneProps = {
   isAdmin: boolean
 }
 
+type MessageStateSnapshot = Record<
+  number,
+  {
+    isPinned: boolean
+    reactions: Array<{
+      emoji: string
+      count: number
+      reactedByCurrentUser: boolean
+    }>
+  }
+>
+
 export function ConversationMessagePane({
   target,
   initialMessages,
@@ -50,6 +68,7 @@ export function ConversationMessagePane({
 }: ConversationMessagePaneProps) {
   const client = useMemo(() => createClient(), [])
   const [messages, setMessages] = useState(initialMessages)
+  const [messageState, setMessageState] = useState<MessageStateSnapshot>({})
   const [draft, setDraft] = useState('')
   const [replyToId, setReplyToId] = useState<number | null>(null)
   const [editingMessageId, setEditingMessageId] = useState<number | null>(null)
@@ -57,6 +76,37 @@ export function ConversationMessagePane({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [realtimeStatus, setRealtimeStatus] = useState('connecting')
+
+  const messageIds = useMemo(() => messages.map((message) => message.id), [messages])
+  const messageIdsKey = messageIds.join(',')
+  const latestMessageId = messages.at(-1)?.id ?? null
+
+  const refreshMessageState = async (ids: number[]) => {
+    if (ids.length === 0) return
+    const snapshot = await loadMessageStateAction({ messageIds: ids })
+    setMessageState((current) => ({ ...current, ...snapshot }))
+  }
+
+  useEffect(() => {
+    let active = true
+
+    if (messageIds.length === 0) {
+      setMessageState({})
+      return
+    }
+
+    void loadMessageStateAction({ messageIds })
+      .then((snapshot) => {
+        if (active) setMessageState(snapshot)
+      })
+      .catch(() => {
+        if (active) setError('메시지 상태를 불러오지 못했습니다.')
+      })
+
+    return () => {
+      active = false
+    }
+  }, [messageIdsKey])
 
   useEffect(() => {
     let active = true
@@ -98,9 +148,65 @@ export function ConversationMessagePane({
     }
   }, [client, target.id, target.kind])
 
+  useEffect(() => {
+    if (messageIds.length === 0) return
+
+    let active = true
+    let stateChannel: ReturnType<typeof client.channel> | null = null
+
+    const refresh = () => {
+      if (!active) return
+      void refreshMessageState(messageIds).catch(() => undefined)
+    }
+
+    void (async () => {
+      const {
+        data: { session },
+      } = await client.auth.getSession()
+      if (!active || !session?.access_token) return
+
+      await client.realtime.setAuth(session.access_token)
+      if (!active) return
+
+      stateChannel = client
+        .channel(`message-state:${target.kind}:${target.id}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'message_reactions' },
+          refresh,
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'message_pins' },
+          refresh,
+        )
+        .subscribe()
+    })()
+
+    return () => {
+      active = false
+      if (stateChannel) void client.removeChannel(stateChannel)
+    }
+  }, [client, messageIdsKey, target.id, target.kind])
+
+  useEffect(() => {
+    if (latestMessageId === null) return
+
+    void markConversationReadAction({
+      channelId: target.kind === 'channel' ? target.id : null,
+      dmThreadId: target.kind === 'dm' ? target.id : null,
+      lastReadMessageId: latestMessageId,
+    }).catch(() => undefined)
+  }, [latestMessageId, target.id, target.kind])
+
   const renderedMessages = useMemo(
-    () => toMessageListItems(messages, profiles),
-    [messages, profiles],
+    () =>
+      toMessageListItems(messages, profiles).map((message) => ({
+        ...message,
+        isPinned: messageState[message.id]?.isPinned ?? false,
+        reactions: messageState[message.id]?.reactions ?? [],
+      })),
+    [messages, profiles, messageState],
   )
   const replyTarget =
     replyToId === null ? null : renderedMessages.find((message) => message.id === replyToId) ?? null
@@ -195,6 +301,26 @@ export function ConversationMessagePane({
     }
   }
 
+  const handleToggleReaction = async (messageId: number, emoji: string) => {
+    setError(null)
+    try {
+      await toggleMessageReactionAction({ messageId, emoji })
+      await refreshMessageState([messageId])
+    } catch {
+      setError('반응을 변경하지 못했습니다.')
+    }
+  }
+
+  const handleTogglePin = async (messageId: number) => {
+    setError(null)
+    try {
+      await toggleMessagePinAction({ messageId })
+      await refreshMessageState([messageId])
+    } catch {
+      setError('고정 상태를 변경하지 못했습니다.')
+    }
+  }
+
   const handleLoadOlder = async () => {
     const beforeId = messages[0]?.id
     if (!beforeId || busy) return
@@ -247,6 +373,8 @@ export function ConversationMessagePane({
           onReply={handleReply}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          onToggleReaction={handleToggleReaction}
+          onTogglePin={handleTogglePin}
         />
       </div>
 
