@@ -62,5 +62,10 @@ export function createSupabaseAdminRepository(client: SupabaseClient): AdminRepo
       })
       if (error) throw error
     },
+
+    async deleteUser(userId) {
+      const { error } = await client.auth.admin.deleteUser(userId, true)
+      if (error) throw error
+    },
   }
 }
