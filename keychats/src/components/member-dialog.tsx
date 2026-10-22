@@ -10,7 +10,7 @@ type MemberDialogProps = {
   candidates: ProfileOption[]
   canManage: boolean
   canDelete: boolean
-  canLeave: boolean
+  canLeave?: boolean
   isDefault: boolean
   addAction?: (formData: FormData) => void | Promise<void>
   removeAction?: (formData: FormData) => void | Promise<void>
@@ -24,7 +24,7 @@ export function MemberDialog({
   candidates,
   canManage,
   canDelete,
-  canLeave,
+  canLeave = false,
   isDefault,
   addAction,
   removeAction,
