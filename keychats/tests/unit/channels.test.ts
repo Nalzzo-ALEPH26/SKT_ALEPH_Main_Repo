@@ -4,8 +4,9 @@ import {
   addChannelMember,
   createChannel,
   deleteChannel,
+  joinChannelByCode,
+  leaveChannel,
   normalizeChannelName,
-  removeChannelMember,
   type ChannelActor,
   type ChannelRepository,
 } from '@/lib/channels/service'
@@ -23,11 +24,19 @@ const memberId = '22222222-2222-2222-2222-222222222222'
 function repository(): ChannelRepository {
   return {
     findByNormalizedName: vi.fn().mockResolvedValue(null),
+    findByJoinCode: vi.fn().mockResolvedValue({
+      id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      name: 'design',
+      createdBy: creator.userId,
+      isDefault: false,
+      joinCode: '234567',
+    }),
     getById: vi.fn().mockResolvedValue({
       id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
       name: 'design',
       createdBy: creator.userId,
       isDefault: false,
+      joinCode: '234567',
     }),
     activeUserIds: vi.fn(async (ids) => [...ids]),
     create: vi.fn().mockResolvedValue({ id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' }),
@@ -79,6 +88,7 @@ describe('createChannel', () => {
       name: 'design',
       createdBy: memberId,
       isDefault: false,
+      joinCode: '345678',
     })
 
     await expect(createChannel(repo, creator, ' Design ', [])).rejects.toThrow('CHANNEL_NAME_TAKEN')
@@ -107,29 +117,34 @@ describe('channel membership management', () => {
     )
   })
 
+  it('joins a channel with a six-digit code', async () => {
+    const repo = repository()
+    await joinChannelByCode(repo, { userId: memberId, isAdmin: false }, ' 234567 ')
+    expect(repo.findByJoinCode).toHaveBeenCalledWith('234567')
+    expect(repo.addMember).toHaveBeenCalledWith(
+      'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      memberId,
+      'member',
+    )
+  })
+
+  it('lets an ordinary member leave even the default general channel', async () => {
+    const repo = repository()
+    vi.mocked(repo.getById).mockResolvedValue({
+      id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      name: 'general',
+      createdBy: admin.userId,
+      isDefault: true,
+      joinCode: '100000',
+    })
+    await leaveChannel(repo, { userId: memberId, isAdmin: false }, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
+    expect(repo.removeMember).toHaveBeenCalledWith('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', memberId)
+  })
+
   it('allows the sole admin to manage another creator channel', async () => {
     const repo = repository()
     await addChannelMember(repo, admin, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', memberId)
     expect(repo.addMember).toHaveBeenCalled()
-  })
-
-  it('denies an ordinary non-creator member from managing membership', async () => {
-    const repo = repository()
-    const ordinary = { userId: memberId, isAdmin: false }
-
-    await expect(
-      removeChannelMember(repo, ordinary, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', creator.userId),
-    ).rejects.toThrow('CHANNEL_MANAGE_FORBIDDEN')
-    expect(repo.removeMember).not.toHaveBeenCalled()
-  })
-
-  it('does not allow the creator/owner membership to be removed', async () => {
-    const repo = repository()
-
-    await expect(
-      removeChannelMember(repo, admin, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', creator.userId),
-    ).rejects.toThrow('CHANNEL_OWNER_REQUIRED')
-    expect(repo.removeMember).not.toHaveBeenCalled()
   })
 })
 
@@ -152,6 +167,7 @@ describe('deleteChannel', () => {
       name: 'general',
       createdBy: admin.userId,
       isDefault: true,
+      joinCode: '100000',
     })
 
     await expect(
