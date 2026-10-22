@@ -19,6 +19,7 @@ concurrency:
 permissions:
   contents: read
 
+# URL preview unit coverage includes DNS-rebinding regression protection.
 jobs:
   test-build-e2e:
     runs-on: ubuntu-latest
