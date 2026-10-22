@@ -5,6 +5,8 @@ import { AppShell } from '@/components/app-shell'
 import { AuthGuardError, requireActiveUser } from '@/lib/auth/guards'
 import { createAuthGuardAccess } from '@/lib/auth/server-access'
 import { buildDirectSidebarData } from '@/lib/dms/presentation'
+import { getUnreadCounts } from '@/lib/messages/service'
+import { loadUnreadInputs } from '@/lib/messages/state-supabase'
 import { normalizeTheme, type KeychatsTheme } from '@/lib/settings/theme'
 import { createClient } from '@/lib/supabase/server'
 
@@ -26,6 +28,7 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
     { data: channels, error: channelsError },
     { data: dmThreads, error: dmThreadsError },
     { data: activeProfiles, error: profilesError },
+    unreadInputs,
   ] = await Promise.all([
     client
       .from('user_settings')
@@ -39,6 +42,7 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
       .select('user_id,display_name')
       .eq('status', 'active')
       .order('display_name'),
+    loadUnreadInputs(client, profile.user_id),
   ])
 
   if (settingsError) throw settingsError
@@ -50,6 +54,12 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
   if (settings?.theme) {
     theme = normalizeTheme(settings.theme)
   }
+
+  const unread = getUnreadCounts(
+    unreadInputs.messages,
+    unreadInputs.readStates,
+    profile.user_id,
+  )
 
   const direct = buildDirectSidebarData(
     profile.user_id,
@@ -70,9 +80,12 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
       channels={(channels ?? []).map((channel) => ({
         id: channel.id as string,
         name: channel.name as string,
-        unreadCount: 0,
+        unreadCount: unread.channels[channel.id as string] ?? 0,
       }))}
-      directMessages={direct.directMessages}
+      directMessages={direct.directMessages.map((directMessage) => ({
+        ...directMessage,
+        unreadCount: unread.directMessages[directMessage.id] ?? 0,
+      }))}
       directCandidates={direct.directCandidates}
       theme={theme}
     >
