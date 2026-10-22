@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 jobs:
-  bidirectional-realtime:
+  dm-e2e-debug:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -36,110 +36,16 @@ jobs:
           set +a
           echo "::add-mask::$SECRET_KEY"
           {
-            printf 'SB_URL=%s\n' "$API_URL"
-            printf 'SB_PUBLISHABLE=%s\n' "$PUBLISHABLE_KEY"
-            printf 'SB_SECRET=%s\n' "$SECRET_KEY"
+            printf 'NEXT_PUBLIC_SUPABASE_URL=%s\n' "$API_URL"
+            printf 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=%s\n' "$PUBLISHABLE_KEY"
+            printf 'SUPABASE_SECRET_KEY=%s\n' "$SECRET_KEY"
           } >> "$GITHUB_ENV"
       - name: Install app dependencies
         run: npm ci
-      - name: Verify bidirectional Postgres Changes only
-        run: |
-          node --input-type=module <<'NODE'
-          import { createClient } from '@supabase/supabase-js'
-
-          const url = process.env.SB_URL
-          const publishable = process.env.SB_PUBLISHABLE
-          const secret = process.env.SB_SECRET
-          const password = 'RealtimeDebug!2026'
-          const suffix = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`
-          const admin = createClient(url, secret, { auth: { persistSession: false, autoRefreshToken: false } })
-
-          const makeUser = async (prefix) => {
-            const loginId = `${prefix}_${suffix}`
-            const email = `${loginId}@auth.keychats.invalid`
-            const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true, app_metadata: { role: 'member' } })
-            if (error || !data.user) throw error ?? new Error('CREATE_USER_FAILED')
-            const userId = data.user.id
-            const { error: profileError } = await admin.from('profiles').insert({ user_id: userId, username: loginId, display_name: loginId, status: 'active' })
-            if (profileError) throw profileError
-            return { userId, email }
-          }
-
-          const waitReady = (client, user, channelId, label, received) => new Promise(async (resolve, reject) => {
-            const { data, error } = await client.auth.signInWithPassword({ email: user.email, password })
-            if (error || !data.session) return reject(error ?? new Error(`${label}_LOGIN_FAILED`))
-            await client.realtime.setAuth(data.session.access_token)
-            const timeout = setTimeout(() => reject(new Error(`${label}_POSTGRES_READY_TIMEOUT`)), 12000)
-            const channel = client
-              .channel(`debug:${channelId}:${label}`)
-              .on('system', '*', (payload) => {
-                if (payload?.extension === 'postgres_changes' && payload?.status === 'ok') {
-                  clearTimeout(timeout)
-                  resolve(channel)
-                }
-                if (payload?.extension === 'postgres_changes' && payload?.status === 'error') {
-                  clearTimeout(timeout)
-                  reject(new Error(`${label}_POSTGRES_ERROR:${payload?.message ?? 'unknown'}`))
-                }
-              })
-              .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `channel_id=eq.${channelId}` }, (payload) => {
-                received.push(payload.new.body)
-              })
-              .subscribe((status) => {
-                if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-                  clearTimeout(timeout)
-                  reject(new Error(`${label}_${status}`))
-                }
-              })
-          })
-
-          const waitFor = async (received, expected, label) => {
-            const deadline = Date.now() + 7000
-            while (Date.now() < deadline) {
-              if (received.includes(expected)) return
-              await new Promise((r) => setTimeout(r, 100))
-            }
-            throw new Error(`${label}_MISSING:${expected};got=${JSON.stringify(received)}`)
-          }
-
-          let first, second, channelId
-          const firstClient = createClient(url, publishable, { auth: { persistSession: false, autoRefreshToken: false } })
-          const secondClient = createClient(url, publishable, { auth: { persistSession: false, autoRefreshToken: false } })
-          const receivedA = []
-          const receivedB = []
-          try {
-            first = await makeUser('rt_a')
-            second = await makeUser('rt_b')
-            const { data: channel, error: channelError } = await admin.from('channels').insert({ name: `rt-${suffix}`, created_by: first.userId }).select('id').single()
-            if (channelError || !channel) throw channelError ?? new Error('CHANNEL_CREATE_FAILED')
-            channelId = channel.id
-            const { error: membersError } = await admin.from('channel_members').insert([
-              { channel_id: channelId, user_id: first.userId, role: 'owner' },
-              { channel_id: channelId, user_id: second.userId, role: 'member' },
-            ])
-            if (membersError) throw membersError
-
-            await Promise.all([
-              waitReady(firstClient, first, channelId, 'A', receivedA),
-              waitReady(secondClient, second, channelId, 'B', receivedB),
-            ])
-
-            const aBody = `a-to-b-${suffix}`
-            const { error: aInsertError } = await firstClient.from('messages').insert({ channel_id: channelId, sender_id: first.userId, body: aBody })
-            if (aInsertError) throw aInsertError
-            await waitFor(receivedB, aBody, 'B')
-
-            const bBody = `b-to-a-${suffix}`
-            const { error: bInsertError } = await secondClient.from('messages').insert({ channel_id: channelId, sender_id: second.userId, body: bBody })
-            if (bInsertError) throw bInsertError
-            await waitFor(receivedA, bBody, 'A')
-
-            console.log('BIDIRECTIONAL_REALTIME_OK')
-          } finally {
-            await firstClient.removeAllChannels()
-            await secondClient.removeAllChannels()
-            if (channelId) await admin.from('channels').delete().eq('id', channelId)
-            if (first?.userId) await admin.auth.admin.deleteUser(first.userId)
-            if (second?.userId) await admin.auth.admin.deleteUser(second.userId)
-          }
-          NODE
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run only DM E2E with Playwright API logging
+        env:
+          GITHUB_ACTIONS: 'false'
+          DEBUG: 'pw:api'
+        run: npx playwright test tests/e2e/direct-messages.spec.ts --workers=1 --reporter=line
