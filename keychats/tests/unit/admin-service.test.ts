@@ -18,7 +18,7 @@ function repository(username = 'member') {
       userId,
       username,
       displayName: username,
-      status: 'active',
+      status: 'active' as const,
       createdAt: '2026-10-21T00:00:00.000Z',
     })),
     setStatus: vi.fn(async () => undefined),
