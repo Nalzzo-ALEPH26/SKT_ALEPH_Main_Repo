@@ -1,3 +1,7 @@
+'use client'
+
+import { useState, type FormEvent } from 'react'
+
 type ProfileOption = {
   userId: string
   displayName: string
@@ -7,16 +11,39 @@ type ProfileOption = {
 type ChannelDialogProps = {
   profiles: ProfileOption[]
   currentUserId: string
-  action?: (formData: FormData) => void | Promise<void>
+  action?: (formData: FormData) => Promise<{ channelId: string } | void>
 }
 
 export function ChannelDialog({ profiles, currentUserId, action }: ChannelDialogProps) {
   const candidates = profiles.filter((profile) => profile.userId !== currentUserId)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!action || busy) return
+
+    setBusy(true)
+    setError(null)
+
+    try {
+      const result = await action(new FormData(event.currentTarget))
+      if (result?.channelId) {
+        window.location.assign(`/chats/channel/${result.channelId}`)
+        return
+      }
+      setError('채널을 만들지 못했습니다. 다시 시도해 주세요.')
+    } catch {
+      setError('채널을 만들지 못했습니다. 다시 시도해 주세요.')
+    } finally {
+      setBusy(false)
+    }
+  }
 
   return (
     <details className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
       <summary className="cursor-pointer text-sm font-semibold">채널 만들기</summary>
-      <form action={action} className="mt-4 space-y-4">
+      <form onSubmit={handleSubmit} className="mt-4 space-y-4">
         <label className="block space-y-1 text-sm">
           <span className="font-medium">채널 이름</span>
           <input
@@ -24,12 +51,13 @@ export function ChannelDialog({ profiles, currentUserId, action }: ChannelDialog
             required
             maxLength={80}
             placeholder="예: 개발"
-            className="w-full rounded-lg border border-zinc-300 bg-transparent px-3 py-2 outline-none focus:border-zinc-500 dark:border-zinc-700"
+            disabled={busy}
+            className="w-full rounded-lg border border-zinc-300 bg-transparent px-3 py-2 outline-none focus:border-zinc-500 disabled:opacity-60 dark:border-zinc-700"
           />
         </label>
 
         {candidates.length > 0 ? (
-          <fieldset className="space-y-2">
+          <fieldset className="space-y-2" disabled={busy}>
             <legend className="text-sm font-medium">초대할 멤버</legend>
             {candidates.map((profile) => (
               <label key={profile.userId} className="flex items-center gap-2 text-sm">
@@ -41,11 +69,18 @@ export function ChannelDialog({ profiles, currentUserId, action }: ChannelDialog
           </fieldset>
         ) : null}
 
+        {error ? (
+          <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+            {error}
+          </p>
+        ) : null}
+
         <button
           type="submit"
-          className="rounded-lg bg-zinc-950 px-3 py-2 text-sm font-semibold text-white dark:bg-white dark:text-zinc-950"
+          disabled={busy || !action}
+          className="rounded-lg bg-zinc-950 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50 dark:bg-white dark:text-zinc-950"
         >
-          만들기
+          {busy ? '만드는 중…' : '만들기'}
         </button>
       </form>
     </details>
