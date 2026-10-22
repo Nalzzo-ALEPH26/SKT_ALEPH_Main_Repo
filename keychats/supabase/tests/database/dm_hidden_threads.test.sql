@@ -67,13 +67,13 @@ select set_config(
   true
 );
 
-select results_eq(
+select throws_ok(
   $$
     insert into public.dm_hidden_threads (dm_thread_id, user_id)
     values ('cccccccc-cccc-cccc-cccc-cccccccccccc', '33333333-3333-3333-3333-333333333333')
-    returning user_id
   $$,
-  $$ select null::uuid where false $$,
+  '42501',
+  null,
   'non-participant cannot create hidden state for a DM'
 );
 
