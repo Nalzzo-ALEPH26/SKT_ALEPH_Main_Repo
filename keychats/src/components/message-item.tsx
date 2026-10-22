@@ -1,4 +1,6 @@
 import type { AttachmentMetadata } from '@/lib/files/supabase'
+import { splitMessageText } from '@/lib/url-preview/url'
+import { UrlPreviewCard } from '@/components/url-preview-card'
 
 type MessageSender = {
   userId: string
@@ -48,6 +50,28 @@ function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function MessageBody({ body }: { body: string | null }) {
+  return (
+    <>
+      {splitMessageText(body).map((part, index) =>
+        part.type === 'url' ? (
+          <a
+            key={`${part.value}-${index}`}
+            href={part.value}
+            target="_blank"
+            rel="noreferrer nofollow"
+            className="underline decoration-zinc-400 underline-offset-2 hover:decoration-zinc-700 dark:hover:decoration-zinc-200"
+          >
+            {part.value}
+          </a>
+        ) : (
+          <span key={`text-${index}`}>{part.value}</span>
+        ),
+      )}
+    </>
+  )
 }
 
 export function MessageItem({
@@ -105,11 +129,13 @@ export function MessageItem({
             <span className="italic text-zinc-500">삭제된 메시지입니다.</span>
           ) : (
             <>
-              {message.body}
+              <MessageBody body={message.body} />
               {message.editedAt ? <span className="ml-1 text-xs text-zinc-400">(수정됨)</span> : null}
             </>
           )}
         </div>
+
+        <UrlPreviewCard messageId={message.id} body={message.body} deleted={isDeleted} />
 
         {!isDeleted && attachments.length > 0 ? (
           <div className="mt-2 flex max-w-xl flex-col gap-2" data-message-attachments>
