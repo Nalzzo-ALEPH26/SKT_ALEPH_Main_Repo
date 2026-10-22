@@ -43,6 +43,29 @@ describe('workspace shell', () => {
     expect(html).toContain('conversation')
   })
 
+  it('shows the admin entry only to admins', () => {
+    const adminHtml = renderToStaticMarkup(
+      createElement(AppShell, {
+        profile: { displayName: 'Admin', avatarPath: null },
+        channels: [],
+        directMessages: [],
+        isAdmin: true,
+      }),
+    )
+    const memberHtml = renderToStaticMarkup(
+      createElement(AppShell, {
+        profile: { displayName: 'Member', avatarPath: null },
+        channels: [],
+        directMessages: [],
+        isAdmin: false,
+      }),
+    )
+
+    expect(adminHtml).toContain('관리자')
+    expect(adminHtml).toContain('href="/chats/admin"')
+    expect(memberHtml).not.toContain('href="/chats/admin"')
+  })
+
   it('marks and styles the selected workspace theme', () => {
     const html = renderToStaticMarkup(
       createElement(
