@@ -98,7 +98,7 @@ export function ChannelDialog({
           +
         </summary>
         <div className="absolute right-0 top-7 z-30 w-72 rounded-xl border border-black/10 bg-white p-4 text-black shadow-xl dark:border-white/10 dark:bg-[#202020] dark:text-white">
-          <div className="mb-3 text-sm font-semibold">채널 만들기</div>
+          <div className="mb-3 text-sm font-semibold">새 채널</div>
           {form}
         </div>
       </details>
