@@ -1,3 +1,4 @@
+import { FeedbackComposer } from '@/components/feedback-composer'
 import { requireActiveUser } from '@/lib/auth/guards'
 import { createAuthGuardAccess } from '@/lib/auth/server-access'
 import { createClient } from '@/lib/supabase/server'
@@ -39,21 +40,7 @@ export default async function FeedbackPage() {
       <h1 className="mt-2 text-2xl font-semibold">피드백 게시판</h1>
       <p className="mt-2 text-sm text-zinc-500">Keychats를 쓰면서 불편한 점이나 개선 아이디어를 남겨주세요.</p>
 
-      <form action={createFeedbackAction} className="mt-6 rounded-2xl border border-black/10 p-4 dark:border-white/10">
-        <label className="block text-sm font-semibold" htmlFor="feedback-body">피드백 작성</label>
-        <textarea
-          id="feedback-body"
-          name="body"
-          required
-          maxLength={4000}
-          rows={4}
-          placeholder="어떤 점을 개선하면 좋을까요?"
-          className="mt-3 w-full resize-y rounded-xl border border-black/20 bg-white px-3 py-2 text-sm text-black outline-none focus:border-black dark:border-white/20 dark:bg-zinc-950 dark:text-white"
-        />
-        <button type="submit" className="mt-3 rounded-xl bg-zinc-950 px-4 py-2 text-sm font-semibold text-white dark:bg-white dark:text-zinc-950">
-          등록
-        </button>
-      </form>
+      <FeedbackComposer action={createFeedbackAction} />
 
       <div className="mt-6 space-y-3">
         {(posts ?? []).map((post) => {
