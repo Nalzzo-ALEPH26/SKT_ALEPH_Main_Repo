@@ -115,6 +115,34 @@ async function waitForReadState(
     .toBe(messageId)
 }
 
+async function waitForLiveAttachment(admin: SupabaseClient, messageId: number, expectedBody: string) {
+  await expect
+    .poll(
+      async () => {
+        const { data: message, error: messageError } = await admin
+          .from('messages')
+          .select('body,deleted_at')
+          .eq('id', messageId)
+          .maybeSingle()
+
+        if (messageError) return `message-error:${messageError.message}`
+        if (!message) return 'message-missing'
+        if (message.deleted_at) return `message-deleted:${message.body ?? 'null'}`
+        if (message.body !== expectedBody) return `message-body:${message.body ?? 'null'}`
+
+        const { count, error: attachmentError } = await admin
+          .from('attachments')
+          .select('id', { count: 'exact', head: true })
+          .eq('message_id', messageId)
+
+        if (attachmentError) return `attachment-error:${attachmentError.message}`
+        return `live-attachments:${count ?? 0}`
+      },
+      { timeout: 10_000 },
+    )
+    .toBe('live-attachments:1')
+}
+
 test('creates a member channel and covers attachment, reaction, pin, unread, theme and mobile drawer', async ({ browser }) => {
   const admin = createAdminClient()
   const suffix = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
@@ -191,13 +219,18 @@ test('creates a member channel and covers attachment, reaction, pin, unread, the
     await firstSend.click()
 
     const firstArticle = firstPage.locator('article').filter({ hasText: richMessage }).first()
-    const secondArticle = secondPage.locator('article').filter({ hasText: richMessage }).first()
     await expect(firstArticle).toBeVisible({ timeout: 10_000 })
-    await expect(secondArticle).toBeVisible({ timeout: 10_000 })
-    await expect(secondArticle.getByRole('link', { name: /acceptance\.txt/ })).toBeVisible({ timeout: 10_000 })
-
-    const messageId = Number(await secondArticle.getAttribute('data-message-id'))
+    const messageId = Number(await firstArticle.getAttribute('data-message-id'))
     expect(Number.isInteger(messageId)).toBe(true)
+
+    await waitForLiveAttachment(admin, messageId, richMessage)
+    await expect(firstArticle.getByRole('link', { name: /acceptance\.txt/ })).toBeVisible({
+      timeout: 10_000,
+    })
+
+    const secondArticle = secondPage.locator(`article[data-message-id="${messageId}"]`)
+    await expect(secondArticle).toContainText(richMessage, { timeout: 10_000 })
+    await expect(secondArticle.getByRole('link', { name: /acceptance\.txt/ })).toBeVisible({ timeout: 10_000 })
     await waitForReadState(admin, second.userId, createdChannelId!, messageId)
 
     await firstArticle.hover()
