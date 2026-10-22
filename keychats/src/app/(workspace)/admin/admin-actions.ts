@@ -3,6 +3,7 @@
 import { requireAdmin } from '@/lib/auth/guards'
 import { createAuthGuardAccess } from '@/lib/auth/server-access'
 import {
+  deleteManagedUser,
   disableManagedUser,
   expelManagedUser,
   listManagedUsers,
@@ -67,4 +68,10 @@ export async function expelUserAction(userId: string) {
   const { userRepository } = await requireAdminContext()
   await expelManagedUser(userRepository, userId)
   return { status: 'expelled' as const }
+}
+
+export async function deleteUserAction(userId: string) {
+  const { userRepository } = await requireAdminContext()
+  await deleteManagedUser(userRepository, userId)
+  return { status: 'deleted' as const }
 }
