@@ -100,10 +100,17 @@ test('syncs a plain message in a channel created through the UI', async ({ brows
     await createDetails.getByLabel('채널 이름').fill(channelName)
     await createDetails.getByRole('checkbox', { name: /New Channel Beta/ }).check()
     await createDetails.getByRole('button', { name: '만들기' }).click()
+
+    const baseChannelUrl = `http://localhost:3000/chats/channel/${baseChannelId}`
+    await expect.poll(() => firstPage.url(), { timeout: 10_000 }).not.toBe(baseChannelUrl)
     await expect(firstPage).toHaveURL(/\/chats\/channel\/[0-9a-f-]+$/)
+    await expect(firstPage.getByRole('heading', { name: `#${channelName}` })).toBeVisible({
+      timeout: 10_000,
+    })
 
     createdChannelId = firstPage.url().split('/').pop() ?? null
     expect(createdChannelId).toBeTruthy()
+    expect(createdChannelId).not.toBe(baseChannelId)
 
     const { data: memberships, error: membershipError } = await admin
       .from('channel_members')
