@@ -14,6 +14,18 @@ type ChannelDialogProps = {
   action?: (formData: FormData) => Promise<{ channelId: string } | void>
 }
 
+function lockCurrentConversationForNavigation() {
+  const pane = document.querySelector<HTMLElement>('[data-conversation-message-pane]')
+  if (!pane) return
+
+  pane.setAttribute('data-realtime-status', 'connecting')
+  pane.querySelectorAll<HTMLTextAreaElement | HTMLInputElement | HTMLButtonElement>(
+    'textarea, input, button',
+  ).forEach((control) => {
+    control.disabled = true
+  })
+}
+
 export function ChannelDialog({ profiles, currentUserId, action }: ChannelDialogProps) {
   const candidates = profiles.filter((profile) => profile.userId !== currentUserId)
   const [busy, setBusy] = useState(false)
@@ -29,6 +41,7 @@ export function ChannelDialog({ profiles, currentUserId, action }: ChannelDialog
     try {
       const result = await action(new FormData(event.currentTarget))
       if (result?.channelId) {
+        lockCurrentConversationForNavigation()
         window.location.assign(`/chats/channel/${result.channelId}`)
         return
       }
