@@ -5,18 +5,30 @@ import { describe, expect, it, vi } from 'vitest'
 vi.mock('@/app/(workspace)/dm/dm-actions', () => ({
   startDirectMessageAction: vi.fn(),
 }))
+vi.mock('@/app/(workspace)/channel/channel-actions', () => ({
+  createChannelAction: vi.fn(),
+  joinChannelByCodeAction: vi.fn(),
+}))
 
 import { AppShell } from '@/components/app-shell'
 import { Avatar } from '@/components/avatar'
 import { ThemeToggle } from '@/components/theme-toggle'
 
 describe('workspace shell', () => {
-  it('renders channel/direct sections, new-DM candidates and a mobile navigation trigger', () => {
+  it('renders channel/direct sections, channel creation, join-by-code and feedback navigation', () => {
     const html = renderToStaticMarkup(
       createElement(
         AppShell,
         {
           profile: { displayName: 'Miles', avatarPath: null },
+          currentUserId: '11111111-1111-1111-1111-111111111111',
+          channelProfiles: [
+            {
+              userId: '33333333-3333-3333-3333-333333333333',
+              displayName: 'New Teammate',
+              username: 'new_teammate',
+            },
+          ],
           channels: [{ id: 'general', name: 'general', unreadCount: 2 }],
           directMessages: [{ id: 'dm-1', displayName: 'Teammate', unreadCount: 1 }],
           directCandidates: [
@@ -34,11 +46,12 @@ describe('workspace shell', () => {
     expect(html).toContain('CHANNELS')
     expect(html).toContain('DIRECT')
     expect(html).toContain('#general')
-    expect(html).toContain('Teammate')
+    expect(html).toContain('data-channel-create-trigger="true"')
+    expect(html).toContain('name="joinCode"')
+    expect(html).toContain('100000 · General')
+    expect(html).toContain('href="/feedback"')
+    expect(html).toContain('피드백')
     expect(html).toContain('새 DM')
-    expect(html).toContain('New Teammate')
-    expect(html).toContain('name="otherUserId"')
-    expect(html).toContain('value="33333333-3333-3333-3333-333333333333"')
     expect(html).toContain('data-mobile-menu-trigger="true"')
     expect(html).toContain('conversation')
   })
@@ -93,11 +106,13 @@ describe('workspace shell', () => {
     expect(html).toContain('alt="Miles"')
   })
 
-  it('renders exactly the Light and Dark choices with the current theme marked', () => {
+  it('makes the selected theme visually explicit', () => {
     const html = renderToStaticMarkup(createElement(ThemeToggle, { theme: 'dark' }))
 
     expect(html).toContain('Light')
     expect(html).toContain('Dark')
     expect(html).toContain('data-current-theme="dark"')
+    expect(html).toContain('data-theme-selected="dark"')
+    expect(html).toContain('✓')
   })
 })
