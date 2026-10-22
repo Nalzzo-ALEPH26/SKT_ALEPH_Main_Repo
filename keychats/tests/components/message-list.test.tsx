@@ -77,4 +77,29 @@ describe('MessageList', () => {
     expect(html).toContain('original question')
     expect(html).toContain('Teammate')
   })
+
+  it('renders reaction counts, the current users reaction state and a pinned marker', () => {
+    const html = render([
+      {
+        id: 4,
+        body: 'react to me',
+        sender,
+        replyTo: null,
+        createdAt: '2026-10-21T00:04:00.000Z',
+        editedAt: null,
+        deletedAt: null,
+        isPinned: true,
+        reactions: [
+          { emoji: '👍', count: 2, reactedByCurrentUser: true },
+          { emoji: '🎉', count: 1, reactedByCurrentUser: false },
+        ],
+      },
+    ])
+
+    expect(html).toContain('고정됨')
+    expect(html).toContain('data-reaction-emoji="👍"')
+    expect(html).toContain('data-reacted-by-current-user="true"')
+    expect(html).toContain('👍 2')
+    expect(html).toContain('🎉 1')
+  })
 })
