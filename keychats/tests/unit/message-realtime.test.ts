@@ -27,9 +27,16 @@ function row(id: number, body: string): RealtimeMessageRow {
 function fakeRealtimeClient() {
   const handlers: Array<{ event: string; filter: string }> = []
   let statusHandler: ((status: string) => void) | undefined
+  let systemHandler: ((payload: { extension?: string; status?: string; message?: string }) => void) | undefined
+
   const realtimeChannel = {
-    on: vi.fn((_: string, options: { event: string; filter: string }) => {
-      handlers.push({ event: options.event, filter: options.filter })
+    on: vi.fn((type: string, options: unknown, callback: (payload: unknown) => void) => {
+      if (type === 'system') {
+        systemHandler = callback as typeof systemHandler
+      } else {
+        const postgresOptions = options as { event: string; filter: string }
+        handlers.push({ event: postgresOptions.event, filter: postgresOptions.filter })
+      }
       return realtimeChannel
     }),
     subscribe: vi.fn((callback?: (status: string) => void) => {
@@ -47,6 +54,8 @@ function fakeRealtimeClient() {
     realtimeChannel,
     handlers,
     emitStatus: (status: string) => statusHandler?.(status),
+    emitSystem: (payload: { extension?: string; status?: string; message?: string }) =>
+      systemHandler?.(payload),
   }
 }
 
@@ -84,14 +93,26 @@ describe('subscribeToChannelMessages', () => {
     expect(client.removeChannel).toHaveBeenCalledWith(realtimeChannel)
   })
 
-  it('forwards realtime subscription status so callers can wait for readiness', () => {
-    const { client, emitStatus } = fakeRealtimeClient()
+  it('reports READY only after the postgres_changes system subscription is live', () => {
+    const { client, emitStatus, emitSystem } = fakeRealtimeClient()
     const onStatus = vi.fn()
 
     subscribeToChannelMessages(client, channelId, vi.fn(), onStatus)
     emitStatus('SUBSCRIBED')
+    expect(onStatus).not.toHaveBeenCalled()
 
-    expect(onStatus).toHaveBeenCalledWith('SUBSCRIBED')
+    emitSystem({ extension: 'postgres_changes', status: 'ok', message: 'Subscribed to PostgreSQL' })
+    expect(onStatus).toHaveBeenCalledWith('READY')
+  })
+
+  it('surfaces postgres_changes system errors as a degraded status', () => {
+    const { client, emitSystem } = fakeRealtimeClient()
+    const onStatus = vi.fn()
+
+    subscribeToChannelMessages(client, channelId, vi.fn(), onStatus)
+    emitSystem({ extension: 'postgres_changes', status: 'error', message: 'failed' })
+
+    expect(onStatus).toHaveBeenCalledWith('POSTGRES_ERROR')
   })
 })
 

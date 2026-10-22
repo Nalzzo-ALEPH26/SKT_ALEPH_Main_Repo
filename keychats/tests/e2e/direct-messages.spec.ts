@@ -94,7 +94,7 @@ async function startDm(context: BrowserContext, current: E2eUser, other: E2eUser
   await expect(page).toHaveURL(/\/chats\/dm\/[0-9a-f-]+$/)
   const pane = page.locator('[data-dm-message-pane]')
   await expect(pane).toBeVisible()
-  await expect(pane).toHaveAttribute('data-realtime-status', 'subscribed', { timeout: 10_000 })
+  await expect(pane).toHaveAttribute('data-realtime-status', 'ready', { timeout: 12_000 })
   return page
 }
 

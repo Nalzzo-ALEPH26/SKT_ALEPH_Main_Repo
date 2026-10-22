@@ -87,7 +87,7 @@ async function openChannel(context: BrowserContext, channelId: string, loginId: 
   await page.goto(`/chats/channel/${channelId}`)
   const pane = page.locator('[data-channel-message-pane]')
   await expect(pane).toBeVisible()
-  await expect(pane).toHaveAttribute('data-realtime-status', 'subscribed', { timeout: 10_000 })
+  await expect(pane).toHaveAttribute('data-realtime-status', 'ready', { timeout: 12_000 })
   return page
 }
 
