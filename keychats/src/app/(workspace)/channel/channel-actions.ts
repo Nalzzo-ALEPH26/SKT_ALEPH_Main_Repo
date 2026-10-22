@@ -46,7 +46,7 @@ export async function createChannelAction(formData: FormData) {
 
   const created = await createChannel(repository, actor, name, memberIds)
   revalidatePath('/')
-  redirect(`/channel/${created.id}`)
+  return { channelId: created.id }
 }
 
 export async function addChannelMemberAction(formData: FormData) {
