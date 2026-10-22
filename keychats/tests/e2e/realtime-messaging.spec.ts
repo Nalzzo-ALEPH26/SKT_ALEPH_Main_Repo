@@ -73,18 +73,17 @@ async function cleanupFixture(fixture: Fixture | null) {
   await fixture.admin.auth.admin.deleteUser(fixture.second.userId)
 }
 
-async function login(page: Page, loginId: string) {
+async function login(page: Page, loginId: string, channelId: string) {
   await page.goto('/chats/login')
   await page.getByLabel('아이디').fill(loginId)
   await page.getByLabel('비밀번호').fill(password)
   await page.getByRole('button', { name: '로그인' }).click()
-  await expect(page).toHaveURL(/\/chats$/)
+  await expect(page).toHaveURL(`http://localhost:3000/chats/channel/${channelId}`)
 }
 
 async function openChannel(context: BrowserContext, channelId: string, loginId: string) {
   const page = await context.newPage()
-  await login(page, loginId)
-  await page.goto(`/chats/channel/${channelId}`)
+  await login(page, loginId, channelId)
   const pane = page.locator('[data-channel-message-pane]')
   await expect(pane).toBeVisible()
   await expect(pane).toHaveAttribute('data-realtime-status', 'ready', { timeout: 12_000 })
