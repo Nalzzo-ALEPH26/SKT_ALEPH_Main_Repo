@@ -10,16 +10,24 @@ export type RealtimeMessageRow = {
   deleted_at: string | null
 }
 
+type PostgresSystemPayload = {
+  extension?: string
+  status?: string
+  message?: string
+}
+
 type MessageRealtimeChannel = {
   on: (
-    type: 'postgres_changes',
-    options: {
-      event: 'INSERT' | 'UPDATE'
-      schema: 'public'
-      table: 'messages'
-      filter: string
-    },
-    callback: (payload: { new: RealtimeMessageRow }) => void,
+    type: 'postgres_changes' | 'system',
+    options:
+      | {
+          event: 'INSERT' | 'UPDATE'
+          schema: 'public'
+          table: 'messages'
+          filter: string
+        }
+      | '*',
+    callback: (payload: { new: RealtimeMessageRow } | PostgresSystemPayload) => void,
   ) => MessageRealtimeChannel
   subscribe: (callback?: (status: string) => void) => MessageRealtimeChannel
 }
@@ -47,6 +55,19 @@ function subscribeToMessages(
 ) {
   const channel = client
     .channel(subscriptionName)
+    .on('system', '*', (payload) => {
+      const system = payload as PostgresSystemPayload
+      if (system.extension !== 'postgres_changes') return
+
+      if (system.status === 'ok') {
+        onStatus?.('READY')
+        return
+      }
+
+      if (system.status === 'error' || system.status === 'timeout') {
+        onStatus?.(`POSTGRES_${system.status.toUpperCase()}`)
+      }
+    })
     .on(
       'postgres_changes',
       {
@@ -55,7 +76,7 @@ function subscribeToMessages(
         table: 'messages',
         filter,
       },
-      (payload) => onChange(payload.new),
+      (payload) => onChange((payload as { new: RealtimeMessageRow }).new),
     )
     .on(
       'postgres_changes',
@@ -65,9 +86,11 @@ function subscribeToMessages(
         table: 'messages',
         filter,
       },
-      (payload) => onChange(payload.new),
+      (payload) => onChange((payload as { new: RealtimeMessageRow }).new),
     )
-    .subscribe((status) => onStatus?.(status))
+    .subscribe((status) => {
+      if (status !== 'SUBSCRIBED') onStatus?.(status)
+    })
 
   return () => {
     void client.removeChannel(channel)
