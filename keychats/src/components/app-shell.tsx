@@ -23,6 +23,7 @@ type AppShellProps = {
     displayName: string
   }>
   theme?: KeychatsTheme
+  isAdmin?: boolean
   children?: ReactNode
 }
 
@@ -32,6 +33,7 @@ export function AppShell({
   directMessages,
   directCandidates = [],
   theme = 'light',
+  isAdmin = false,
   children,
 }: AppShellProps) {
   const dark = theme === 'dark'
@@ -59,6 +61,7 @@ export function AppShell({
               directMessages={directMessages}
               directCandidates={directCandidates}
               theme={theme}
+              isAdmin={isAdmin}
             />
           </div>
         </div>
@@ -73,6 +76,7 @@ export function AppShell({
               directMessages={directMessages}
               directCandidates={directCandidates}
               theme={theme}
+              isAdmin={isAdmin}
             />
           </div>
         </div>
