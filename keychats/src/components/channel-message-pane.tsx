@@ -11,5 +11,11 @@ type ChannelMessagePaneProps = {
 }
 
 export function ChannelMessagePane({ channelId, ...props }: ChannelMessagePaneProps) {
-  return <ConversationMessagePane target={{ kind: 'channel', id: channelId }} {...props} />
+  return (
+    <ConversationMessagePane
+      key={channelId}
+      target={{ kind: 'channel', id: channelId }}
+      {...props}
+    />
+  )
 }
