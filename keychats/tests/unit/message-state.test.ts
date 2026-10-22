@@ -80,10 +80,10 @@ describe('message reactions', () => {
     const repository = fakeStateRepository()
 
     await expect(toggleReaction(repository, actor, 10, '👍')).resolves.toBe(true)
-    expect(repository.reactions).toHaveSize(1)
+    expect(repository.reactions.size).toBe(1)
 
     await expect(toggleReaction(repository, actor, 10, '👍')).resolves.toBe(false)
-    expect(repository.reactions).toHaveSize(0)
+    expect(repository.reactions.size).toBe(0)
   })
 
   it('rejects empty or oversized emoji keys', async () => {
