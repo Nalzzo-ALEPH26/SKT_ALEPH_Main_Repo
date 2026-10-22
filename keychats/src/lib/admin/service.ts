@@ -50,7 +50,7 @@ export async function resetManagedUserPassword(
   userId: string,
   randomBytesFactory?: RandomBytesFactory,
 ) {
-  await requireManagedTarget(repository, userId)
+  await requireRemovableTarget(repository, userId)
   const temporaryPassword = generateTemporaryPassword(randomBytesFactory)
   await repository.updatePassword(userId, temporaryPassword)
   return temporaryPassword
