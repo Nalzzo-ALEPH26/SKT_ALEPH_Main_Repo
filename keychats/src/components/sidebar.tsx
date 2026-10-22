@@ -30,6 +30,7 @@ type SidebarProps = {
   directMessages: DirectItem[]
   directCandidates?: DirectCandidate[]
   theme?: KeychatsTheme
+  isAdmin?: boolean
 }
 
 function UnreadBadge({ count }: { count: number }) {
@@ -48,6 +49,7 @@ export function Sidebar({
   directMessages,
   directCandidates = [],
   theme = 'light',
+  isAdmin = false,
 }: SidebarProps) {
   const dark = theme === 'dark'
   const muted = dark ? 'text-white/45' : 'text-black/40'
@@ -140,6 +142,15 @@ export function Sidebar({
             ))}
           </div>
         </section>
+
+        {isAdmin ? (
+          <section>
+            <div className={`mb-2 px-2 text-xs font-semibold tracking-[0.14em] ${muted}`}>ADMIN</div>
+            <Link href="/admin" className={`block rounded-lg px-2.5 py-2 text-sm ${item}`}>
+              관리자
+            </Link>
+          </section>
+        ) : null}
       </nav>
 
       <Link
