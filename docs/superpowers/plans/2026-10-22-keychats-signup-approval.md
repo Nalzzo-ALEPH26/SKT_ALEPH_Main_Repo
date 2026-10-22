@@ -18,7 +18,7 @@ Implemented and verified:
 - immediate `/chats` login form and `/chats/signup` request form
 - admin approval/rejection UI with legacy invite flow retained as fallback
 - production migration applied only to Keychats Supabase project `otcohkelaqajomlashgy`
-- Keychats CI run `39741979663` passed database, unit, production build, and Playwright E2E steps
+- Keychats CI run `39741979663` passed database, unit, production build, and Playwright E2E steps on application SHA `48dcb39a78f8e002e57b840a28362c0a4d8d5d25`
 - production Keychats deployment `dpl_A42QbVtHzf8kKniJKYd6Qev2smgo` is READY
 - `whogh.vercel.app` host deployment `dpl_CacKunimNqH4nFjDpKHbJYCgZBnB` is READY with a visible Keychats entry link
 - production smoke: `/`, `/chats`, `/chats/signup` return 200; no recent fatal/error runtime logs
