@@ -78,6 +78,31 @@ describe('URL preview SSRF boundary', () => {
     expect(fetchImpl).not.toHaveBeenCalled()
   })
 
+  it('passes the validated DNS addresses to the production request transport instead of re-resolving the hostname', async () => {
+    const requestImpl = vi.fn(async () => htmlResponse('<title>Pinned transport</title>'))
+    const globalFetch = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('global fetch must not run'))
+
+    try {
+      const result = await fetchUrlPreview(
+        'https://example.com/page',
+        {
+          resolveHost: async () => ['93.184.216.34'],
+          requestImpl,
+        } as never,
+      )
+
+      expect(result?.title).toBe('Pinned transport')
+      expect(requestImpl).toHaveBeenCalledWith(
+        expect.any(URL),
+        ['93.184.216.34'],
+        expect.objectContaining({ timeoutMs: 5_000, maxBytes: 512 * 1024 }),
+      )
+      expect(globalFetch).not.toHaveBeenCalled()
+    } finally {
+      globalFetch.mockRestore()
+    }
+  })
+
   it('rejects a public URL that redirects to a blocked address', async () => {
     const fetchImpl = vi.fn(async () =>
       new Response(null, {
