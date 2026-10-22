@@ -53,5 +53,17 @@ export async function login(_previousState: LoginState, formData: FormData): Pro
     return { error: GENERIC_LOGIN_ERROR }
   }
 
-  redirect('/chats')
+  const { data: firstChannel, error: channelError } = await supabase
+    .from('channels')
+    .select('id')
+    .order('is_default', { ascending: false })
+    .order('name')
+    .limit(1)
+    .maybeSingle()
+
+  if (channelError) {
+    throw channelError
+  }
+
+  redirect(firstChannel?.id ? `/channel/${firstChannel.id}` : '/settings')
 }
