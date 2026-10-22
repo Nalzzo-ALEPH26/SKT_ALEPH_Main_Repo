@@ -19,61 +19,34 @@ async function getMessageContext() {
     userId: claims.sub,
     isAdmin: claims.app_metadata?.role === 'admin',
   }
-
-  return {
-    actor,
-    repository: createSupabaseMessageRepository(client),
-  }
+  return { actor, repository: createSupabaseMessageRepository(client) }
 }
 
-export async function sendDmMessageAction(input: {
-  dmThreadId: string
-  body: string
-  replyToId: number | null
-  attachmentCount?: number
-}) {
+export async function sendDmMessageAction(input: { dmThreadId: string; body: string; replyToId: number | null; attachmentCount?: number }) {
   const { actor, repository } = await getMessageContext()
-  return sendDmMessage(repository, actor, {
-    dmThreadId: input.dmThreadId,
-    body: input.body,
-    replyToId: input.replyToId,
-    attachmentCount: input.attachmentCount,
-  })
+  return sendDmMessage(repository, actor, input)
 }
 
-export async function editDmMessageAction(input: {
-  dmThreadId: string
-  messageId: number
-  body: string
-}) {
+export async function editDmMessageAction(input: { dmThreadId: string; messageId: number; body: string }) {
   const { actor, repository } = await getMessageContext()
   const message = await repository.getById(input.messageId)
-
-  if (!message || message.dmThreadId !== input.dmThreadId) {
-    throw new Error('MESSAGE_ROOM_MISMATCH')
-  }
-
+  if (!message || message.dmThreadId !== input.dmThreadId) throw new Error('MESSAGE_ROOM_MISMATCH')
   return editMessage(repository, actor, input.messageId, input.body)
 }
 
-export async function deleteDmMessageAction(input: {
-  dmThreadId: string
-  messageId: number
-}) {
+export async function deleteDmMessageAction(input: { dmThreadId: string; messageId: number }) {
   const { actor, repository } = await getMessageContext()
   const message = await repository.getById(input.messageId)
-
-  if (!message || message.dmThreadId !== input.dmThreadId) {
-    throw new Error('MESSAGE_ROOM_MISMATCH')
-  }
-
+  if (!message || message.dmThreadId !== input.dmThreadId) throw new Error('MESSAGE_ROOM_MISMATCH')
   return deleteMessage(repository, actor, input.messageId)
 }
 
-export async function loadOlderDmMessagesAction(input: {
-  dmThreadId: string
-  beforeId: number
-}) {
+export async function loadOlderDmMessagesAction(input: { dmThreadId: string; beforeId: number }) {
   const { repository } = await getMessageContext()
   return loadDmMessages(repository, input.dmThreadId, input.beforeId)
+}
+
+export async function loadLatestDmMessagesAction(input: { dmThreadId: string }) {
+  const { repository } = await getMessageContext()
+  return loadDmMessages(repository, input.dmThreadId)
 }
