@@ -20,16 +20,15 @@ export default async function AdminPage() {
   }
 
   const admin = createAdminClient()
-  const [users, signupRequests] = await Promise.all([
+  const [users, signupRequests, { data: inviteRows, error: inviteError }] = await Promise.all([
     listManagedUsers(createSupabaseAdminRepository(admin)),
     listPendingSignupRequests(createSupabaseSignupReviewRepository(admin)),
+    admin
+      .from('invites')
+      .select('id,expires_at,used_at,revoked_at,created_at')
+      .order('created_at', { ascending: false })
+      .limit(30),
   ])
-
-  const { data: inviteRows, error: inviteError } = await admin
-    .from('invites')
-    .select('id,expires_at,used_at,revoked_at,created_at')
-    .order('created_at', { ascending: false })
-    .limit(30)
 
   if (inviteError) throw inviteError
 
