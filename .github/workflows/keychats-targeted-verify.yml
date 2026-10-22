@@ -28,4 +28,4 @@ jobs:
       - name: Production build
         run: npm run build
       - name: Verification marker
-        run: echo "validated url preview and admin controls"
+        run: echo "validated url preview and admin controls after build fixes"
