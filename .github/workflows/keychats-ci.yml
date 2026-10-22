@@ -1,12 +1,6 @@
 name: Keychats CI
 
 on:
-  push:
-    branches:
-      - 'feature/keychats-v1'
-    paths:
-      - 'keychats/**'
-      - '.github/workflows/keychats-ci.yml'
   pull_request:
     paths:
       - 'keychats/**'

@@ -56,10 +56,11 @@ The hosted Keychats project currently includes:
 - channel constraints for the default room and normalized channel names
 - message moderation and message Postgres Changes publication
 - message reaction, pin, and read-state Postgres Changes publication
+- secure private storage for avatars and chat attachments, including attachment Realtime publication
 
 The channel-constraint migration adds `channels.is_default`, enforces case-insensitive/trimmed channel-name uniqueness, marks `#general` as the default room, prevents ordinary users from creating another `general` room, and prevents even the administrator from deleting the default `#general` channel.
 
-The branch also contains `secure_storage`, which is applied to the hosted Keychats project only after its database/unit/build verification passes. It creates private `avatars` and `chat-attachments` buckets, enforces the 10 MiB limit and allowed MIME types, adds Storage RLS, restricts attachment metadata to the sender's own live message, and publishes attachment metadata changes for Realtime refresh.
+The hosted `secure_storage` migration creates private `avatars` and `chat-attachments` buckets, enforces the 10 MiB limit and allowed MIME types, adds Storage RLS, restricts attachment metadata to the sender's own live message, and publishes attachment metadata changes for Realtime refresh.
 
 Invite contract:
 
