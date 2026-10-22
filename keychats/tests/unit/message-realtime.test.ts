@@ -10,6 +10,14 @@ import {
 const channelId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 const dmThreadId = 'cccccccc-cccc-cccc-cccc-cccccccccccc'
 
+type TestSystemPayload = {
+  extension?: string
+  status?: string
+  message?: string
+}
+
+type TestRealtimePayload = { new: RealtimeMessageRow } | TestSystemPayload
+
 function row(id: number, body: string): RealtimeMessageRow {
   return {
     id,
@@ -27,12 +35,12 @@ function row(id: number, body: string): RealtimeMessageRow {
 function fakeRealtimeClient() {
   const handlers: Array<{ event: string; filter: string }> = []
   let statusHandler: ((status: string) => void) | undefined
-  let systemHandler: ((payload: { extension?: string; status?: string; message?: string }) => void) | undefined
+  let systemHandler: ((payload: TestSystemPayload) => void) | undefined
 
   const realtimeChannel = {
-    on: vi.fn((type: string, options: unknown, callback: (payload: unknown) => void) => {
+    on: vi.fn((type: string, options: unknown, callback: (payload: TestRealtimePayload) => void) => {
       if (type === 'system') {
-        systemHandler = callback as typeof systemHandler
+        systemHandler = callback as (payload: TestSystemPayload) => void
       } else {
         const postgresOptions = options as { event: string; filter: string }
         handlers.push({ event: postgresOptions.event, filter: postgresOptions.filter })
@@ -54,8 +62,7 @@ function fakeRealtimeClient() {
     realtimeChannel,
     handlers,
     emitStatus: (status: string) => statusHandler?.(status),
-    emitSystem: (payload: { extension?: string; status?: string; message?: string }) =>
-      systemHandler?.(payload),
+    emitSystem: (payload: TestSystemPayload) => systemHandler?.(payload),
   }
 }
 
