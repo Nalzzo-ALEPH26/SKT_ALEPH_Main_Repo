@@ -1,12 +1,13 @@
 name: Keychats Unit Temp
 
-# Focused message-state server action RED verification.
+# Focused message-state server action verification.
 on:
   push:
     branches:
       - 'feature/keychats-v1'
     paths:
       - '.github/workflows/keychats-unit-temp.yml'
+      - 'keychats/src/app/(workspace)/message-state-actions.ts'
 
 permissions:
   contents: read
