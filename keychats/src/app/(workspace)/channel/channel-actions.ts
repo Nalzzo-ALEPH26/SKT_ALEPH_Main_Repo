@@ -67,6 +67,26 @@ export async function leaveChannelAction(formData: FormData) {
   redirect('/settings')
 }
 
+export async function manageChannelsAction(formData: FormData) {
+  const operation = requiredText(formData, 'operation')
+  const channelIds = [...new Set(
+    formData.getAll('channelIds').map((value) => String(value).trim()).filter(Boolean),
+  )]
+  if (channelIds.length === 0) throw new Error('CHANNEL_IDS_REQUIRED')
+
+  const { actor, repository } = await channelContext()
+  if (operation === 'leave') {
+    for (const channelId of channelIds) await leaveChannel(repository, actor, channelId)
+  } else if (operation === 'delete') {
+    for (const channelId of channelIds) await deleteChannel(repository, actor, channelId)
+  } else {
+    throw new Error('CHANNEL_OPERATION_INVALID')
+  }
+
+  revalidatePath('/')
+  redirect('/settings')
+}
+
 export async function addChannelMemberAction(formData: FormData) {
   const { actor, repository } = await channelContext()
   const channelId = requiredText(formData, 'channelId')

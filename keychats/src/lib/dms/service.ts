@@ -11,6 +11,8 @@ export type DmPair = {
 
 export type DmRepository = {
   getOrCreate: (pair: DmPair) => Promise<DmThread>
+  hide: (threadIds: string[], userId: string) => Promise<void>
+  unhide: (threadId: string, userId: string) => Promise<void>
 }
 
 export function canonicalDmPair(firstUserId: string, secondUserId: string): DmPair {
@@ -26,5 +28,17 @@ export async function getOrCreateDm(
   currentUserId: string,
   otherUserId: string,
 ): Promise<DmThread> {
-  return repository.getOrCreate(canonicalDmPair(currentUserId, otherUserId))
+  const thread = await repository.getOrCreate(canonicalDmPair(currentUserId, otherUserId))
+  await repository.unhide(thread.id, currentUserId)
+  return thread
+}
+
+export async function hideDirectMessages(
+  repository: DmRepository,
+  currentUserId: string,
+  threadIds: string[],
+) {
+  const uniqueThreadIds = [...new Set(threadIds.map((id) => id.trim()).filter(Boolean))]
+  if (uniqueThreadIds.length === 0) throw new Error('DM_THREAD_IDS_REQUIRED')
+  await repository.hide(uniqueThreadIds, currentUserId)
 }

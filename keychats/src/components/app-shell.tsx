@@ -18,6 +18,8 @@ type AppShellProps = {
     id: string
     name: string
     unreadCount: number
+    canLeave?: boolean
+    canDelete?: boolean
   }>
   directMessages: Array<{
     id: string

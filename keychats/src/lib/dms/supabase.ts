@@ -64,5 +64,25 @@ export function createSupabaseDmRepository(client: SupabaseClient): DmRepository
 
       fail(error as DatabaseError | null, 'DM_CREATE_FAILED')
     },
+
+    async hide(threadIds, userId) {
+      for (const threadId of threadIds) {
+        const { error } = await client
+          .from('dm_hidden_threads')
+          .insert({ dm_thread_id: threadId, user_id: userId })
+        if (error && (error as DatabaseError).code !== '23505') {
+          fail(error as DatabaseError, 'DM_HIDE_FAILED')
+        }
+      }
+    },
+
+    async unhide(threadId, userId) {
+      const { error } = await client
+        .from('dm_hidden_threads')
+        .delete()
+        .eq('dm_thread_id', threadId)
+        .eq('user_id', userId)
+      if (error) fail(error as DatabaseError, 'DM_UNHIDE_FAILED')
+    },
   }
 }

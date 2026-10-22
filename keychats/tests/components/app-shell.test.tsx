@@ -4,10 +4,12 @@ import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/app/(workspace)/dm/dm-actions', () => ({
   startDirectMessageAction: vi.fn(),
+  manageDirectMessagesAction: vi.fn(),
 }))
 vi.mock('@/app/(workspace)/channel/channel-actions', () => ({
   createChannelAction: vi.fn(),
   joinChannelByCodeAction: vi.fn(),
+  manageChannelsAction: vi.fn(),
 }))
 
 import { AppShell } from '@/components/app-shell'
@@ -15,7 +17,7 @@ import { Avatar } from '@/components/avatar'
 import { ThemeToggle } from '@/components/theme-toggle'
 
 describe('workspace shell', () => {
-  it('renders channel/direct sections, channel creation, join-by-code and feedback navigation', () => {
+  it('renders channel/direct sections, room management, channel creation, join-by-code and feedback navigation', () => {
     const html = renderToStaticMarkup(
       createElement(
         AppShell,
@@ -29,7 +31,22 @@ describe('workspace shell', () => {
               username: 'new_teammate',
             },
           ],
-          channels: [{ id: 'general', name: 'general', unreadCount: 2 }],
+          channels: [
+            {
+              id: 'general',
+              name: 'general',
+              unreadCount: 2,
+              canLeave: true,
+              canDelete: false,
+            },
+            {
+              id: 'design',
+              name: 'design',
+              unreadCount: 0,
+              canLeave: true,
+              canDelete: true,
+            },
+          ],
           directMessages: [{ id: 'dm-1', displayName: 'Teammate', unreadCount: 1 }],
           directCandidates: [
             {
@@ -37,6 +54,7 @@ describe('workspace shell', () => {
               displayName: 'New Teammate',
             },
           ],
+          isAdmin: true,
         },
         createElement('div', null, 'conversation'),
       ),
@@ -47,6 +65,13 @@ describe('workspace shell', () => {
     expect(html).toContain('DIRECT')
     expect(html).toContain('#general')
     expect(html).toContain('data-channel-create-trigger="true"')
+    expect(html).toContain('data-popover-side="right"')
+    expect(html).toContain('채널 관리')
+    expect(html).toContain('name="channelIds"')
+    expect(html).toContain('value="leave"')
+    expect(html).toContain('value="delete"')
+    expect(html).toContain('DM 관리')
+    expect(html).toContain('name="dmThreadIds"')
     expect(html).toContain('name="joinCode"')
     expect(html).toContain('100000 · General')
     expect(html).toContain('href="/feedback"')

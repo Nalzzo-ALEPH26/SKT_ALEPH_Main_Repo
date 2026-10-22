@@ -49,6 +49,23 @@ describe('buildDirectSidebarData', () => {
     ])
   })
 
+  it('filters threads hidden by the current user while keeping the counterpart as a DM candidate', () => {
+    const result = buildDirectSidebarData(
+      userA,
+      profiles,
+      [
+        { id: 'dm-ab', userLow: userA, userHigh: userB },
+        { id: 'dm-ac', userLow: userA, userHigh: userC },
+      ],
+      new Set(['dm-ab']),
+    )
+
+    expect(result.directMessages).toEqual([
+      { id: 'dm-ac', displayName: 'Gamma', unreadCount: 0 },
+    ])
+    expect(result.directCandidates).toContainEqual({ userId: userB, displayName: 'Beta' })
+  })
+
   it('uses a stable fallback label if the counterpart profile is unavailable', () => {
     const result = buildDirectSidebarData(
       userA,

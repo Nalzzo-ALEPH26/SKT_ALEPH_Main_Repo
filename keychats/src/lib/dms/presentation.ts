@@ -22,18 +22,21 @@ export function buildDirectSidebarData(
   currentUserId: string,
   profiles: DirectProfile[],
   threads: DirectThread[],
+  hiddenThreadIds: ReadonlySet<string> = new Set(),
 ) {
   const profileById = new Map(profiles.map((profile) => [profile.userId, profile]))
 
   return {
-    directMessages: threads.map((thread) => {
-      const otherUserId = counterpartUserId(thread, currentUserId)
-      return {
-        id: thread.id,
-        displayName: profileById.get(otherUserId)?.displayName ?? '알 수 없는 사용자',
-        unreadCount: 0,
-      }
-    }),
+    directMessages: threads
+      .filter((thread) => !hiddenThreadIds.has(thread.id))
+      .map((thread) => {
+        const otherUserId = counterpartUserId(thread, currentUserId)
+        return {
+          id: thread.id,
+          displayName: profileById.get(otherUserId)?.displayName ?? '알 수 없는 사용자',
+          unreadCount: 0,
+        }
+      }),
     directCandidates: profiles
       .filter((profile) => profile.userId !== currentUserId)
       .map((profile) => ({
