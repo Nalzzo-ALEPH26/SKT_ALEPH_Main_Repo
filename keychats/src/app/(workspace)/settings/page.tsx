@@ -1,3 +1,4 @@
+import { AvatarUploader } from '@/components/avatar-uploader'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { requireActiveUser } from '@/lib/auth/guards'
 import { createAuthGuardAccess } from '@/lib/auth/server-access'
@@ -27,6 +28,17 @@ export default async function SettingsPage() {
       <p className="mt-2 text-sm opacity-55">{profile.display_name}</p>
 
       <section className="mt-8 rounded-2xl border border-current/10 p-5">
+        <h2 className="text-sm font-semibold">프로필 사진</h2>
+        <div className="mt-4">
+          <AvatarUploader
+            userId={profile.user_id}
+            displayName={profile.display_name}
+            avatarPath={profile.avatar_path}
+          />
+        </div>
+      </section>
+
+      <section className="mt-4 rounded-2xl border border-current/10 p-5">
         <h2 className="text-sm font-semibold">화면 테마</h2>
         <p className="mt-1 text-sm opacity-55">Keychats에서 사용할 Light 또는 Dark 모드를 선택합니다.</p>
         <form action={updateThemeAction} className="mt-4">
