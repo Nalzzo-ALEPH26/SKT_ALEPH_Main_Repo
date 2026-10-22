@@ -12,12 +12,11 @@ export const dynamic = 'force-dynamic'
 
 export default async function SettingsPage() {
   const client = await createClient()
-  const { claims, profile } = await requireActiveUser(createAuthGuardAccess(client))
-  const { data: settings, error } = await client
-    .from('user_settings')
-    .select('theme')
-    .eq('user_id', claims.sub)
-    .maybeSingle()
+  const [authResult, { data: settings, error }] = await Promise.all([
+    requireActiveUser(createAuthGuardAccess(client)),
+    client.from('user_settings').select('theme').maybeSingle(),
+  ])
+  const { profile } = authResult
 
   if (error) throw error
   const theme = normalizeTheme(settings?.theme ?? 'light')
