@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import {
+  deleteManagedUser,
   disableManagedUser,
   expelManagedUser,
   generateTemporaryPassword,
@@ -24,6 +25,7 @@ function repository(username = 'member') {
     setStatus: vi.fn(async () => undefined),
     updatePassword: vi.fn(async () => undefined),
     banUser: vi.fn(async () => undefined),
+    deleteUser: vi.fn(async () => undefined),
   }
   return repo
 }
@@ -65,13 +67,21 @@ describe('admin account controls', () => {
     expect(repo.banUser).toHaveBeenCalledWith(memberId)
   })
 
+  it('lets an admin permanently delete a non-admin login account', async () => {
+    const repo = repository()
+    await deleteManagedUser(repo, memberId)
+    expect(repo.deleteUser).toHaveBeenCalledWith(memberId)
+  })
+
   it.each([
     ['disable', (repo: AdminRepository) => disableManagedUser(repo, adminId)],
     ['expel', (repo: AdminRepository) => expelManagedUser(repo, adminId)],
+    ['delete', (repo: AdminRepository) => deleteManagedUser(repo, adminId)],
   ])('protects the sole cxu1344 admin from %s', async (_name, invoke) => {
     const repo = repository('cxu1344')
     await expect(invoke(repo)).rejects.toThrow('SOLE_ADMIN_PROTECTED')
     expect(repo.setStatus).not.toHaveBeenCalled()
     expect(repo.banUser).not.toHaveBeenCalled()
+    expect(repo.deleteUser).not.toHaveBeenCalled()
   })
 })
