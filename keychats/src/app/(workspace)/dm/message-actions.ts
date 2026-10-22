@@ -30,12 +30,14 @@ export async function sendDmMessageAction(input: {
   dmThreadId: string
   body: string
   replyToId: number | null
+  attachmentCount?: number
 }) {
   const { actor, repository } = await getMessageContext()
   return sendDmMessage(repository, actor, {
     dmThreadId: input.dmThreadId,
     body: input.body,
     replyToId: input.replyToId,
+    attachmentCount: input.attachmentCount,
   })
 }
 
