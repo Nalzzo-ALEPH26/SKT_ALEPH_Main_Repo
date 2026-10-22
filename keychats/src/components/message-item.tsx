@@ -1,3 +1,5 @@
+import type { AttachmentMetadata } from '@/lib/files/supabase'
+
 type MessageSender = {
   userId: string
   displayName: string
@@ -26,6 +28,7 @@ export type MessageListItem = {
   deletedAt: string | null
   isPinned?: boolean
   reactions?: MessageReactionItem[]
+  attachments?: AttachmentMetadata[]
 }
 
 type MessageItemProps = {
@@ -41,6 +44,12 @@ type MessageItemProps = {
 
 const QUICK_REACTIONS = ['👍', '❤️', '😂', '🎉'] as const
 
+function formatBytes(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
 export function MessageItem({
   message,
   currentUserId,
@@ -55,6 +64,7 @@ export function MessageItem({
   const canEdit = !isDeleted && message.sender.userId === currentUserId
   const canDelete = !isDeleted && (message.sender.userId === currentUserId || isAdmin)
   const reactions = message.reactions ?? []
+  const attachments = message.attachments ?? []
 
   return (
     <article data-message-id={message.id} className="group flex gap-3 px-1 py-3">
@@ -100,6 +110,35 @@ export function MessageItem({
             </>
           )}
         </div>
+
+        {!isDeleted && attachments.length > 0 ? (
+          <div className="mt-2 flex max-w-xl flex-col gap-2" data-message-attachments>
+            {attachments.map((attachment) => {
+              const href = `/chats/api/attachments/${attachment.id}`
+              const isImage = attachment.mimeType.startsWith('image/')
+              return isImage ? (
+                <a key={attachment.id} href={href} target="_blank" rel="noreferrer" className="block w-fit">
+                  <img
+                    src={href}
+                    alt={attachment.originalName}
+                    className="max-h-80 max-w-full rounded-xl border border-black/10 object-contain dark:border-white/10"
+                  />
+                </a>
+              ) : (
+                <a
+                  key={attachment.id}
+                  href={href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center justify-between gap-4 rounded-xl border border-black/10 px-3 py-2 text-sm hover:bg-black/5 dark:border-white/10 dark:hover:bg-white/5"
+                >
+                  <span className="min-w-0 truncate">{attachment.originalName}</span>
+                  <span className="shrink-0 text-xs text-zinc-500">{formatBytes(attachment.sizeBytes)}</span>
+                </a>
+              )
+            })}
+          </div>
+        ) : null}
 
         {!isDeleted && reactions.length > 0 ? (
           <div className="mt-2 flex flex-wrap gap-1.5" data-message-reactions>
