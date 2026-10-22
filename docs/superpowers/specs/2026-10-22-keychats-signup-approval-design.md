@@ -54,6 +54,7 @@ Rejection:
 - marks the request `rejected`
 - deletes the corresponding unapproved Supabase Auth user
 - leaves no workspace profile or membership behind
+- keeps a minimal audit row so the administrator can see that the request was rejected
 
 The existing invite-link code remains available as a fallback/legacy path, but the admin UI should emphasize signup requests instead of requiring the administrator to distribute links.
 
@@ -61,13 +62,13 @@ The existing invite-link code remains available as a fallback/legacy path, but t
 
 Add a `signup_requests` table.
 
-Suggested columns:
+Recommended schema shape:
 
 ```sql
 create table public.signup_requests (
   id uuid primary key default gen_random_uuid(),
-  auth_user_id uuid not null unique references auth.users(id) on delete cascade,
-  username text not null unique,
+  auth_user_id uuid unique references auth.users(id) on delete set null,
+  username text not null,
   display_name text not null,
   status text not null default 'pending'
     check (status in ('pending', 'approved', 'rejected')),
@@ -75,7 +76,13 @@ create table public.signup_requests (
   reviewed_at timestamptz,
   reviewed_by uuid references public.profiles(user_id)
 );
+
+create unique index signup_requests_pending_username_uidx
+  on public.signup_requests(username)
+  where status = 'pending';
 ```
+
+The permanent audit table does not make `username` globally unique. Only a currently pending request is unique by username. This allows a rejected requester to submit again later. Active-account uniqueness continues to be enforced by `profiles.username` and Supabase Auth's internal email uniqueness.
 
 Validation must match the existing Keychats account rules:
 - username: normalized lowercase, `^[a-z0-9_]{3,24}$`
@@ -92,7 +99,7 @@ A server action receives the public form data.
 
 Sequence:
 1. Validate and normalize input using the existing login-ID/password rules.
-2. Check for an existing profile, pending request, or conflicting Auth account.
+2. Check for an existing active profile, pending request, or conflicting Auth account.
 3. Create the Supabase Auth user using `auth.admin.createUser()` with:
    - internal Keychats email derived from login ID
    - submitted password
@@ -102,7 +109,9 @@ Sequence:
 5. If inserting the request fails, delete the newly created Auth user as compensation.
 6. Return a generic success state.
 
-Duplicate login IDs must return a generic user-facing conflict message without revealing unnecessary account details.
+A rejected request can be submitted again because the rejected Auth user is deleted and the username uniqueness constraint only covers `pending` requests.
+
+Duplicate or unavailable login IDs must return a generic user-facing conflict message without revealing unnecessary account details.
 
 ## Approval Transaction Semantics
 
@@ -117,27 +126,19 @@ Provisioning sequence:
 4. Insert `channel_members` for the general channel.
 5. Mark `signup_requests.status = 'approved'`, set `reviewed_at`, and `reviewed_by`.
 
-If provisioning fails partway, the implementation must avoid leaving a partially approved workspace user. Prefer a database RPC/transaction for the profile/settings/membership/request-state changes so they commit atomically.
-
-The Auth user already exists before approval and should remain intact if a transient approval transaction fails; the administrator can retry the still-pending request.
+The profile/settings/membership/request-state updates should run through a database RPC/transaction so they commit atomically. If the transaction fails, the Auth user remains and the request stays `pending`, allowing the administrator to retry safely.
 
 ## Rejection Semantics
 
-Rejection is also admin-only.
+Rejection is admin-only.
 
 Sequence:
 1. Require the request to be `pending`.
-2. Mark the request `rejected` with reviewer metadata.
+2. Mark the request `rejected`, set reviewer metadata, and preserve username/display-name audit fields.
 3. Delete the corresponding Supabase Auth user.
+4. `auth_user_id` becomes `null` through `on delete set null`.
 
-Because `signup_requests.auth_user_id` references `auth.users` with `on delete cascade`, deleting the Auth user would also delete the request row. To preserve an audit record, the final migration should therefore use `on delete set null` and allow `auth_user_id` to be nullable after rejection, or store a separate immutable request ID/login ID audit record.
-
-Recommended final schema:
-- `auth_user_id uuid unique references auth.users(id) on delete set null`
-- `auth_user_id` nullable
-- retain username/display_name/status/review metadata after rejection
-
-This preserves review history without retaining credentials or Auth identities.
+The rejected request row remains as an audit record but does not prevent a later signup request with the same username.
 
 ## Login and Access Control
 
@@ -162,8 +163,8 @@ The existing `/chats` external rewrite to the separate Keychats Vercel project r
 - Signup-request insert/review operations use server-side admin code only.
 - Approval/rejection actions require `requireAdmin`.
 - Pending users receive no `profiles` row and therefore fail the existing active-user guard and RLS helper checks.
-- Approval provisioning should be atomic.
-- Rejection should preserve a minimal audit record while deleting the Auth identity.
+- Approval provisioning is atomic.
+- Rejection preserves only the minimal audit record while deleting the Auth identity.
 - Existing invite and user-management security tests must continue to pass.
 - No writes or migrations may target the PlanDoSee Supabase project.
 
@@ -172,18 +173,20 @@ The existing `/chats` external rewrite to the separate Keychats Vercel project r
 ### Database tests
 
 Add pgTAP coverage for:
-- `signup_requests` schema and constraints
+- `signup_requests` schema and status constraints
+- pending-only username uniqueness
 - no anon/authenticated direct table privileges
 - approval RPC only provisions a pending request
 - approval creates profile/settings/general membership atomically
 - duplicate approval is rejected/no-op safely
-- rejection/audit constraints
+- rejected requests retain audit data after Auth deletion
 
 ### Unit tests
 
 Add coverage for:
 - signup request input validation
 - Auth user cleanup if request persistence fails
+- duplicate/pending request behavior
 - approval/rejection service behavior
 - admin authorization wrappers
 
@@ -194,12 +197,12 @@ Add/extend Playwright flow:
 2. login form is immediately visible
 3. visitor opens signup request form and submits a new account
 4. login before approval is denied
-5. admin opens `/chats/admin` and sees pending request
+5. admin opens `/chats/admin` and sees the pending request
 6. admin approves it
 7. requester logs in with the original password
 8. requester enters the general channel
 
-A rejection scenario should also verify that the rejected account cannot log in.
+A rejection scenario should also verify that the rejected account cannot log in and can submit a fresh request later if needed.
 
 Existing realtime, DM, attachment, reaction/pin, unread, theme, mobile, invite, and admin-disable tests remain unchanged and must continue to pass.
 
