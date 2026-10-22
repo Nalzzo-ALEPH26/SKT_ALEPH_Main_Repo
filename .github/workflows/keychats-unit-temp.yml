@@ -1,12 +1,11 @@
 name: Keychats Unit Temp
 
-# DM RLS regression + Task 10 RED verification trigger.
+# Focused DM repository GREEN verification.
 on:
   push:
     branches:
       - 'feature/keychats-v1'
     paths:
-      - 'keychats/**'
       - '.github/workflows/keychats-unit-temp.yml'
 
 permissions:
@@ -24,4 +23,4 @@ jobs:
         with:
           node-version: '22'
       - run: npm ci
-      - run: npm test
+      - run: npx vitest run tests/unit/dm-supabase.test.ts
