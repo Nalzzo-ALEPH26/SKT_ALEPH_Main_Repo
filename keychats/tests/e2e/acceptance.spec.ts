@@ -182,10 +182,17 @@ test('creates a member channel and covers attachment, reaction, pin, unread, the
     await createDetails.getByLabel('채널 이름').fill(newChannelName)
     await createDetails.getByRole('checkbox', { name: /Acceptance Beta/ }).check()
     await createDetails.getByRole('button', { name: '만들기' }).click()
+
+    const baseChannelUrl = `http://localhost:3000/chats/channel/${baseChannelId}`
+    await expect.poll(() => firstPage.url(), { timeout: 10_000 }).not.toBe(baseChannelUrl)
     await expect(firstPage).toHaveURL(/\/chats\/channel\/[0-9a-f-]+$/)
+    await expect(firstPage.getByRole('heading', { name: `#${newChannelName}` })).toBeVisible({
+      timeout: 10_000,
+    })
 
     const createdChannelId = firstPage.url().split('/').pop()
     expect(createdChannelId).toBeTruthy()
+    expect(createdChannelId).not.toBe(baseChannelId)
     channelIds.push(createdChannelId!)
     await expect(firstPage.getByText('멤버 2명', { exact: true })).toBeVisible()
     await expect(firstPage.locator('[data-channel-message-pane]')).toHaveAttribute(
