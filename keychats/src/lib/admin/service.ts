@@ -16,6 +16,7 @@ export type AdminRepository = {
   setStatus: (userId: string, status: ManagedUserStatus) => Promise<void>
   updatePassword: (userId: string, password: string) => Promise<void>
   banUser: (userId: string) => Promise<void>
+  deleteUser: (userId: string) => Promise<void>
 }
 
 type RandomBytesFactory = () => Buffer
@@ -58,7 +59,6 @@ export async function resetManagedUserPassword(
 export async function disableManagedUser(repository: AdminRepository, userId: string) {
   await requireRemovableTarget(repository, userId)
 
-  // Database status changes first so already-issued JWTs immediately lose RLS access.
   await repository.setStatus(userId, 'disabled')
   await repository.banUser(userId)
 }
@@ -66,7 +66,14 @@ export async function disableManagedUser(repository: AdminRepository, userId: st
 export async function expelManagedUser(repository: AdminRepository, userId: string) {
   await requireRemovableTarget(repository, userId)
 
-  // Keep the profile row and historical messages; only access is removed.
   await repository.setStatus(userId, 'expelled')
   await repository.banUser(userId)
+}
+
+export async function deleteManagedUser(repository: AdminRepository, userId: string) {
+  await requireRemovableTarget(repository, userId)
+
+  // Revoke database access before soft-deleting the Auth login. Historical profile/messages stay intact.
+  await repository.setStatus(userId, 'expelled')
+  await repository.deleteUser(userId)
 }
