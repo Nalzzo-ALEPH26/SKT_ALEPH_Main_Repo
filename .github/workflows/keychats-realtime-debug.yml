@@ -65,18 +65,31 @@ jobs:
             return { userId, email }
           }
 
-          const waitSubscribed = (client, user, channelId, label, received) => new Promise(async (resolve, reject) => {
+          const waitReady = (client, user, channelId, label, received) => new Promise(async (resolve, reject) => {
             const { data, error } = await client.auth.signInWithPassword({ email: user.email, password })
             if (error || !data.session) return reject(error ?? new Error(`${label}_LOGIN_FAILED`))
             await client.realtime.setAuth(data.session.access_token)
+            const timeout = setTimeout(() => reject(new Error(`${label}_POSTGRES_READY_TIMEOUT`)), 12000)
             const channel = client
               .channel(`debug:${channelId}:${label}`)
+              .on('system', '*', (payload) => {
+                if (payload?.extension === 'postgres_changes' && payload?.status === 'ok') {
+                  clearTimeout(timeout)
+                  resolve(channel)
+                }
+                if (payload?.extension === 'postgres_changes' && payload?.status === 'error') {
+                  clearTimeout(timeout)
+                  reject(new Error(`${label}_POSTGRES_ERROR:${payload?.message ?? 'unknown'}`))
+                }
+              })
               .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `channel_id=eq.${channelId}` }, (payload) => {
                 received.push(payload.new.body)
               })
               .subscribe((status) => {
-                if (status === 'SUBSCRIBED') resolve(channel)
-                if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') reject(new Error(`${label}_${status}`))
+                if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                  clearTimeout(timeout)
+                  reject(new Error(`${label}_${status}`))
+                }
               })
           })
 
@@ -107,8 +120,8 @@ jobs:
             if (membersError) throw membersError
 
             await Promise.all([
-              waitSubscribed(firstClient, first, channelId, 'A', receivedA),
-              waitSubscribed(secondClient, second, channelId, 'B', receivedB),
+              waitReady(firstClient, first, channelId, 'A', receivedA),
+              waitReady(secondClient, second, channelId, 'B', receivedB),
             ])
 
             const aBody = `a-to-b-${suffix}`
