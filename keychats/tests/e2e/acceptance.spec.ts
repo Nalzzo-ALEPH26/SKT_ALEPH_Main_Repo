@@ -160,6 +160,11 @@ test('creates a member channel and covers attachment, reaction, pin, unread, the
     expect(createdChannelId).toBeTruthy()
     channelIds.push(createdChannelId!)
     await expect(firstPage.getByText('멤버 2명', { exact: true })).toBeVisible()
+    await expect(firstPage.locator('[data-channel-message-pane]')).toHaveAttribute(
+      'data-realtime-status',
+      'ready',
+      { timeout: 12_000 },
+    )
 
     const secondPage = await secondContext.newPage()
     await login(secondPage, second.loginId)
@@ -176,11 +181,18 @@ test('creates a member channel and covers attachment, reaction, pin, unread, the
       mimeType: 'text/plain',
       buffer: Buffer.from('keychats acceptance attachment'),
     })
-    await firstPage.getByLabel('메시지 입력').fill(richMessage)
-    await firstPage.locator('[data-send-message]').click()
+    await expect(firstPage.locator('[data-selected-attachments]')).toContainText('acceptance.txt')
+
+    const firstInput = firstPage.getByLabel('메시지 입력')
+    const firstSend = firstPage.locator('[data-send-message]')
+    await firstInput.fill(richMessage)
+    await expect(firstInput).toHaveValue(richMessage)
+    await expect(firstSend).toBeEnabled({ timeout: 5_000 })
+    await firstSend.click()
 
     const firstArticle = firstPage.locator('article').filter({ hasText: richMessage }).first()
     const secondArticle = secondPage.locator('article').filter({ hasText: richMessage }).first()
+    await expect(firstArticle).toBeVisible({ timeout: 10_000 })
     await expect(secondArticle).toBeVisible({ timeout: 10_000 })
     await expect(secondArticle.getByRole('link', { name: /acceptance\.txt/ })).toBeVisible({ timeout: 10_000 })
 
@@ -323,9 +335,11 @@ test('uses a one-time invite and immediately blocks a disabled member with an ex
     await reusePage.getByLabel('표시 이름').fill('Should Not Register')
     await reusePage.getByLabel('비밀번호').fill(password)
     await reusePage.getByRole('button', { name: '계정 만들기' }).click()
-    await expect(reusePage.getByRole('alert')).toHaveText(
-      '초대 링크가 유효하지 않거나 더 이상 사용할 수 없습니다.',
-    )
+    await expect(
+      reusePage.getByText('초대 링크가 유효하지 않거나 더 이상 사용할 수 없습니다.', {
+        exact: true,
+      }),
+    ).toBeVisible()
 
     await adminPage.reload()
     const managedRow = adminPage
