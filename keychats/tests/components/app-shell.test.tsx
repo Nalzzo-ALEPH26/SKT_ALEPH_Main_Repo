@@ -62,8 +62,8 @@ describe('workspace shell', () => {
     )
 
     expect(adminHtml).toContain('관리자')
-    expect(adminHtml).toContain('href="/chats/admin"')
-    expect(memberHtml).not.toContain('href="/chats/admin"')
+    expect(adminHtml).toContain('href="/admin"')
+    expect(memberHtml).not.toContain('href="/admin"')
   })
 
   it('marks and styles the selected workspace theme', () => {
