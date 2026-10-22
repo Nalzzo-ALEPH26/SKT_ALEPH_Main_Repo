@@ -59,18 +59,43 @@ export function ConversationMessagePane({
   const [realtimeStatus, setRealtimeStatus] = useState('connecting')
 
   useEffect(() => {
+    let active = true
+    let unsubscribe: (() => void) | undefined
+
     setRealtimeStatus('connecting')
 
     const onChange = (incoming: RealtimeMessageRow) => {
       setMessages((current) => reconcileMessageChange(current, incoming))
     }
     const onStatus = (status: string) => {
-      setRealtimeStatus(status.toLowerCase())
+      if (active) setRealtimeStatus(status.toLowerCase())
     }
 
-    return target.kind === 'channel'
-      ? subscribeToChannelMessages(client as never, target.id, onChange, onStatus)
-      : subscribeToDmMessages(client as never, target.id, onChange, onStatus)
+    void (async () => {
+      const {
+        data: { session },
+        error: sessionError,
+      } = await client.auth.getSession()
+
+      if (!active) return
+      if (sessionError || !session?.access_token) {
+        setRealtimeStatus('auth-missing')
+        return
+      }
+
+      await client.realtime.setAuth(session.access_token)
+      if (!active) return
+
+      unsubscribe =
+        target.kind === 'channel'
+          ? subscribeToChannelMessages(client as never, target.id, onChange, onStatus)
+          : subscribeToDmMessages(client as never, target.id, onChange, onStatus)
+    })()
+
+    return () => {
+      active = false
+      unsubscribe?.()
+    }
   }, [client, target.id, target.kind])
 
   const renderedMessages = useMemo(
