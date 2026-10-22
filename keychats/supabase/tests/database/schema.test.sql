@@ -1,13 +1,14 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(21);
+select plan(23);
 
 select has_table('public', 'profiles', 'profiles table exists');
 select has_table('public', 'invites', 'invites table exists');
 select has_table('public', 'channels', 'channels table exists');
 select has_table('public', 'channel_members', 'channel_members table exists');
 select has_table('public', 'dm_threads', 'dm_threads table exists');
+select has_table('public', 'dm_hidden_threads', 'dm hidden threads table exists');
 select has_table('public', 'messages', 'messages table exists');
 select has_table('public', 'attachments', 'attachments table exists');
 select has_table('public', 'message_reactions', 'message_reactions table exists');
@@ -18,14 +19,14 @@ select has_table('public', 'url_previews', 'url_previews table exists');
 
 select ok(
   (
-    select count(*) = 12 and bool_and(c.relrowsecurity)
+    select count(*) = 13 and bool_and(c.relrowsecurity)
     from pg_class c
     join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'public'
       and c.relkind = 'r'
       and c.relname = any(array[
         'profiles', 'invites', 'channels', 'channel_members', 'dm_threads',
-        'messages', 'attachments', 'message_reactions', 'message_pins',
+        'dm_hidden_threads', 'messages', 'attachments', 'message_reactions', 'message_pins',
         'read_states', 'user_settings', 'url_previews'
       ])
   ),
@@ -111,6 +112,13 @@ select has_index(
   'channels',
   'channels_normalized_name_uidx',
   'channel names are unique after trim/lower normalization'
+);
+
+select has_index(
+  'public',
+  'dm_hidden_threads',
+  'dm_hidden_threads_user_id_idx',
+  'hidden DM rows are indexed by user'
 );
 
 select * from finish();
