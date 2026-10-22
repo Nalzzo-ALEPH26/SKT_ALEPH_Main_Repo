@@ -134,3 +134,19 @@ with check (
       and (select private.can_access_live_message(m.id))
   )
 );
+
+do $$
+begin
+  if exists (
+    select 1 from pg_publication where pubname = 'supabase_realtime'
+  ) and not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'attachments'
+  ) then
+    execute 'alter publication supabase_realtime add table public.attachments';
+  end if;
+end
+$$;
