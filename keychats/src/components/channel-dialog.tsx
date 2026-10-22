@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { createPortal } from 'react-dom'
 
 type ProfileOption = {
   userId: string
@@ -30,6 +31,51 @@ export function ChannelDialog({
   const candidates = profiles.filter((profile) => profile.userId !== currentUserId)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [open, setOpen] = useState(false)
+  const [position, setPosition] = useState({ left: 8, top: 8 })
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const popoverRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open || variant !== 'sidebar') return
+
+    const updatePosition = () => {
+      const trigger = triggerRef.current
+      if (!trigger) return
+      const rect = trigger.getBoundingClientRect()
+      const width = 288
+      const gap = 8
+      const edge = 8
+      let left = rect.right + gap
+      if (left + width > window.innerWidth - edge) {
+        left = Math.max(edge, rect.left - width - gap)
+      }
+      const estimatedHeight = Math.min(480, window.innerHeight - edge * 2)
+      const top = Math.min(Math.max(edge, rect.top), Math.max(edge, window.innerHeight - estimatedHeight - edge))
+      setPosition({ left, top })
+    }
+
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node
+      if (triggerRef.current?.contains(target) || popoverRef.current?.contains(target)) return
+      setOpen(false)
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false)
+    }
+
+    updatePosition()
+    window.addEventListener('resize', updatePosition)
+    window.addEventListener('scroll', updatePosition, true)
+    document.addEventListener('pointerdown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      window.removeEventListener('resize', updatePosition)
+      window.removeEventListener('scroll', updatePosition, true)
+      document.removeEventListener('pointerdown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [open, variant])
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -89,19 +135,37 @@ export function ChannelDialog({
 
   if (variant === 'sidebar') {
     return (
-      <details className="relative">
-        <summary
+      <>
+        <button
+          ref={triggerRef}
+          type="button"
           data-channel-create-trigger={true}
+          data-popover-side="right"
           aria-label="채널 만들기"
-          className="cursor-pointer list-none rounded-md px-1.5 text-lg leading-none opacity-60 hover:opacity-100"
+          aria-expanded={open}
+          onClick={() => setOpen((current) => !current)}
+          className="rounded-md px-1.5 text-lg leading-none opacity-60 hover:opacity-100"
         >
           +
-        </summary>
-        <div className="absolute right-0 top-7 z-30 w-72 rounded-xl border border-black/10 bg-white p-4 text-black shadow-xl dark:border-white/10 dark:bg-[#202020] dark:text-white">
-          <div className="mb-3 text-sm font-semibold">새 채널</div>
-          {form}
-        </div>
-      </details>
+        </button>
+        {open && typeof document !== 'undefined'
+          ? createPortal(
+              <div
+                ref={popoverRef}
+                data-channel-create-popover={true}
+                className="fixed z-[80] w-72 max-w-[calc(100vw-16px)] rounded-xl border border-black/10 bg-white p-4 text-black shadow-xl dark:border-white/10 dark:bg-[#202020] dark:text-white"
+                style={{ left: position.left, top: position.top }}
+              >
+                <div className="mb-3 flex items-center justify-between gap-3 text-sm font-semibold">
+                  <span>새 채널</span>
+                  <button type="button" onClick={() => setOpen(false)} aria-label="채널 만들기 닫기" className="text-lg font-normal leading-none opacity-50 hover:opacity-100">×</button>
+                </div>
+                {form}
+              </div>,
+              document.body,
+            )
+          : null}
+      </>
     )
   }
 
