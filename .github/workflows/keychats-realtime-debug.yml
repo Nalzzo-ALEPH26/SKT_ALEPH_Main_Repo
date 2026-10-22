@@ -1,5 +1,6 @@
 name: Keychats Realtime Debug
 
+# Focused verification for the visible DM control fix.
 on:
   push:
     branches:
