@@ -45,6 +45,38 @@ export type MessageRepository = {
   }) => Promise<MessageRecord[]>
 }
 
+export type ReadStateTarget = {
+  channelId: string | null
+  dmThreadId: string | null
+}
+
+export type MessageStateRepository = {
+  hasReaction: (messageId: number, userId: string, emoji: string) => Promise<boolean>
+  addReaction: (messageId: number, userId: string, emoji: string) => Promise<void>
+  removeReaction: (messageId: number, userId: string, emoji: string) => Promise<void>
+  getPin: (messageId: number) => Promise<{ messageId: number; pinnedBy: string } | null>
+  addPin: (messageId: number, userId: string) => Promise<void>
+  removePin: (messageId: number) => Promise<void>
+  setReadState: (input: {
+    userId: string
+    channelId: string | null
+    dmThreadId: string | null
+    lastReadMessageId: number | null
+  }) => Promise<void>
+}
+
+export type UnreadMessage = {
+  id: number
+  channelId: string | null
+  dmThreadId: string | null
+  senderId: string
+  deletedAt: string | null
+}
+
+export type UnreadReadState = ReadStateTarget & {
+  lastReadMessageId: number | null
+}
+
 type SendMessageBase = {
   body?: string | null
   replyToId?: number | null
@@ -182,4 +214,105 @@ export async function loadDmMessages(
   beforeId: number | null = null,
 ) {
   return repository.listDm({ dmThreadId, beforeId, limit: 50 })
+}
+
+function normalizeReactionEmoji(emoji: string) {
+  const normalized = emoji.trim()
+  if (!normalized || normalized.length > 32) throw new Error('REACTION_EMOJI_INVALID')
+  return normalized
+}
+
+export async function toggleReaction(
+  repository: MessageStateRepository,
+  actor: MessageActor,
+  messageId: number,
+  emoji: string,
+) {
+  const normalizedEmoji = normalizeReactionEmoji(emoji)
+  const exists = await repository.hasReaction(messageId, actor.userId, normalizedEmoji)
+
+  if (exists) {
+    await repository.removeReaction(messageId, actor.userId, normalizedEmoji)
+    return false
+  }
+
+  await repository.addReaction(messageId, actor.userId, normalizedEmoji)
+  return true
+}
+
+export async function togglePin(
+  repository: MessageStateRepository,
+  actor: MessageActor,
+  messageId: number,
+) {
+  const existing = await repository.getPin(messageId)
+  if (existing) {
+    await repository.removePin(messageId)
+    return false
+  }
+
+  await repository.addPin(messageId, actor.userId)
+  return true
+}
+
+function assertReadStateTarget(target: ReadStateTarget) {
+  const targetCount = Number(target.channelId !== null) + Number(target.dmThreadId !== null)
+  if (targetCount !== 1) throw new Error('READ_STATE_TARGET_INVALID')
+}
+
+export async function markRoomRead(
+  repository: MessageStateRepository,
+  actor: MessageActor,
+  target: ReadStateTarget,
+  lastReadMessageId: number | null,
+) {
+  assertReadStateTarget(target)
+  if (lastReadMessageId !== null && (!Number.isInteger(lastReadMessageId) || lastReadMessageId < 1)) {
+    throw new Error('READ_STATE_MESSAGE_INVALID')
+  }
+
+  await repository.setReadState({
+    userId: actor.userId,
+    channelId: target.channelId,
+    dmThreadId: target.dmThreadId,
+    lastReadMessageId,
+  })
+}
+
+export function getUnreadCounts(
+  messages: UnreadMessage[],
+  readStates: UnreadReadState[],
+  currentUserId: string,
+) {
+  const channels: Record<string, number> = {}
+  const directMessages: Record<string, number> = {}
+  const channelMarkers = new Map<string, number>()
+  const dmMarkers = new Map<string, number>()
+
+  for (const state of readStates) {
+    if (state.channelId) {
+      channelMarkers.set(state.channelId, state.lastReadMessageId ?? 0)
+      channels[state.channelId] ??= 0
+    }
+    if (state.dmThreadId) {
+      dmMarkers.set(state.dmThreadId, state.lastReadMessageId ?? 0)
+      directMessages[state.dmThreadId] ??= 0
+    }
+  }
+
+  for (const message of messages) {
+    if (message.channelId) channels[message.channelId] ??= 0
+    if (message.dmThreadId) directMessages[message.dmThreadId] ??= 0
+
+    if (message.deletedAt || message.senderId === currentUserId) continue
+
+    if (message.channelId && message.id > (channelMarkers.get(message.channelId) ?? 0)) {
+      channels[message.channelId] += 1
+    }
+    if (message.dmThreadId && message.id > (dmMarkers.get(message.dmThreadId) ?? 0)) {
+      directMessages[message.dmThreadId] += 1
+    }
+  }
+
+  return { channels, directMessages }
 }
