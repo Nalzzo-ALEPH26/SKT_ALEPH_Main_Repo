@@ -19,6 +19,7 @@ type QueryResult = { data: unknown; error: null | { code?: string; message?: str
 function fakeSupabase(results: QueryResult[]) {
   const calls: Array<[string, ...unknown[]]> = []
   const remaining = [...results]
+  const single = vi.fn(async () => remaining.shift() ?? { data: null, error: null })
 
   const client = {
     from: vi.fn((table: string) => {
@@ -28,17 +29,19 @@ function fakeSupabase(results: QueryResult[]) {
         calls.push([name, ...args])
         return query
       }
+      const resolve = async () => remaining.shift() ?? { data: null, error: null }
 
       query.select = chain('select')
       query.eq = chain('eq')
       query.insert = chain('insert')
-      query.maybeSingle = vi.fn(async () => remaining.shift() ?? { data: null, error: null })
-      query.single = vi.fn(async () => remaining.shift() ?? { data: null, error: null })
+      query.maybeSingle = vi.fn(resolve)
+      query.single = single
+      query.then = (onFulfilled: (value: QueryResult) => unknown) => resolve().then(onFulfilled)
       return query
     }),
   }
 
-  return { client, calls }
+  return { client, calls, single }
 }
 
 describe('createSupabaseDmRepository', () => {
@@ -54,8 +57,9 @@ describe('createSupabaseDmRepository', () => {
     expect(fake.calls.some(([name]) => name === 'insert')).toBe(false)
   })
 
-  it('inserts the canonical pair when no thread exists', async () => {
+  it('inserts without RETURNING, then re-reads the canonical pair under participant SELECT RLS', async () => {
     const fake = fakeSupabase([
+      { data: null, error: null },
       { data: null, error: null },
       { data: row, error: null },
     ])
@@ -67,6 +71,8 @@ describe('createSupabaseDmRepository', () => {
       'insert',
       { user_low: pair.userLow, user_high: pair.userHigh },
     ])
+    expect(fake.single).not.toHaveBeenCalled()
+    expect(fake.client.from).toHaveBeenCalledTimes(3)
     expect(thread.id).toBe(row.id)
   })
 
@@ -83,6 +89,7 @@ describe('createSupabaseDmRepository', () => {
       userLow: pair.userLow,
       userHigh: pair.userHigh,
     })
+    expect(fake.single).not.toHaveBeenCalled()
     expect(fake.client.from).toHaveBeenCalledTimes(3)
   })
 })
