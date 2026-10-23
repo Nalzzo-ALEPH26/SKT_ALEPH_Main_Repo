@@ -168,7 +168,7 @@ test('DM management safely handles empty selection, highlights checked rooms, an
 
     await panel.locator('form').evaluate((form: HTMLFormElement) => form.requestSubmit())
     await expect(page.getByText('This page couldn’t load')).toHaveCount(0)
-    await expect(page.getByText('KEYCHATS').first()).toBeVisible()
+    await expect(page).toHaveURL(/\/chats\/dm\/[0-9a-f-]+$/)
 
     const row = panel.locator('[data-dm-management-row]').filter({ hasText: fixture.second.displayName })
     const checkbox = row.locator('input[type="checkbox"]')
