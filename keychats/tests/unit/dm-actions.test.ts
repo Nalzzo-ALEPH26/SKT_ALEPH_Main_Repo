@@ -50,7 +50,7 @@ beforeEach(() => {
 })
 
 describe('startDirectMessageAction', () => {
-  it('derives the current participant from authenticated profile, restores a hidden thread and redirects', async () => {
+  it('restores the thread, refreshes workspace navigation and redirects', async () => {
     const formData = new FormData()
     formData.set('otherUserId', otherUserId)
 
@@ -62,6 +62,7 @@ describe('startDirectMessageAction', () => {
       userHigh: currentUserId,
     })
     expect(mocks.repository.unhide).toHaveBeenCalledWith(threadId, currentUserId)
+    expect(mocks.revalidatePath).toHaveBeenCalledWith('/')
     expect(mocks.redirect).toHaveBeenCalledWith(`/dm/${threadId}`)
   })
 
