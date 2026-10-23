@@ -207,7 +207,6 @@ export function Sidebar({
   const dark = theme === 'dark'
   const muted = dark ? 'text-white/45' : 'text-black/40'
   const item = dark ? 'text-white/75 hover:bg-white/5' : 'text-black/70 hover:bg-black/5'
-  const panel = dark ? 'border-white/10 bg-[#202020]' : 'border-black/10 bg-white'
   const smallControl = `rounded-md px-1.5 py-1 text-[11px] tracking-normal ${
     dark ? 'text-white/60 hover:bg-white/5' : 'text-black/55 hover:bg-black/5'
   }`
@@ -231,46 +230,47 @@ export function Sidebar({
             <span>CHANNELS</span>
             <div className="flex items-center gap-1.5">
               {(manageableLeaveChannels.length > 0 || manageableDeleteChannels.length > 0) ? (
-                <details className="relative">
-                  <summary className={`cursor-pointer list-none ${smallControl}`}>
-                    채널 관리
-                  </summary>
-                  <div className={`absolute right-0 top-7 z-30 w-64 rounded-xl border p-3 text-left shadow-xl ${panel}`}>
-                    {manageableLeaveChannels.length > 0 ? (
-                      <form action={manageChannelsAction} className="space-y-2">
-                        <p className="text-xs font-semibold tracking-normal">나갈 채널 선택</p>
-                        <div className="max-h-40 space-y-1.5 overflow-y-auto">
-                          {manageableLeaveChannels.map((channel) => (
-                            <label key={`leave-${channel.id}`} className="flex items-center gap-2 text-xs font-normal tracking-normal">
-                              <input type="checkbox" name="channelIds" value={channel.id} />
-                              <span className="min-w-0 truncate">#{channel.name}</span>
-                            </label>
-                          ))}
-                        </div>
-                        <button name="operation" value="leave" type="submit" className={`w-full rounded-lg border px-2 py-1.5 text-xs font-semibold tracking-normal ${dark ? 'border-white/15 hover:bg-white/5' : 'border-black/10 hover:bg-black/5'}`}>
-                          선택한 채널 나가기
-                        </button>
-                      </form>
-                    ) : null}
+                <ViewportPopover
+                  label="채널 관리"
+                  marker="channel-management"
+                  dark={dark}
+                  width={256}
+                  triggerClassName={smallControl}
+                >
+                  {manageableLeaveChannels.length > 0 ? (
+                    <form action={manageChannelsAction} className="space-y-2">
+                      <p className="text-xs font-semibold tracking-normal">나갈 채널 선택</p>
+                      <div className="max-h-64 space-y-1.5 overflow-y-auto pr-1">
+                        {manageableLeaveChannels.map((channel) => (
+                          <label key={`leave-${channel.id}`} className="flex items-center gap-2 text-xs font-normal tracking-normal">
+                            <input type="checkbox" name="channelIds" value={channel.id} />
+                            <span className="min-w-0 truncate">#{channel.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <button name="operation" value="leave" type="submit" className={`w-full rounded-lg border px-2 py-1.5 text-xs font-semibold tracking-normal ${dark ? 'border-white/15 hover:bg-white/5' : 'border-black/10 hover:bg-black/5'}`}>
+                        선택한 채널 나가기
+                      </button>
+                    </form>
+                  ) : null}
 
-                    {manageableDeleteChannels.length > 0 ? (
-                      <form action={manageChannelsAction} className={`${manageableLeaveChannels.length > 0 ? 'mt-3 border-t pt-3' : ''} space-y-2 ${dark ? 'border-white/10' : 'border-black/10'}`}>
-                        <p className="text-xs font-semibold tracking-normal">삭제할 채널 선택</p>
-                        <div className="max-h-40 space-y-1.5 overflow-y-auto">
-                          {manageableDeleteChannels.map((channel) => (
-                            <label key={`delete-${channel.id}`} className="flex items-center gap-2 text-xs font-normal tracking-normal">
-                              <input type="checkbox" name="channelIds" value={channel.id} />
-                              <span className="min-w-0 truncate">#{channel.name}</span>
-                            </label>
-                          ))}
-                        </div>
-                        <button name="operation" value="delete" type="submit" className="w-full rounded-lg border border-red-500/30 px-2 py-1.5 text-xs font-semibold tracking-normal text-red-600 hover:bg-red-500/5 dark:text-red-400">
-                          선택한 채널 삭제
-                        </button>
-                      </form>
-                    ) : null}
-                  </div>
-                </details>
+                  {manageableDeleteChannels.length > 0 ? (
+                    <form action={manageChannelsAction} className={`${manageableLeaveChannels.length > 0 ? 'mt-3 border-t pt-3' : ''} space-y-2 ${dark ? 'border-white/10' : 'border-black/10'}`}>
+                      <p className="text-xs font-semibold tracking-normal">삭제할 채널 선택</p>
+                      <div className="max-h-64 space-y-1.5 overflow-y-auto pr-1">
+                        {manageableDeleteChannels.map((channel) => (
+                          <label key={`delete-${channel.id}`} className="flex items-center gap-2 text-xs font-normal tracking-normal">
+                            <input type="checkbox" name="channelIds" value={channel.id} />
+                            <span className="min-w-0 truncate">#{channel.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <button name="operation" value="delete" type="submit" className="w-full rounded-lg border border-red-500/30 px-2 py-1.5 text-xs font-semibold tracking-normal text-red-600 hover:bg-red-500/5 dark:text-red-400">
+                        선택한 채널 삭제
+                      </button>
+                    </form>
+                  ) : null}
+                </ViewportPopover>
               ) : null}
               <ChannelDialog
                 variant="sidebar"
