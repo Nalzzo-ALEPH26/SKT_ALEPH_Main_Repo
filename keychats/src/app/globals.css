@@ -25,3 +25,33 @@ body {
 a {
   color: inherit;
 }
+
+[data-keychats-workspace][data-theme="light"] aside {
+  background: #fff0c9 !important;
+  color: #243b8f !important;
+  border-color: rgb(36 59 143 / 18%) !important;
+}
+
+[data-keychats-workspace][data-theme="light"] aside :is(a, button, summary, label, p, span, div) {
+  color: #243b8f;
+}
+
+[data-keychats-workspace][data-theme="light"] aside [data-unread-badge] {
+  background: #243b8f !important;
+  color: #fff0c9 !important;
+}
+
+[data-keychats-workspace][data-theme="dark"] aside {
+  background: #243b8f !important;
+  color: #fff0c9 !important;
+  border-color: rgb(255 240 201 / 22%) !important;
+}
+
+[data-keychats-workspace][data-theme="dark"] aside :is(a, button, summary, label, p, span, div) {
+  color: #fff0c9;
+}
+
+[data-keychats-workspace][data-theme="dark"] aside [data-unread-badge] {
+  background: #fff0c9 !important;
+  color: #243b8f !important;
+}

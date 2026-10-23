@@ -33,6 +33,7 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
     { data: hiddenDmThreads, error: hiddenDmThreadsError },
     { data: activeProfiles, error: profilesError },
     { data: communities, error: communitiesError },
+    { data: communityPins, error: communityPinsError },
     unread,
   ] = await Promise.all([
     client.from('user_settings').select('theme').eq('user_id', profile.user_id).maybeSingle(),
@@ -51,8 +52,12 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
       .order('display_name'),
     client
       .from('communities')
-      .select('id,name')
+      .select('id,name,created_at')
       .order('created_at', { ascending: true }),
+    client
+      .from('community_pins')
+      .select('community_id,pinned_at')
+      .order('pinned_at', { ascending: false }),
     loadUnreadCounts(client),
   ])
 
@@ -63,6 +68,7 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
   if (hiddenDmThreadsError) throw hiddenDmThreadsError
   if (profilesError) throw profilesError
   if (communitiesError) throw communitiesError
+  if (communityPinsError) throw communityPinsError
 
   let theme: KeychatsTheme = 'light'
   if (settings?.theme) theme = normalizeTheme(settings.theme)
@@ -95,6 +101,21 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
     channelMemberCounts.set(channelId, (channelMemberCounts.get(channelId) ?? 0) + 1)
   }
 
+  const communityPinTime = new Map(
+    (communityPins ?? []).map((pin) => [
+      pin.community_id as string,
+      new Date(pin.pinned_at as string).getTime(),
+    ]),
+  )
+  const sortedCommunities = [...(communities ?? [])].sort((left, right) => {
+    const leftPin = communityPinTime.get(left.id as string)
+    const rightPin = communityPinTime.get(right.id as string)
+    if (leftPin && rightPin) return rightPin - leftPin
+    if (leftPin) return -1
+    if (rightPin) return 1
+    return new Date(left.created_at as string).getTime() - new Date(right.created_at as string).getTime()
+  })
+
   return (
     <AppShell
       profile={{ displayName: profile.display_name, avatarPath: profile.avatar_path }}
@@ -124,7 +145,7 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
         unreadCount: unread.directMessages[directMessage.id] ?? 0,
       }))}
       directCandidates={direct.directCandidates}
-      communities={(communities ?? []).map((community) => ({
+      communities={sortedCommunities.map((community) => ({
         id: community.id as string,
         name: community.name as string,
       }))}
