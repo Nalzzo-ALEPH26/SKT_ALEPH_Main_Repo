@@ -29,7 +29,7 @@ export async function startDirectMessageAction(formData: FormData) {
   const { profile, repository } = await dmContext()
   const thread = await getOrCreateDm(repository, profile.user_id, otherUserId)
 
-  revalidatePath('/')
+  revalidatePath('/', 'layout')
   redirect(`/dm/${thread.id}`)
 }
 
