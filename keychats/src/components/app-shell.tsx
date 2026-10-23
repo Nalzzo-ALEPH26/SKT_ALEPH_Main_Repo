@@ -133,9 +133,12 @@ export function AppShell({
 }: AppShellProps) {
   const pathname = usePathname()
   const dark = theme === 'dark'
-  const [unread, setUnread] = useState<UnreadCounts>(() => initialUnreadCounts(channels, directMessages))
+  const initialActiveRoom = activeRoomFromPathname(pathname)
+  const [unread, setUnread] = useState<UnreadCounts>(() =>
+    clearActiveRoom(initialUnreadCounts(channels, directMessages), initialActiveRoom),
+  )
   const [unreadRealtimeStatus, setUnreadRealtimeStatus] = useState('connecting')
-  const activeRoomRef = useRef<ActiveRoom>(activeRoomFromPathname(pathname))
+  const activeRoomRef = useRef<ActiveRoom>(initialActiveRoom)
   const knownChannelIds = useMemo(() => new Set(channels.map((channel) => channel.id)), [channels])
   const knownDmIds = useMemo(() => new Set(directMessages.map((direct) => direct.id)), [directMessages])
 
@@ -221,8 +224,9 @@ export function AppShell({
           const system = payload as { extension?: string; status?: string }
           if (system.extension !== 'postgres_changes') return
           if (system.status === 'ok') {
-            setUnreadRealtimeStatus('ready')
-            void syncUnread()
+            void syncUnread().finally(() => {
+              if (active) setUnreadRealtimeStatus('ready')
+            })
           } else if (system.status === 'error' || system.status === 'timeout') {
             setUnreadRealtimeStatus(`postgres-${system.status}`)
           }
