@@ -37,8 +37,10 @@ export async function manageDirectMessagesAction(formData: FormData) {
     .getAll('dmThreadIds')
     .map((value) => String(value).trim())
     .filter(Boolean)
-  const { profile, repository } = await dmContext()
 
+  if (threadIds.length === 0) return
+
+  const { profile, repository } = await dmContext()
   await hideDirectMessages(repository, profile.user_id, threadIds)
   revalidatePath('/')
   redirect('/settings')
