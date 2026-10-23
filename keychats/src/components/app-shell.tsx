@@ -168,8 +168,7 @@ export function AppShell({
       )
     }
 
-    const handleInsert = (payload: { new: RealtimeMessageRow }) => {
-      const message = payload.new
+    const handleInsert = (message: RealtimeMessageRow) => {
       if (!active || message.sender_id === currentUserId || message.deleted_at) return
 
       const activeRoom = activeRoomRef.current
@@ -231,7 +230,7 @@ export function AppShell({
         .on(
           'postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'messages' },
-          (payload) => handleInsert(payload as { new: RealtimeMessageRow }),
+          (payload) => handleInsert(payload.new as unknown as RealtimeMessageRow),
         )
         .subscribe((status) => {
           if (!active || status === 'SUBSCRIBED') return
