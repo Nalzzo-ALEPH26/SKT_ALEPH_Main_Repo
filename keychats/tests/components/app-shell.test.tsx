@@ -2,6 +2,9 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
 
+vi.mock('next/navigation', () => ({
+  usePathname: () => '/channel/design',
+}))
 vi.mock('@/app/(workspace)/dm/dm-actions', () => ({
   startDirectMessageAction: vi.fn(),
   manageDirectMessagesAction: vi.fn(),
@@ -78,6 +81,8 @@ describe('workspace shell', () => {
     expect(html).toContain('피드백')
     expect(html).toContain('새 DM')
     expect(html).toContain('data-mobile-menu-trigger="true"')
+    expect(html).toContain('data-unread-realtime-status="connecting"')
+    expect(html).toContain('data-unread-badge="true"')
     expect(html).toContain('conversation')
   })
 
