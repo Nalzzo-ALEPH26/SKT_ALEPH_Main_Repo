@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 
 import {
   createChannelAction,
@@ -19,6 +20,7 @@ import {
 } from '@/app/(workspace)/dm/dm-actions'
 import { Avatar } from '@/components/avatar'
 import { ChannelDialog } from '@/components/channel-dialog'
+import { isSidebarHrefActive, sortSidebarCommunities, type SidebarCommunity } from '@/lib/sidebar/presentation'
 import type { KeychatsTheme } from '@/lib/settings/theme'
 
 type ChannelItem = {
@@ -46,10 +48,7 @@ type ChannelProfile = {
   username: string
 }
 
-type CommunityItem = {
-  id: string
-  name: string
-}
+type CommunityItem = SidebarCommunity
 
 type SidebarProps = {
   profile: {
@@ -70,7 +69,6 @@ type SidebarProps = {
 type ViewportPopoverProps = {
   label: ReactNode
   marker: string
-  dark: boolean
   width?: number
   children: ReactNode
   ariaLabel?: string
@@ -80,7 +78,6 @@ type ViewportPopoverProps = {
 function ViewportPopover({
   label,
   marker,
-  dark,
   width = 256,
   children,
   ariaLabel,
@@ -104,9 +101,7 @@ function ViewportPopover({
       const maxWidth = Math.min(width, window.innerWidth - edge * 2)
       let left = rect.right + gap
 
-      if (left + maxWidth > window.innerWidth - edge) {
-        left = rect.left - maxWidth - gap
-      }
+      if (left + maxWidth > window.innerWidth - edge) left = rect.left - maxWidth - gap
       if (left < edge) {
         left = Math.min(
           Math.max(edge, rect.left),
@@ -119,7 +114,6 @@ function ViewportPopover({
         Math.max(edge, rect.top),
         Math.max(edge, window.innerHeight - estimatedHeight - edge),
       )
-
       setPosition({ left, top })
     }
 
@@ -166,9 +160,7 @@ function ViewportPopover({
               ref={panelRef}
               data-sidebar-popover={marker}
               data-popover-layout="viewport-safe"
-              className={`fixed z-[90] max-h-[calc(100vh-16px)] overflow-y-auto rounded-xl border p-3 text-left shadow-xl ${
-                dark ? 'border-white/10 bg-[#202020] text-white' : 'border-black/10 bg-white text-black'
-              }`}
+              className="fixed z-[90] max-h-[calc(100vh-16px)] overflow-y-auto rounded-xl border border-[#fff0c9]/20 bg-[#243b8f] p-3 text-left text-[#fff0c9] shadow-xl"
               style={{ left: position.left, top: position.top, width: Math.min(width, window.innerWidth - 16) }}
             >
               {children}
@@ -191,7 +183,6 @@ type SelectionFormProps = {
   fieldName: string
   title: string
   submitLabel: string
-  dark: boolean
   operation?: 'leave' | 'delete'
   destructive?: boolean
   rowKind?: 'dm' | 'channel' | 'community'
@@ -204,7 +195,6 @@ function SelectionForm({
   fieldName,
   title,
   submitLabel,
-  dark,
   operation,
   destructive = false,
   rowKind,
@@ -241,12 +231,8 @@ function SelectionForm({
               data-selected={selected ? 'true' : 'false'}
               className={`flex cursor-pointer items-center gap-2 rounded-lg border px-2 py-2 text-xs font-normal tracking-normal transition ${
                 selected
-                  ? dark
-                    ? 'border-white/25 bg-white/10 text-white'
-                    : 'border-black/15 bg-black/[0.07] text-black'
-                  : dark
-                    ? 'border-transparent text-white/75 hover:bg-white/5'
-                    : 'border-transparent text-black/70 hover:bg-black/[0.03]'
+                  ? 'border-[#fff0c9]/50 bg-[#fff0c9] text-[#243b8f]'
+                  : 'border-transparent text-[#fff0c9]/80 hover:bg-[#fff0c9]/10'
               }`}
             >
               <input
@@ -266,10 +252,8 @@ function SelectionForm({
         disabled={selectedIds.size === 0}
         className={`w-full rounded-lg border px-2 py-1.5 text-xs font-semibold tracking-normal disabled:cursor-not-allowed disabled:opacity-40 ${
           destructive
-            ? 'border-red-500/30 text-red-600 hover:bg-red-500/5 dark:text-red-400'
-            : dark
-              ? 'border-white/15 hover:bg-white/5'
-              : 'border-black/10 hover:bg-black/5'
+            ? 'border-red-300/50 text-red-200 hover:bg-red-500/10'
+            : 'border-[#fff0c9]/25 text-[#fff0c9] hover:bg-[#fff0c9]/10'
         }`}
       >
         {submitLabel}
@@ -278,12 +262,14 @@ function SelectionForm({
   )
 }
 
-function UnreadBadge({ count }: { count: number }) {
+function UnreadBadge({ count, active = false }: { count: number; active?: boolean }) {
   if (count <= 0) return null
   return (
     <span
       data-unread-badge
-      className="min-w-5 rounded-full bg-black px-1.5 py-0.5 text-center text-xs font-semibold text-white dark:bg-white dark:text-black"
+      className={`min-w-5 rounded-full px-1.5 py-0.5 text-center text-xs font-semibold ${
+        active ? 'bg-[#243b8f] text-[#fff0c9]' : 'bg-[#fff0c9] text-[#243b8f]'
+      }`}
     >
       {count}
     </span>
@@ -298,27 +284,30 @@ export function Sidebar({
   directMessages,
   directCandidates = [],
   communities = [],
-  theme = 'light',
+  theme: _theme = 'light',
   isAdmin = false,
   unreadRealtimeStatus = 'connecting',
 }: SidebarProps) {
-  const dark = theme === 'dark'
-  const muted = dark ? 'text-white/45' : 'text-black/40'
-  const item = dark ? 'text-white/75 hover:bg-white/5' : 'text-black/70 hover:bg-black/5'
-  const smallControl = `rounded-md px-1.5 py-1 text-[11px] tracking-normal ${
-    dark ? 'text-white/60 hover:bg-white/5' : 'text-black/55 hover:bg-black/5'
-  }`
+  const pathname = usePathname()
+  const muted = 'text-[#fff0c9]/50'
+  const item = 'text-[#fff0c9]/80 hover:bg-[#fff0c9]/10'
+  const activeItem = 'bg-[#fff0c9] text-[#243b8f] font-semibold shadow-sm'
+  const smallControl = 'rounded-md px-1.5 py-1 text-[11px] tracking-normal text-[#fff0c9]/65 hover:bg-[#fff0c9]/10 hover:text-[#fff0c9]'
   const manageableLeaveChannels = channels.filter((channel) => channel.canLeave)
   const manageableDeleteChannels = channels.filter((channel) => channel.canDelete)
+  const orderedCommunities = sortSidebarCommunities(communities)
+  const linkClass = (href: string) =>
+    `block rounded-lg px-2.5 py-2 text-sm transition ${isSidebarHrefActive(pathname, href) ? activeItem : item}`
+  const rowLinkClass = (href: string) =>
+    `flex items-center justify-between rounded-lg px-2.5 py-2 text-sm transition ${isSidebarHrefActive(pathname, href) ? activeItem : item}`
 
   return (
     <aside
+      data-sidebar-root
       data-unread-realtime-status={unreadRealtimeStatus}
-      className={`flex h-full w-full flex-col border-r p-4 md:w-72 ${
-        dark ? 'border-white/10 bg-[#181818] text-white' : 'border-black/10 bg-[#f7f7f5] text-black'
-      }`}
+      className="flex h-full w-full flex-col border-r border-[#fff0c9]/20 bg-[#243b8f] p-4 text-[#fff0c9] md:w-72"
     >
-      <div className={`px-2 pb-5 pt-2 text-sm font-semibold tracking-[0.18em] ${dark ? 'text-white/75' : 'text-black/70'}`}>
+      <div className="px-2 pb-5 pt-2 text-sm font-semibold tracking-[0.18em] text-[#fff0c9]/90">
         KEYCHATS
       </div>
 
@@ -327,14 +316,8 @@ export function Sidebar({
           <div className={`mb-2 flex items-center justify-between px-2 text-xs font-semibold tracking-[0.14em] ${muted}`}>
             <span>CHANNELS</span>
             <div className="flex items-center gap-1.5">
-              {(manageableLeaveChannels.length > 0 || manageableDeleteChannels.length > 0) ? (
-                <ViewportPopover
-                  label="채널 관리"
-                  marker="channel-management"
-                  dark={dark}
-                  width={256}
-                  triggerClassName={smallControl}
-                >
+              {manageableLeaveChannels.length > 0 || manageableDeleteChannels.length > 0 ? (
+                <ViewportPopover label="채널 관리" marker="channel-management" width={256} triggerClassName={smallControl}>
                   {manageableLeaveChannels.length > 0 ? (
                     <SelectionForm
                       action={manageChannelsAction}
@@ -343,11 +326,9 @@ export function Sidebar({
                       title="나갈 채널 선택"
                       submitLabel="선택한 채널 나가기"
                       operation="leave"
-                      dark={dark}
                       rowKind="channel"
                     />
                   ) : null}
-
                   {manageableDeleteChannels.length > 0 ? (
                     <SelectionForm
                       action={manageChannelsAction}
@@ -356,33 +337,27 @@ export function Sidebar({
                       title="삭제할 채널 선택"
                       submitLabel="선택한 채널 삭제"
                       operation="delete"
-                      dark={dark}
                       destructive
                       rowKind="channel"
-                      className={`${manageableLeaveChannels.length > 0 ? 'mt-3 border-t pt-3' : ''} ${dark ? 'border-white/10' : 'border-black/10'}`}
+                      className={manageableLeaveChannels.length > 0 ? 'mt-3 border-t border-[#fff0c9]/20 pt-3' : ''}
                     />
                   ) : null}
                 </ViewportPopover>
               ) : null}
-              <ChannelDialog
-                variant="sidebar"
-                profiles={channelProfiles}
-                currentUserId={currentUserId}
-                action={createChannelAction}
-              />
+              <ChannelDialog variant="sidebar" profiles={channelProfiles} currentUserId={currentUserId} action={createChannelAction} />
             </div>
           </div>
           <div className="space-y-1">
-            {channels.map((channel) => (
-              <Link
-                key={channel.id}
-                href={`/channel/${channel.id}`}
-                className={`flex items-center justify-between rounded-lg px-2.5 py-2 text-sm ${item}`}
-              >
-                <span>#{channel.name}</span>
-                <UnreadBadge count={channel.unreadCount} />
-              </Link>
-            ))}
+            {channels.map((channel) => {
+              const href = `/channel/${channel.id}`
+              const active = isSidebarHrefActive(pathname, href)
+              return (
+                <Link key={channel.id} href={href} data-sidebar-active={active ? 'true' : 'false'} className={rowLinkClass(href)}>
+                  <span>#{channel.name}</span>
+                  <UnreadBadge count={channel.unreadCount} active={active} />
+                </Link>
+              )
+            })}
           </div>
           <form action={joinChannelByCodeAction} className="mt-3 flex gap-1.5 px-2">
             <input
@@ -393,13 +368,9 @@ export function Sidebar({
               maxLength={6}
               placeholder="100000 · General"
               aria-label="채널 입장 코드"
-              className={`min-w-0 flex-1 rounded-lg border px-2 py-1.5 text-xs outline-none ${
-                dark
-                  ? 'border-white/10 bg-white/5 text-white placeholder:text-white/30'
-                  : 'border-black/10 bg-white text-black placeholder:text-black/30'
-              }`}
+              className="min-w-0 flex-1 rounded-lg border border-[#fff0c9]/25 bg-[#fff0c9]/10 px-2 py-1.5 text-xs text-[#fff0c9] outline-none placeholder:text-[#fff0c9]/35"
             />
-            <button type="submit" className={`rounded-lg border px-2 py-1.5 text-xs font-semibold ${dark ? 'border-white/10' : 'border-black/10'}`}>
+            <button type="submit" className="rounded-lg border border-[#fff0c9]/25 px-2 py-1.5 text-xs font-semibold hover:bg-[#fff0c9]/10">
               입장
             </button>
           </form>
@@ -410,32 +381,19 @@ export function Sidebar({
             <span>DIRECT</span>
             <div className="flex items-center gap-1.5">
               {directMessages.length > 0 ? (
-                <ViewportPopover
-                  label="DM 관리"
-                  marker="dm-management"
-                  dark={dark}
-                  width={256}
-                  triggerClassName={smallControl}
-                >
+                <ViewportPopover label="DM 관리" marker="dm-management" width={256} triggerClassName={smallControl}>
                   <SelectionForm
                     action={manageDirectMessagesAction}
                     items={directMessages.map((direct) => ({ id: direct.id, label: direct.displayName }))}
                     fieldName="dmThreadIds"
                     title="나갈 DM 선택"
                     submitLabel="선택한 DM 나가기"
-                    dark={dark}
                     rowKind="dm"
                   />
                 </ViewportPopover>
               ) : null}
               {directCandidates.length > 0 ? (
-                <ViewportPopover
-                  label="새 DM"
-                  marker="new-dm"
-                  dark={dark}
-                  width={224}
-                  triggerClassName={smallControl}
-                >
+                <ViewportPopover label="새 DM" marker="new-dm" width={224} triggerClassName={smallControl}>
                   <div className="max-h-72 overflow-y-auto">
                     {directCandidates.map((candidate) => (
                       <form key={candidate.userId} action={startDirectMessageAction}>
@@ -451,12 +409,16 @@ export function Sidebar({
             </div>
           </div>
           <div className="space-y-1">
-            {directMessages.map((direct) => (
-              <Link key={direct.id} href={`/dm/${direct.id}`} className={`flex items-center justify-between rounded-lg px-2.5 py-2 text-sm ${item}`}>
-                <span className="min-w-0 truncate">{direct.displayName}</span>
-                <UnreadBadge count={direct.unreadCount} />
-              </Link>
-            ))}
+            {directMessages.map((direct) => {
+              const href = `/dm/${direct.id}`
+              const active = isSidebarHrefActive(pathname, href)
+              return (
+                <Link key={direct.id} href={href} data-sidebar-active={active ? 'true' : 'false'} className={rowLinkClass(href)}>
+                  <span className="min-w-0 truncate">{direct.displayName}</span>
+                  <UnreadBadge count={direct.unreadCount} active={active} />
+                </Link>
+              )
+            })}
           </div>
         </section>
 
@@ -464,21 +426,14 @@ export function Sidebar({
           <div className={`mb-2 flex items-center justify-between px-2 text-xs font-semibold tracking-[0.14em] ${muted}`}>
             <span>COMMUNITY</span>
             <div className="flex items-center gap-1.5">
-              {isAdmin && communities.length > 0 ? (
-                <ViewportPopover
-                  label="커뮤니티 관리"
-                  marker="community-management"
-                  dark={dark}
-                  width={256}
-                  triggerClassName={smallControl}
-                >
+              {isAdmin && orderedCommunities.length > 0 ? (
+                <ViewportPopover label="커뮤니티 관리" marker="community-management" width={256} triggerClassName={smallControl}>
                   <SelectionForm
                     action={deleteCommunitiesAction}
-                    items={communities.map((community) => ({ id: community.id, label: community.name }))}
+                    items={orderedCommunities.map((community) => ({ id: community.id, label: community.name }))}
                     fieldName="communityIds"
                     title="삭제할 커뮤니티 선택"
                     submitLabel="선택한 커뮤니티 삭제"
-                    dark={dark}
                     destructive
                     rowKind="community"
                   />
@@ -487,10 +442,9 @@ export function Sidebar({
               <ViewportPopover
                 label="+"
                 marker="new-community"
-                dark={dark}
                 width={256}
                 ariaLabel="커뮤니티 추가"
-                triggerClassName="rounded-md px-1.5 text-lg leading-none opacity-60 hover:opacity-100"
+                triggerClassName="rounded-md px-1.5 text-lg leading-none text-[#fff0c9]/65 hover:bg-[#fff0c9]/10 hover:text-[#fff0c9]"
               >
                 <form action={createCommunityAction} className="space-y-3">
                   <label className="block space-y-1 text-xs font-semibold tracking-normal">
@@ -500,14 +454,10 @@ export function Sidebar({
                       required
                       maxLength={40}
                       placeholder="예: 자유게시판"
-                      className={`w-full rounded-lg border px-2.5 py-2 text-sm font-normal outline-none ${
-                        dark
-                          ? 'border-white/10 bg-black/20 text-white placeholder:text-white/30'
-                          : 'border-black/10 bg-white text-black placeholder:text-black/30'
-                      }`}
+                      className="w-full rounded-lg border border-[#fff0c9]/25 bg-[#fff0c9]/10 px-2.5 py-2 text-sm font-normal text-[#fff0c9] outline-none placeholder:text-[#fff0c9]/35"
                     />
                   </label>
-                  <button type="submit" className={`w-full rounded-lg border px-2 py-1.5 text-xs font-semibold tracking-normal ${dark ? 'border-white/15 hover:bg-white/5' : 'border-black/10 hover:bg-black/5'}`}>
+                  <button type="submit" className="w-full rounded-lg border border-[#fff0c9]/25 px-2 py-1.5 text-xs font-semibold tracking-normal hover:bg-[#fff0c9]/10">
                     추가
                   </button>
                 </form>
@@ -515,28 +465,47 @@ export function Sidebar({
             </div>
           </div>
           <div className="space-y-1">
-            <Link href="/feedback" className={`block rounded-lg px-2.5 py-2 text-sm ${item}`}>
+            <Link href="/feedback" data-sidebar-active={isSidebarHrefActive(pathname, '/feedback') ? 'true' : 'false'} className={linkClass('/feedback')}>
               피드백
             </Link>
-            {communities.map((community) => (
-              <Link key={community.id} href={`/community/${community.id}`} className={`block truncate rounded-lg px-2.5 py-2 text-sm ${item}`}>
-                {community.name}
-              </Link>
-            ))}
+            {orderedCommunities.map((community) => {
+              const href = `/community/${community.id}`
+              const active = isSidebarHrefActive(pathname, href)
+              return (
+                <Link key={community.id} href={href} data-sidebar-active={active ? 'true' : 'false'} className={linkClass(href)}>
+                  <span className="flex items-center gap-2">
+                    <span className="min-w-0 truncate">{community.name}</span>
+                    {community.pinnedAt ? (
+                      <span data-community-pinned className={`shrink-0 text-[10px] ${active ? 'text-[#243b8f]/65' : 'text-[#fff0c9]/55'}`}>
+                        고정
+                      </span>
+                    ) : null}
+                  </span>
+                </Link>
+              )
+            })}
           </div>
         </section>
 
         {isAdmin ? (
           <section>
             <div className={`mb-2 px-2 text-xs font-semibold tracking-[0.14em] ${muted}`}>ADMIN</div>
-            <Link href="/admin" className={`block rounded-lg px-2.5 py-2 text-sm ${item}`}>
+            <Link href="/admin" data-sidebar-active={isSidebarHrefActive(pathname, '/admin') ? 'true' : 'false'} className={linkClass('/admin')}>
               관리자
             </Link>
           </section>
         ) : null}
       </nav>
 
-      <Link href="/settings" className={`mt-4 flex items-center gap-3 rounded-xl border p-3 ${dark ? 'border-white/10 bg-white/5' : 'border-black/5 bg-white'}`}>
+      <Link
+        href="/settings"
+        data-sidebar-active={isSidebarHrefActive(pathname, '/settings') ? 'true' : 'false'}
+        className={`mt-4 flex items-center gap-3 rounded-xl border p-3 transition ${
+          isSidebarHrefActive(pathname, '/settings')
+            ? 'border-[#fff0c9] bg-[#fff0c9] text-[#243b8f]'
+            : 'border-[#fff0c9]/20 bg-[#fff0c9]/10 text-[#fff0c9] hover:bg-[#fff0c9]/15'
+        }`}
+      >
         <Avatar displayName={profile.displayName} avatarPath={profile.avatarPath} size="sm" />
         <span className="min-w-0 flex-1 truncate text-sm font-medium">{profile.displayName}</span>
       </Link>

@@ -107,6 +107,9 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
       new Date(pin.pinned_at as string).getTime(),
     ]),
   )
+  const communityPinValue = new Map(
+    (communityPins ?? []).map((pin) => [pin.community_id as string, pin.pinned_at as string]),
+  )
   const sortedCommunities = [...(communities ?? [])].sort((left, right) => {
     const leftPin = communityPinTime.get(left.id as string)
     const rightPin = communityPinTime.get(right.id as string)
@@ -148,6 +151,7 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
       communities={sortedCommunities.map((community) => ({
         id: community.id as string,
         name: community.name as string,
+        pinnedAt: communityPinValue.get(community.id as string) ?? null,
       }))}
       theme={theme}
       isAdmin={isAdmin}

@@ -165,3 +165,57 @@ export async function deleteCommunityCommentAction(communityId: string, formData
   if (error) throw error
   revalidatePath(communityPath(communityId))
 }
+
+export async function setCommunityCommentPinnedAction(communityId: string, formData: FormData) {
+  const commentId = requiredText(formData, 'commentId')
+  const postId = requiredText(formData, 'postId')
+  const operation = requiredText(formData, 'operation')
+  if (operation !== 'pin' && operation !== 'unpin') throw new Error('COMMUNITY_COMMENT_PIN_OPERATION_INVALID')
+
+  const client = await createClient()
+  const { claims } = await requireActiveUser(createAuthGuardAccess(client))
+  const isAdmin = claims.app_metadata?.role === 'admin'
+
+  const { data: community, error: communityError } = await client
+    .from('communities')
+    .select('id,created_by')
+    .eq('id', communityId)
+    .maybeSingle()
+  if (communityError) throw communityError
+  if (!community) throw new Error('COMMUNITY_NOT_FOUND')
+  if (!isAdmin && community.created_by !== claims.sub) throw new Error('COMMUNITY_COMMENT_PIN_FORBIDDEN')
+
+  const { data: post, error: postError } = await client
+    .from('community_posts')
+    .select('id')
+    .eq('id', postId)
+    .eq('community_id', communityId)
+    .maybeSingle()
+  if (postError) throw postError
+  if (!post) throw new Error('COMMUNITY_POST_NOT_FOUND')
+
+  const { data: comment, error: commentError } = await client
+    .from('community_comments')
+    .select('id')
+    .eq('id', commentId)
+    .eq('post_id', postId)
+    .maybeSingle()
+  if (commentError) throw commentError
+  if (!comment) throw new Error('COMMUNITY_COMMENT_NOT_FOUND')
+
+  const { error: deleteError } = await client
+    .from('community_comment_pins')
+    .delete()
+    .eq('comment_id', commentId)
+  if (deleteError) throw deleteError
+
+  if (operation === 'pin') {
+    const { error: insertError } = await client.from('community_comment_pins').insert({
+      comment_id: commentId,
+      pinned_by: claims.sub,
+    })
+    if (insertError) throw insertError
+  }
+
+  revalidatePath(communityPath(communityId))
+}

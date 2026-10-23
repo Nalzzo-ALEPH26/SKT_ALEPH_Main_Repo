@@ -3,6 +3,7 @@
 import { useLayoutEffect, useRef } from 'react'
 
 import { MessageItem, type MessageListItem } from '@/components/message-item'
+import { shouldGroupMessages } from '@/lib/messages/grouping'
 
 type MessageListProps = {
   messages: MessageListItem[]
@@ -38,8 +39,7 @@ export function MessageList({
     if (!scrollArea) return
 
     const updateFollowLatest = () => {
-      const distanceFromBottom =
-        scrollArea.scrollHeight - scrollArea.clientHeight - scrollArea.scrollTop
+      const distanceFromBottom = scrollArea.scrollHeight - scrollArea.clientHeight - scrollArea.scrollTop
       followLatestRef.current = distanceFromBottom <= FOLLOW_LATEST_THRESHOLD_PX
     }
 
@@ -63,8 +63,7 @@ export function MessageList({
     const previousLatestMessageId = previousLatestMessageIdRef.current
     previousLatestMessageIdRef.current = latestMessageId
 
-    const receivedNewLatestMessage =
-      latestMessageId !== null && latestMessageId !== previousLatestMessageId
+    const receivedNewLatestMessage = latestMessageId !== null && latestMessageId !== previousLatestMessageId
     if (!receivedNewLatestMessage || !followLatestRef.current) return
 
     scrollArea.scrollTop = scrollArea.scrollHeight
@@ -72,36 +71,36 @@ export function MessageList({
 
   if (messages.length === 0) {
     return (
-      <div
-        ref={contentRef}
-        data-message-scroll-area
-        className="flex flex-1 items-center justify-center py-16 text-sm text-zinc-500"
-      >
+      <div ref={contentRef} data-message-scroll-area className="flex flex-1 items-center justify-center py-16 text-sm text-zinc-500">
         아직 메시지가 없습니다.
       </div>
     )
   }
 
   return (
-    <div
-      ref={contentRef}
-      className="flex flex-col divide-y divide-zinc-100 dark:divide-zinc-900"
-      data-message-list
-      data-message-scroll-area
-    >
-      {messages.map((message) => (
-        <MessageItem
-          key={message.id}
-          message={message}
-          currentUserId={currentUserId}
-          isAdmin={isAdmin}
-          onReply={onReply}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          onToggleReaction={onToggleReaction}
-          onTogglePin={onTogglePin}
-        />
-      ))}
+    <div ref={contentRef} className="flex flex-col" data-message-list data-message-scroll-area>
+      {messages.map((message, index) => {
+        const previous = messages[index - 1]
+        const next = messages[index + 1]
+        const continuesPrevious = shouldGroupMessages(previous, message)
+        const continuesNext = next ? shouldGroupMessages(message, next) : false
+
+        return (
+          <MessageItem
+            key={message.id}
+            message={message}
+            currentUserId={currentUserId}
+            isAdmin={isAdmin}
+            continuesPrevious={continuesPrevious}
+            continuesNext={continuesNext}
+            onReply={onReply}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onToggleReaction={onToggleReaction}
+            onTogglePin={onTogglePin}
+          />
+        )
+      })}
     </div>
   )
 }

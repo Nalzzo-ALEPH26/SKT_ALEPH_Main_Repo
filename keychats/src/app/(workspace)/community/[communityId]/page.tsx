@@ -12,6 +12,7 @@ import {
   deleteCommunityCommentAction,
   deleteCommunityPostAction,
   renameCommunityAction,
+  setCommunityCommentPinnedAction,
   setCommunityPinnedAction,
   setCommunityPostPinnedAction,
 } from './actions'
@@ -95,6 +96,17 @@ export default async function CommunityPage({ params }: PageProps) {
     comments = (commentRows ?? []) as CommunityCommentRow[]
   }
 
+  const commentIds = comments.map((comment) => comment.id)
+  let commentPins: Array<{ comment_id: string; pinned_at: string }> = []
+  if (commentIds.length > 0) {
+    const { data: commentPinRows, error: commentPinsError } = await client
+      .from('community_comment_pins')
+      .select('comment_id,pinned_at')
+      .in('comment_id', commentIds)
+    if (commentPinsError) throw commentPinsError
+    commentPins = (commentPinRows ?? []) as Array<{ comment_id: string; pinned_at: string }>
+  }
+
   const profileById = new Map(
     (profiles ?? []).map((profile) => [
       profile.user_id as string,
@@ -106,15 +118,32 @@ export default async function CommunityPage({ params }: PageProps) {
   )
   const creator = profileById.get(community.created_by as string)
   const canRename = community.created_by === claims.sub
+  const canPinComments = isAdmin || community.created_by === claims.sub
 
   const pinTimeByPostId = new Map(
     postPins.map((pin) => [pin.post_id, new Date(pin.pinned_at).getTime()]),
+  )
+  const pinTimeByCommentId = new Map(
+    commentPins.map((pin) => [pin.comment_id, new Date(pin.pinned_at).getTime()]),
   )
   const commentsByPostId = new Map<string, CommunityCommentRow[]>()
   for (const comment of comments) {
     const current = commentsByPostId.get(comment.post_id) ?? []
     current.push(comment)
     commentsByPostId.set(comment.post_id, current)
+  }
+  for (const [postId, postComments] of commentsByPostId) {
+    commentsByPostId.set(
+      postId,
+      [...postComments].sort((left, right) => {
+        const leftPin = pinTimeByCommentId.get(left.id)
+        const rightPin = pinTimeByCommentId.get(right.id)
+        if (leftPin !== undefined && rightPin !== undefined) return rightPin - leftPin
+        if (leftPin !== undefined) return -1
+        if (rightPin !== undefined) return 1
+        return new Date(left.created_at).getTime() - new Date(right.created_at).getTime()
+      }),
+    )
   }
 
   const sortedPosts = [...(posts ?? [])].sort((left, right) => {
@@ -133,6 +162,7 @@ export default async function CommunityPage({ params }: PageProps) {
   const setPostPinAction = setCommunityPostPinnedAction.bind(null, communityId)
   const createCommentAction = createCommunityCommentAction.bind(null, communityId)
   const deleteCommentAction = deleteCommunityCommentAction.bind(null, communityId)
+  const setCommentPinAction = setCommunityCommentPinnedAction.bind(null, communityId)
 
   return (
     <div className="mx-auto w-full max-w-3xl px-5 py-8 md:px-8">
@@ -259,33 +289,59 @@ export default async function CommunityPage({ params }: PageProps) {
                   {postComments.map((comment) => {
                     const commentAuthor = profileById.get(comment.author_id)
                     const canDeleteComment = isAdmin || comment.author_id === claims.sub
+                    const commentPinned = pinTimeByCommentId.has(comment.id)
 
                     return (
                       <div
                         key={comment.id}
-                        className="rounded-xl bg-black/[0.025] px-3 py-2.5 dark:bg-white/[0.04]"
+                        data-community-comment
+                        data-pinned={commentPinned ? 'true' : 'false'}
+                        className={`rounded-xl px-3 py-2.5 ${
+                          commentPinned
+                            ? 'border border-amber-500/25 bg-amber-500/[0.07]'
+                            : 'bg-black/[0.025] dark:bg-white/[0.04]'
+                        }`}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <div className="text-xs font-semibold">
-                              {commentAuthor?.displayName ?? '사용자'}{' '}
-                              <span className="font-normal text-zinc-500">
-                                @{commentAuthor?.username ?? 'unknown'}
+                            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+                              <span>
+                                {commentAuthor?.displayName ?? '사용자'}{' '}
+                                <span className="font-normal text-zinc-500">
+                                  @{commentAuthor?.username ?? 'unknown'}
+                                </span>
                               </span>
+                              {commentPinned ? (
+                                <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-300">
+                                  고정 댓글
+                                </span>
+                              ) : null}
                             </div>
                             <time className="mt-0.5 block text-[11px] text-zinc-400" dateTime={comment.created_at}>
                               {formatSeoulDateTime(comment.created_at)}
                             </time>
                           </div>
-                          {canDeleteComment ? (
-                            <form action={deleteCommentAction}>
-                              <input type="hidden" name="commentId" value={comment.id} />
-                              <input type="hidden" name="postId" value={postId} />
-                              <button type="submit" className="text-[11px] text-zinc-400 hover:text-red-600">
-                                삭제
-                              </button>
-                            </form>
-                          ) : null}
+                          <div className="flex items-center gap-2">
+                            {canPinComments ? (
+                              <form action={setCommentPinAction}>
+                                <input type="hidden" name="commentId" value={comment.id} />
+                                <input type="hidden" name="postId" value={postId} />
+                                <input type="hidden" name="operation" value={commentPinned ? 'unpin' : 'pin'} />
+                                <button type="submit" className="text-[11px] text-zinc-400 hover:text-amber-600">
+                                  {commentPinned ? '고정 해제' : '고정'}
+                                </button>
+                              </form>
+                            ) : null}
+                            {canDeleteComment ? (
+                              <form action={deleteCommentAction}>
+                                <input type="hidden" name="commentId" value={comment.id} />
+                                <input type="hidden" name="postId" value={postId} />
+                                <button type="submit" className="text-[11px] text-zinc-400 hover:text-red-600">
+                                  삭제
+                                </button>
+                              </form>
+                            ) : null}
+                          </div>
                         </div>
                         <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-5">{comment.body}</p>
                       </div>

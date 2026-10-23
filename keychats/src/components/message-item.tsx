@@ -37,6 +37,8 @@ type MessageItemProps = {
   message: MessageListItem
   currentUserId: string
   isAdmin: boolean
+  continuesPrevious?: boolean
+  continuesNext?: boolean
   onReply?: (messageId: number) => void
   onEdit?: (messageId: number) => void
   onDelete?: (messageId: number) => void
@@ -72,6 +74,8 @@ export function MessageItem({
   message,
   currentUserId,
   isAdmin,
+  continuesPrevious = false,
+  continuesNext = false,
   onReply,
   onEdit,
   onDelete,
@@ -84,6 +88,7 @@ export function MessageItem({
   const canDelete = !isDeleted && (isOwn || isAdmin)
   const reactions = message.reactions ?? []
   const attachments = message.attachments ?? []
+  const showSenderInfo = !continuesPrevious
 
   const avatar = (
     <div
@@ -94,27 +99,47 @@ export function MessageItem({
     </div>
   )
 
+  const ownBubbleShape = continuesPrevious && continuesNext
+    ? 'rounded-2xl rounded-r-md'
+    : continuesPrevious
+      ? 'rounded-2xl rounded-tr-md'
+      : continuesNext
+        ? 'rounded-2xl rounded-br-md'
+        : 'rounded-2xl rounded-tr-sm'
+
   return (
-    <article data-message-id={message.id} data-own-message={isOwn} className={`group flex gap-3 px-1 py-3 ${isOwn ? 'justify-end' : 'justify-start'}`}>
-      {!isOwn ? avatar : null}
+    <article
+      data-message-id={message.id}
+      data-own-message={isOwn}
+      data-message-group-start={showSenderInfo ? 'true' : 'false'}
+      data-message-group-continuation={continuesPrevious ? 'true' : 'false'}
+      className={`group flex gap-3 px-1 ${continuesPrevious ? 'py-0.5' : 'border-t border-zinc-100 py-3 first:border-t-0 dark:border-zinc-900'} ${isOwn ? 'justify-end' : 'justify-start'}`}
+    >
+      {!isOwn ? (showSenderInfo ? avatar : <div aria-hidden className="order-1 h-9 w-9 shrink-0" />) : null}
       <div className={`min-w-0 max-w-[min(42rem,82%)] ${isOwn ? 'order-1 flex flex-col items-end text-right' : 'order-2 flex-1'}`}>
-        <div className={`flex flex-wrap items-baseline gap-x-2 gap-y-1 ${isOwn ? 'justify-end' : ''}`}>
-          <span className="text-sm font-semibold">{message.sender.displayName}</span>
-          <span className="text-xs text-zinc-500">@{message.sender.username}</span>
-          <time className="text-xs text-zinc-400" dateTime={message.createdAt}>
-            {new Date(message.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
-          </time>
-          {message.isPinned ? <span data-message-pinned className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">고정됨</span> : null}
-        </div>
+        {showSenderInfo ? (
+          <div data-message-sender-meta className={`flex flex-wrap items-baseline gap-x-2 gap-y-1 ${isOwn ? 'justify-end' : ''}`}>
+            <span className="text-sm font-semibold">{message.sender.displayName}</span>
+            <span className="text-xs text-zinc-500">@{message.sender.username}</span>
+            <time className="text-xs text-zinc-400" dateTime={message.createdAt}>
+              {new Date(message.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+            </time>
+            {message.isPinned ? <span data-message-pinned className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">고정됨</span> : null}
+          </div>
+        ) : message.isPinned ? (
+          <div className={`mb-0.5 flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
+            <span data-message-pinned className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">고정됨</span>
+          </div>
+        ) : null}
 
         {message.replyTo ? (
-          <blockquote className="mt-2 w-full border-l-2 border-zinc-300 pl-3 text-left text-xs text-zinc-500 dark:border-zinc-700">
+          <blockquote className={`${showSenderInfo ? 'mt-2' : 'mt-1'} w-full border-l-2 border-zinc-300 pl-3 text-left text-xs text-zinc-500 dark:border-zinc-700`}>
             <span className="font-medium">{message.replyTo.displayName}</span>
             <p className="mt-0.5 truncate">{message.replyTo.deletedAt ? '삭제된 메시지입니다.' : message.replyTo.body}</p>
           </blockquote>
         ) : null}
 
-        <div className={`mt-1 max-w-full whitespace-pre-wrap break-words text-left text-sm leading-6 ${isOwn ? 'rounded-2xl rounded-tr-sm bg-zinc-950 px-3 py-2 text-white dark:bg-white dark:text-zinc-950' : ''}`}>
+        <div className={`${showSenderInfo ? 'mt-1' : 'mt-0'} max-w-full whitespace-pre-wrap break-words text-left text-sm leading-6 ${isOwn ? `${ownBubbleShape} bg-zinc-950 px-3 py-2 text-white dark:bg-white dark:text-zinc-950` : ''}`}>
           {isDeleted ? (
             <span className="italic text-zinc-500">삭제된 메시지입니다.</span>
           ) : (
@@ -170,7 +195,7 @@ export function MessageItem({
           </div>
         ) : null}
       </div>
-      {isOwn ? avatar : null}
+      {isOwn ? (showSenderInfo ? avatar : <div aria-hidden className="order-2 h-9 w-9 shrink-0" />) : null}
     </article>
   )
 }
