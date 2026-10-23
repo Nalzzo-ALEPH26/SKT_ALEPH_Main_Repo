@@ -1,3 +1,7 @@
+'use client'
+
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 
 import {
@@ -5,6 +9,10 @@ import {
   joinChannelByCodeAction,
   manageChannelsAction,
 } from '@/app/(workspace)/channel/channel-actions'
+import {
+  createCommunityAction,
+  deleteCommunitiesAction,
+} from '@/app/(workspace)/community/community-actions'
 import {
   manageDirectMessagesAction,
   startDirectMessageAction,
@@ -38,6 +46,11 @@ type ChannelProfile = {
   username: string
 }
 
+type CommunityItem = {
+  id: string
+  name: string
+}
+
 type SidebarProps = {
   profile: {
     displayName: string
@@ -48,9 +61,123 @@ type SidebarProps = {
   channels: ChannelItem[]
   directMessages: DirectItem[]
   directCandidates?: DirectCandidate[]
+  communities?: CommunityItem[]
   theme?: KeychatsTheme
   isAdmin?: boolean
   unreadRealtimeStatus?: string
+}
+
+type ViewportPopoverProps = {
+  label: ReactNode
+  marker: string
+  dark: boolean
+  width?: number
+  children: ReactNode
+  ariaLabel?: string
+  triggerClassName?: string
+}
+
+function ViewportPopover({
+  label,
+  marker,
+  dark,
+  width = 256,
+  children,
+  ariaLabel,
+  triggerClassName = '',
+}: ViewportPopoverProps) {
+  const [open, setOpen] = useState(false)
+  const [position, setPosition] = useState({ left: 8, top: 8 })
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+
+    const updatePosition = () => {
+      const trigger = triggerRef.current
+      if (!trigger) return
+
+      const rect = trigger.getBoundingClientRect()
+      const edge = 8
+      const gap = 8
+      const maxWidth = Math.min(width, window.innerWidth - edge * 2)
+      let left = rect.right + gap
+
+      if (left + maxWidth > window.innerWidth - edge) {
+        left = rect.left - maxWidth - gap
+      }
+      if (left < edge) {
+        left = Math.min(
+          Math.max(edge, rect.left),
+          Math.max(edge, window.innerWidth - maxWidth - edge),
+        )
+      }
+
+      const estimatedHeight = Math.min(420, window.innerHeight - edge * 2)
+      const top = Math.min(
+        Math.max(edge, rect.top),
+        Math.max(edge, window.innerHeight - estimatedHeight - edge),
+      )
+
+      setPosition({ left, top })
+    }
+
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node
+      if (triggerRef.current?.contains(target) || panelRef.current?.contains(target)) return
+      setOpen(false)
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false)
+    }
+
+    updatePosition()
+    window.addEventListener('resize', updatePosition)
+    window.addEventListener('scroll', updatePosition, true)
+    document.addEventListener('pointerdown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+
+    return () => {
+      window.removeEventListener('resize', updatePosition)
+      window.removeEventListener('scroll', updatePosition, true)
+      document.removeEventListener('pointerdown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [open, width])
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        data-sidebar-popover-trigger={marker}
+        data-popover-layout="viewport-safe"
+        aria-label={ariaLabel}
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+        className={triggerClassName}
+      >
+        {label}
+      </button>
+      {open && typeof document !== 'undefined'
+        ? createPortal(
+            <div
+              ref={panelRef}
+              data-sidebar-popover={marker}
+              data-popover-layout="viewport-safe"
+              className={`fixed z-[90] max-h-[calc(100vh-16px)] overflow-y-auto rounded-xl border p-3 text-left shadow-xl ${
+                dark ? 'border-white/10 bg-[#202020] text-white' : 'border-black/10 bg-white text-black'
+              }`}
+              style={{ left: position.left, top: position.top, width: Math.min(width, window.innerWidth - 16) }}
+            >
+              {children}
+            </div>,
+            document.body,
+          )
+        : null}
+    </>
+  )
 }
 
 function UnreadBadge({ count }: { count: number }) {
@@ -72,6 +199,7 @@ export function Sidebar({
   channels,
   directMessages,
   directCandidates = [],
+  communities = [],
   theme = 'light',
   isAdmin = false,
   unreadRealtimeStatus = 'connecting',
@@ -80,6 +208,9 @@ export function Sidebar({
   const muted = dark ? 'text-white/45' : 'text-black/40'
   const item = dark ? 'text-white/75 hover:bg-white/5' : 'text-black/70 hover:bg-black/5'
   const panel = dark ? 'border-white/10 bg-[#202020]' : 'border-black/10 bg-white'
+  const smallControl = `rounded-md px-1.5 py-1 text-[11px] tracking-normal ${
+    dark ? 'text-white/60 hover:bg-white/5' : 'text-black/55 hover:bg-black/5'
+  }`
   const manageableLeaveChannels = channels.filter((channel) => channel.canLeave)
   const manageableDeleteChannels = channels.filter((channel) => channel.canDelete)
 
@@ -101,7 +232,7 @@ export function Sidebar({
             <div className="flex items-center gap-1.5">
               {(manageableLeaveChannels.length > 0 || manageableDeleteChannels.length > 0) ? (
                 <details className="relative">
-                  <summary className={`cursor-pointer list-none rounded-md px-1.5 py-1 text-[11px] tracking-normal ${dark ? 'text-white/60 hover:bg-white/5' : 'text-black/55 hover:bg-black/5'}`}>
+                  <summary className={`cursor-pointer list-none ${smallControl}`}>
                     채널 관리
                   </summary>
                   <div className={`absolute right-0 top-7 z-30 w-64 rounded-xl border p-3 text-left shadow-xl ${panel}`}>
@@ -187,13 +318,16 @@ export function Sidebar({
             <span>DIRECT</span>
             <div className="flex items-center gap-1.5">
               {directMessages.length > 0 ? (
-                <details className="relative">
-                  <summary className={`cursor-pointer list-none rounded-md px-1.5 py-1 text-[11px] tracking-normal ${dark ? 'text-white/60 hover:bg-white/5' : 'text-black/55 hover:bg-black/5'}`}>
-                    DM 관리
-                  </summary>
-                  <form action={manageDirectMessagesAction} className={`absolute right-0 top-7 z-20 w-56 rounded-xl border p-3 shadow-lg ${panel}`}>
+                <ViewportPopover
+                  label="DM 관리"
+                  marker="dm-management"
+                  dark={dark}
+                  width={256}
+                  triggerClassName={smallControl}
+                >
+                  <form action={manageDirectMessagesAction}>
                     <p className="mb-2 text-xs font-semibold tracking-normal">나갈 DM 선택</p>
-                    <div className="max-h-48 space-y-1.5 overflow-y-auto">
+                    <div className="max-h-64 space-y-1.5 overflow-y-auto pr-1">
                       {directMessages.map((direct) => (
                         <label key={`manage-${direct.id}`} className="flex items-center gap-2 text-xs font-normal tracking-normal">
                           <input type="checkbox" name="dmThreadIds" value={direct.id} />
@@ -205,14 +339,17 @@ export function Sidebar({
                       선택한 DM 나가기
                     </button>
                   </form>
-                </details>
+                </ViewportPopover>
               ) : null}
               {directCandidates.length > 0 ? (
-                <details className="relative">
-                  <summary className={`cursor-pointer list-none rounded-md px-1.5 py-1 text-[11px] tracking-normal ${dark ? 'text-white/60 hover:bg-white/5' : 'text-black/55 hover:bg-black/5'}`}>
-                    새 DM
-                  </summary>
-                  <div className={`absolute right-0 top-7 z-20 w-48 rounded-xl border p-1.5 shadow-lg ${panel}`}>
+                <ViewportPopover
+                  label="새 DM"
+                  marker="new-dm"
+                  dark={dark}
+                  width={224}
+                  triggerClassName={smallControl}
+                >
+                  <div className="max-h-72 overflow-y-auto">
                     {directCandidates.map((candidate) => (
                       <form key={candidate.userId} action={startDirectMessageAction}>
                         <input type="hidden" name="otherUserId" value={candidate.userId} />
@@ -222,14 +359,14 @@ export function Sidebar({
                       </form>
                     ))}
                   </div>
-                </details>
+                </ViewportPopover>
               ) : null}
             </div>
           </div>
           <div className="space-y-1">
             {directMessages.map((direct) => (
               <Link key={direct.id} href={`/dm/${direct.id}`} className={`flex items-center justify-between rounded-lg px-2.5 py-2 text-sm ${item}`}>
-                <span>{direct.displayName}</span>
+                <span className="min-w-0 truncate">{direct.displayName}</span>
                 <UnreadBadge count={direct.unreadCount} />
               </Link>
             ))}
@@ -237,10 +374,73 @@ export function Sidebar({
         </section>
 
         <section>
-          <div className={`mb-2 px-2 text-xs font-semibold tracking-[0.14em] ${muted}`}>COMMUNITY</div>
-          <Link href="/feedback" className={`block rounded-lg px-2.5 py-2 text-sm ${item}`}>
-            피드백
-          </Link>
+          <div className={`mb-2 flex items-center justify-between px-2 text-xs font-semibold tracking-[0.14em] ${muted}`}>
+            <span>COMMUNITY</span>
+            <div className="flex items-center gap-1.5">
+              {isAdmin && communities.length > 0 ? (
+                <ViewportPopover
+                  label="커뮤니티 관리"
+                  marker="community-management"
+                  dark={dark}
+                  width={256}
+                  triggerClassName={smallControl}
+                >
+                  <form action={deleteCommunitiesAction}>
+                    <p className="mb-2 text-xs font-semibold tracking-normal">삭제할 커뮤니티 선택</p>
+                    <div className="max-h-64 space-y-1.5 overflow-y-auto pr-1">
+                      {communities.map((community) => (
+                        <label key={`community-delete-${community.id}`} className="flex items-center gap-2 text-xs font-normal tracking-normal">
+                          <input type="checkbox" name="communityIds" value={community.id} />
+                          <span className="min-w-0 truncate">{community.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <button type="submit" className="mt-3 w-full rounded-lg border border-red-500/30 px-2 py-1.5 text-xs font-semibold tracking-normal text-red-600 hover:bg-red-500/5 dark:text-red-400">
+                      선택한 커뮤니티 삭제
+                    </button>
+                  </form>
+                </ViewportPopover>
+              ) : null}
+              <ViewportPopover
+                label="+"
+                marker="new-community"
+                dark={dark}
+                width={256}
+                ariaLabel="커뮤니티 추가"
+                triggerClassName="rounded-md px-1.5 text-lg leading-none opacity-60 hover:opacity-100"
+              >
+                <form action={createCommunityAction} className="space-y-3">
+                  <label className="block space-y-1 text-xs font-semibold tracking-normal">
+                    <span>새 커뮤니티 이름</span>
+                    <input
+                      name="communityName"
+                      required
+                      maxLength={40}
+                      placeholder="예: 자유게시판"
+                      className={`w-full rounded-lg border px-2.5 py-2 text-sm font-normal outline-none ${
+                        dark
+                          ? 'border-white/10 bg-black/20 text-white placeholder:text-white/30'
+                          : 'border-black/10 bg-white text-black placeholder:text-black/30'
+                      }`}
+                    />
+                  </label>
+                  <button type="submit" className={`w-full rounded-lg border px-2 py-1.5 text-xs font-semibold tracking-normal ${dark ? 'border-white/15 hover:bg-white/5' : 'border-black/10 hover:bg-black/5'}`}>
+                    추가
+                  </button>
+                </form>
+              </ViewportPopover>
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Link href="/feedback" className={`block rounded-lg px-2.5 py-2 text-sm ${item}`}>
+              피드백
+            </Link>
+            {communities.map((community) => (
+              <Link key={community.id} href={`/community/${community.id}`} className={`block truncate rounded-lg px-2.5 py-2 text-sm ${item}`}>
+                {community.name}
+              </Link>
+            ))}
+          </div>
         </section>
 
         {isAdmin ? (
