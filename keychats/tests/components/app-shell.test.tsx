@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/channel/design',
+  useRouter: () => ({ refresh: vi.fn() }),
 }))
 vi.mock('@/app/(workspace)/dm/dm-actions', () => ({
   startDirectMessageAction: vi.fn(),
@@ -14,13 +15,17 @@ vi.mock('@/app/(workspace)/channel/channel-actions', () => ({
   joinChannelByCodeAction: vi.fn(),
   manageChannelsAction: vi.fn(),
 }))
+vi.mock('@/app/(workspace)/community/community-actions', () => ({
+  createCommunityAction: vi.fn(),
+  deleteCommunitiesAction: vi.fn(),
+}))
 
 import { AppShell } from '@/components/app-shell'
 import { Avatar } from '@/components/avatar'
 import { ThemeToggle } from '@/components/theme-toggle'
 
 describe('workspace shell', () => {
-  it('renders channel/direct sections, room management, channel creation, join-by-code and feedback navigation', () => {
+  it('renders channel/direct sections, viewport-safe DM management, community controls and feedback navigation', () => {
     const html = renderToStaticMarkup(
       createElement(
         AppShell,
@@ -50,13 +55,20 @@ describe('workspace shell', () => {
               canDelete: true,
             },
           ],
-          directMessages: [{ id: 'dm-1', displayName: 'Teammate', unreadCount: 1 }],
+          directMessages: [
+            { id: 'dm-1', displayName: 'Teammate 1', unreadCount: 1 },
+            { id: 'dm-2', displayName: 'Teammate 2', unreadCount: 0 },
+            { id: 'dm-3', displayName: 'Teammate 3', unreadCount: 0 },
+            { id: 'dm-4', displayName: 'Teammate 4', unreadCount: 0 },
+            { id: 'dm-5', displayName: 'Teammate 5', unreadCount: 0 },
+          ],
           directCandidates: [
             {
               userId: '33333333-3333-3333-3333-333333333333',
               displayName: 'New Teammate',
             },
           ],
+          communities: [{ id: 'community-1', name: '자유게시판' }],
           isAdmin: true,
         },
         createElement('div', null, 'conversation'),
@@ -74,11 +86,19 @@ describe('workspace shell', () => {
     expect(html).toContain('value="leave"')
     expect(html).toContain('value="delete"')
     expect(html).toContain('DM 관리')
+    expect(html).toContain('data-dm-management-panel="viewport-safe"')
     expect(html).toContain('name="dmThreadIds"')
+    expect(html).toContain('Teammate 5')
     expect(html).toContain('name="joinCode"')
     expect(html).toContain('100000 · General')
+    expect(html).toContain('COMMUNITY')
     expect(html).toContain('href="/feedback"')
     expect(html).toContain('피드백')
+    expect(html).toContain('href="/community/community-1"')
+    expect(html).toContain('자유게시판')
+    expect(html).toContain('name="communityName"')
+    expect(html).toContain('커뮤니티 관리')
+    expect(html).toContain('name="communityIds"')
     expect(html).toContain('새 DM')
     expect(html).toContain('data-mobile-menu-trigger="true"')
     expect(html).toContain('data-unread-realtime-status="connecting"')
@@ -86,12 +106,13 @@ describe('workspace shell', () => {
     expect(html).toContain('conversation')
   })
 
-  it('shows the admin entry only to admins', () => {
+  it('shows admin-only entries and community deletion only to admins while community creation stays available', () => {
     const adminHtml = renderToStaticMarkup(
       createElement(AppShell, {
         profile: { displayName: 'Admin', avatarPath: null },
         channels: [],
         directMessages: [],
+        communities: [{ id: 'community-1', name: '자유게시판' }],
         isAdmin: true,
       }),
     )
@@ -100,13 +121,17 @@ describe('workspace shell', () => {
         profile: { displayName: 'Member', avatarPath: null },
         channels: [],
         directMessages: [],
+        communities: [{ id: 'community-1', name: '자유게시판' }],
         isAdmin: false,
       }),
     )
 
     expect(adminHtml).toContain('관리자')
     expect(adminHtml).toContain('href="/admin"')
+    expect(adminHtml).toContain('name="communityIds"')
     expect(memberHtml).not.toContain('href="/admin"')
+    expect(memberHtml).not.toContain('name="communityIds"')
+    expect(memberHtml).toContain('name="communityName"')
   })
 
   it('marks and styles the selected workspace theme', () => {
