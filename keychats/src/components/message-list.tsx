@@ -15,6 +15,8 @@ type MessageListProps = {
   onTogglePin?: (messageId: number) => void
 }
 
+const FOLLOW_LATEST_THRESHOLD_PX = 8
+
 export function MessageList({
   messages,
   currentUserId,
@@ -27,15 +29,46 @@ export function MessageList({
 }: MessageListProps) {
   const contentRef = useRef<HTMLDivElement>(null)
   const didInitialScrollRef = useRef(false)
+  const followLatestRef = useRef(true)
+  const previousLatestMessageIdRef = useRef<number | null>(null)
+  const latestMessageId = messages.at(-1)?.id ?? null
 
   useLayoutEffect(() => {
-    if (didInitialScrollRef.current) return
     const scrollArea = contentRef.current?.parentElement
     if (!scrollArea) return
 
+    const updateFollowLatest = () => {
+      const distanceFromBottom =
+        scrollArea.scrollHeight - scrollArea.clientHeight - scrollArea.scrollTop
+      followLatestRef.current = distanceFromBottom <= FOLLOW_LATEST_THRESHOLD_PX
+    }
+
+    updateFollowLatest()
+    scrollArea.addEventListener('scroll', updateFollowLatest, { passive: true })
+    return () => scrollArea.removeEventListener('scroll', updateFollowLatest)
+  }, [])
+
+  useLayoutEffect(() => {
+    const scrollArea = contentRef.current?.parentElement
+    if (!scrollArea) return
+
+    if (!didInitialScrollRef.current) {
+      scrollArea.scrollTop = scrollArea.scrollHeight
+      followLatestRef.current = true
+      previousLatestMessageIdRef.current = latestMessageId
+      didInitialScrollRef.current = true
+      return
+    }
+
+    const previousLatestMessageId = previousLatestMessageIdRef.current
+    previousLatestMessageIdRef.current = latestMessageId
+
+    const receivedNewLatestMessage =
+      latestMessageId !== null && latestMessageId !== previousLatestMessageId
+    if (!receivedNewLatestMessage || !followLatestRef.current) return
+
     scrollArea.scrollTop = scrollArea.scrollHeight
-    didInitialScrollRef.current = true
-  }, [messages.length])
+  }, [latestMessageId])
 
   if (messages.length === 0) {
     return (
