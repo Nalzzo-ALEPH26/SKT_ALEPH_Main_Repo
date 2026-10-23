@@ -25,7 +25,7 @@ import { Avatar } from '@/components/avatar'
 import { ThemeToggle } from '@/components/theme-toggle'
 
 describe('workspace shell', () => {
-  it('renders channel/direct sections, viewport-safe DM management, community controls and feedback navigation', () => {
+  it('renders channel/direct sections with viewport-safe management popovers, community controls and feedback navigation', () => {
     const html = renderToStaticMarkup(
       createElement(
         AppShell,
@@ -82,12 +82,10 @@ describe('workspace shell', () => {
     expect(html).toContain('data-channel-create-trigger="true"')
     expect(html).toContain('data-popover-side="right"')
     expect(html).toContain('채널 관리')
-    expect(html).toContain('name="channelIds"')
-    expect(html).toContain('value="leave"')
-    expect(html).toContain('value="delete"')
+    expect(html).toContain('data-sidebar-popover-trigger="channel-management"')
+    expect(html).toContain('data-popover-layout="viewport-safe"')
     expect(html).toContain('DM 관리')
     expect(html).toContain('data-sidebar-popover-trigger="dm-management"')
-    expect(html).toContain('data-popover-layout="viewport-safe"')
     expect(html).toContain('Teammate 5')
     expect(html).toContain('name="joinCode"')
     expect(html).toContain('100000 · General')
