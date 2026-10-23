@@ -41,7 +41,7 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
       .select('id,name,created_by,is_default')
       .order('is_default', { ascending: false })
       .order('name'),
-    client.from('channel_members').select('channel_id').eq('user_id', profile.user_id),
+    client.from('channel_members').select('channel_id,user_id'),
     client.from('dm_threads').select('id,user_low,user_high').order('created_at', { ascending: false }),
     client.from('dm_hidden_threads').select('dm_thread_id').eq('user_id', profile.user_id),
     client
@@ -85,8 +85,15 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
     hiddenThreadIds,
   )
   const memberChannelIds = new Set(
-    (channelMemberships ?? []).map((membership) => membership.channel_id as string),
+    (channelMemberships ?? [])
+      .filter((membership) => membership.user_id === profile.user_id)
+      .map((membership) => membership.channel_id as string),
   )
+  const channelMemberCounts = new Map<string, number>()
+  for (const membership of channelMemberships ?? []) {
+    const channelId = membership.channel_id as string
+    channelMemberCounts.set(channelId, (channelMemberCounts.get(channelId) ?? 0) + 1)
+  }
 
   return (
     <AppShell
@@ -103,11 +110,12 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
         const isDefault = Boolean(channel.is_default)
         const createdBy = channel.created_by as string
         const isMember = memberChannelIds.has(id)
+        const memberCount = channelMemberCounts.get(id) ?? 0
         return {
           id,
           name,
           unreadCount: unread.channels[id] ?? 0,
-          canLeave: isMember && (createdBy !== profile.user_id || isDefault),
+          canLeave: isMember && (createdBy !== profile.user_id || isDefault || memberCount <= 1),
           canDelete: isAdmin && !isDefault && name.trim().toLowerCase() !== 'general',
         }
       })}
