@@ -148,3 +148,42 @@ test('keeps one canonical 1:1 DM private while syncing messages in realtime', as
     await cleanupFixture(fixture)
   }
 })
+
+test('DM management safely handles empty selection, highlights checked rooms, and closes outside', async ({ browser }) => {
+  test.setTimeout(60_000)
+
+  let fixture: Fixture | null = null
+  const context = await browser.newContext()
+
+  try {
+    fixture = await createFixture()
+    const page = await startDm(context, fixture.first, fixture.second)
+
+    await clickFirstVisible(page.getByText('DM 관리', { exact: true }))
+    let panel = page.locator('[data-sidebar-popover="dm-management"]')
+    await expect(panel).toBeVisible()
+
+    const leaveButton = panel.getByRole('button', { name: '선택한 DM 나가기' })
+    await expect(leaveButton).toBeDisabled()
+
+    await panel.locator('form').evaluate((form: HTMLFormElement) => form.requestSubmit())
+    await expect(page.getByText('This page couldn’t load')).toHaveCount(0)
+    await expect(page.getByText('KEYCHATS').first()).toBeVisible()
+
+    const row = panel.locator('[data-dm-management-row]').filter({ hasText: fixture.second.displayName })
+    const checkbox = row.locator('input[type="checkbox"]')
+    await checkbox.check()
+    await expect(row).toHaveAttribute('data-selected', 'true')
+    await expect(leaveButton).toBeEnabled()
+
+    await clickFirstVisible(page.getByText('KEYCHATS', { exact: true }))
+    await expect(panel).toHaveCount(0)
+
+    await clickFirstVisible(page.getByText('DM 관리', { exact: true }))
+    panel = page.locator('[data-sidebar-popover="dm-management"]')
+    await expect(panel).toBeVisible()
+  } finally {
+    await context.close()
+    await cleanupFixture(fixture)
+  }
+})
