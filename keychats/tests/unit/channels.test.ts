@@ -42,6 +42,7 @@ function repository(): ChannelRepository {
     create: vi.fn().mockResolvedValue({ id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' }),
     addMember: vi.fn().mockResolvedValue(undefined),
     removeMember: vi.fn().mockResolvedValue(undefined),
+    memberCount: vi.fn().mockResolvedValue(2),
     delete: vi.fn().mockResolvedValue(undefined),
   }
 }
@@ -139,6 +140,17 @@ describe('channel membership management', () => {
     })
     await leaveChannel(repo, { userId: memberId, isAdmin: false }, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
     expect(repo.removeMember).toHaveBeenCalledWith('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', memberId)
+    expect(repo.delete).not.toHaveBeenCalled()
+  })
+
+  it('deletes a non-default channel when its only member leaves', async () => {
+    const repo = repository()
+    vi.mocked(repo.memberCount).mockResolvedValue(1)
+
+    await leaveChannel(repo, creator, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
+
+    expect(repo.delete).toHaveBeenCalledWith('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
+    expect(repo.removeMember).not.toHaveBeenCalled()
   })
 
   it('allows the sole admin to manage another creator channel', async () => {
