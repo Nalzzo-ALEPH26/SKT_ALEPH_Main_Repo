@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 
@@ -180,6 +180,104 @@ function ViewportPopover({
   )
 }
 
+type SelectionFormItem = {
+  id: string
+  label: string
+}
+
+type SelectionFormProps = {
+  action: (formData: FormData) => void | Promise<void>
+  items: SelectionFormItem[]
+  fieldName: string
+  title: string
+  submitLabel: string
+  dark: boolean
+  operation?: 'leave' | 'delete'
+  destructive?: boolean
+  rowKind?: 'dm' | 'channel' | 'community'
+  className?: string
+}
+
+function SelectionForm({
+  action,
+  items,
+  fieldName,
+  title,
+  submitLabel,
+  dark,
+  operation,
+  destructive = false,
+  rowKind,
+  className = '',
+}: SelectionFormProps) {
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
+
+  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+    if (selectedIds.size === 0) event.preventDefault()
+  }
+
+  const setSelected = (id: string, checked: boolean) => {
+    setSelectedIds((current) => {
+      const next = new Set(current)
+      if (checked) next.add(id)
+      else next.delete(id)
+      return next
+    })
+  }
+
+  return (
+    <form action={action} onSubmit={onSubmit} className={`space-y-2 ${className}`}>
+      {operation ? <input type="hidden" name="operation" value={operation} /> : null}
+      <p className="text-xs font-semibold tracking-normal">{title}</p>
+      <div className="max-h-64 space-y-1.5 overflow-y-auto pr-1">
+        {items.map((entry) => {
+          const selected = selectedIds.has(entry.id)
+          return (
+            <label
+              key={entry.id}
+              data-dm-management-row={rowKind === 'dm' ? 'true' : undefined}
+              data-channel-management-row={rowKind === 'channel' ? 'true' : undefined}
+              data-community-management-row={rowKind === 'community' ? 'true' : undefined}
+              data-selected={selected ? 'true' : 'false'}
+              className={`flex cursor-pointer items-center gap-2 rounded-lg border px-2 py-2 text-xs font-normal tracking-normal transition ${
+                selected
+                  ? dark
+                    ? 'border-white/25 bg-white/10 text-white'
+                    : 'border-black/15 bg-black/[0.07] text-black'
+                  : dark
+                    ? 'border-transparent text-white/75 hover:bg-white/5'
+                    : 'border-transparent text-black/70 hover:bg-black/[0.03]'
+              }`}
+            >
+              <input
+                type="checkbox"
+                name={fieldName}
+                value={entry.id}
+                checked={selected}
+                onChange={(event) => setSelected(entry.id, event.target.checked)}
+              />
+              <span className="min-w-0 truncate">{entry.label}</span>
+            </label>
+          )
+        })}
+      </div>
+      <button
+        type="submit"
+        disabled={selectedIds.size === 0}
+        className={`w-full rounded-lg border px-2 py-1.5 text-xs font-semibold tracking-normal disabled:cursor-not-allowed disabled:opacity-40 ${
+          destructive
+            ? 'border-red-500/30 text-red-600 hover:bg-red-500/5 dark:text-red-400'
+            : dark
+              ? 'border-white/15 hover:bg-white/5'
+              : 'border-black/10 hover:bg-black/5'
+        }`}
+      >
+        {submitLabel}
+      </button>
+    </form>
+  )
+}
+
 function UnreadBadge({ count }: { count: number }) {
   if (count <= 0) return null
   return (
@@ -238,37 +336,31 @@ export function Sidebar({
                   triggerClassName={smallControl}
                 >
                   {manageableLeaveChannels.length > 0 ? (
-                    <form action={manageChannelsAction} className="space-y-2">
-                      <p className="text-xs font-semibold tracking-normal">나갈 채널 선택</p>
-                      <div className="max-h-64 space-y-1.5 overflow-y-auto pr-1">
-                        {manageableLeaveChannels.map((channel) => (
-                          <label key={`leave-${channel.id}`} className="flex items-center gap-2 text-xs font-normal tracking-normal">
-                            <input type="checkbox" name="channelIds" value={channel.id} />
-                            <span className="min-w-0 truncate">#{channel.name}</span>
-                          </label>
-                        ))}
-                      </div>
-                      <button name="operation" value="leave" type="submit" className={`w-full rounded-lg border px-2 py-1.5 text-xs font-semibold tracking-normal ${dark ? 'border-white/15 hover:bg-white/5' : 'border-black/10 hover:bg-black/5'}`}>
-                        선택한 채널 나가기
-                      </button>
-                    </form>
+                    <SelectionForm
+                      action={manageChannelsAction}
+                      items={manageableLeaveChannels.map((channel) => ({ id: channel.id, label: `#${channel.name}` }))}
+                      fieldName="channelIds"
+                      title="나갈 채널 선택"
+                      submitLabel="선택한 채널 나가기"
+                      operation="leave"
+                      dark={dark}
+                      rowKind="channel"
+                    />
                   ) : null}
 
                   {manageableDeleteChannels.length > 0 ? (
-                    <form action={manageChannelsAction} className={`${manageableLeaveChannels.length > 0 ? 'mt-3 border-t pt-3' : ''} space-y-2 ${dark ? 'border-white/10' : 'border-black/10'}`}>
-                      <p className="text-xs font-semibold tracking-normal">삭제할 채널 선택</p>
-                      <div className="max-h-64 space-y-1.5 overflow-y-auto pr-1">
-                        {manageableDeleteChannels.map((channel) => (
-                          <label key={`delete-${channel.id}`} className="flex items-center gap-2 text-xs font-normal tracking-normal">
-                            <input type="checkbox" name="channelIds" value={channel.id} />
-                            <span className="min-w-0 truncate">#{channel.name}</span>
-                          </label>
-                        ))}
-                      </div>
-                      <button name="operation" value="delete" type="submit" className="w-full rounded-lg border border-red-500/30 px-2 py-1.5 text-xs font-semibold tracking-normal text-red-600 hover:bg-red-500/5 dark:text-red-400">
-                        선택한 채널 삭제
-                      </button>
-                    </form>
+                    <SelectionForm
+                      action={manageChannelsAction}
+                      items={manageableDeleteChannels.map((channel) => ({ id: channel.id, label: `#${channel.name}` }))}
+                      fieldName="channelIds"
+                      title="삭제할 채널 선택"
+                      submitLabel="선택한 채널 삭제"
+                      operation="delete"
+                      dark={dark}
+                      destructive
+                      rowKind="channel"
+                      className={`${manageableLeaveChannels.length > 0 ? 'mt-3 border-t pt-3' : ''} ${dark ? 'border-white/10' : 'border-black/10'}`}
+                    />
                   ) : null}
                 </ViewportPopover>
               ) : null}
@@ -325,20 +417,15 @@ export function Sidebar({
                   width={256}
                   triggerClassName={smallControl}
                 >
-                  <form action={manageDirectMessagesAction}>
-                    <p className="mb-2 text-xs font-semibold tracking-normal">나갈 DM 선택</p>
-                    <div className="max-h-64 space-y-1.5 overflow-y-auto pr-1">
-                      {directMessages.map((direct) => (
-                        <label key={`manage-${direct.id}`} className="flex items-center gap-2 text-xs font-normal tracking-normal">
-                          <input type="checkbox" name="dmThreadIds" value={direct.id} />
-                          <span className="min-w-0 truncate">{direct.displayName}</span>
-                        </label>
-                      ))}
-                    </div>
-                    <button type="submit" className={`mt-3 w-full rounded-lg border px-2 py-1.5 text-xs font-semibold tracking-normal ${dark ? 'border-white/15 hover:bg-white/5' : 'border-black/10 hover:bg-black/5'}`}>
-                      선택한 DM 나가기
-                    </button>
-                  </form>
+                  <SelectionForm
+                    action={manageDirectMessagesAction}
+                    items={directMessages.map((direct) => ({ id: direct.id, label: direct.displayName }))}
+                    fieldName="dmThreadIds"
+                    title="나갈 DM 선택"
+                    submitLabel="선택한 DM 나가기"
+                    dark={dark}
+                    rowKind="dm"
+                  />
                 </ViewportPopover>
               ) : null}
               {directCandidates.length > 0 ? (
@@ -385,20 +472,16 @@ export function Sidebar({
                   width={256}
                   triggerClassName={smallControl}
                 >
-                  <form action={deleteCommunitiesAction}>
-                    <p className="mb-2 text-xs font-semibold tracking-normal">삭제할 커뮤니티 선택</p>
-                    <div className="max-h-64 space-y-1.5 overflow-y-auto pr-1">
-                      {communities.map((community) => (
-                        <label key={`community-delete-${community.id}`} className="flex items-center gap-2 text-xs font-normal tracking-normal">
-                          <input type="checkbox" name="communityIds" value={community.id} />
-                          <span className="min-w-0 truncate">{community.name}</span>
-                        </label>
-                      ))}
-                    </div>
-                    <button type="submit" className="mt-3 w-full rounded-lg border border-red-500/30 px-2 py-1.5 text-xs font-semibold tracking-normal text-red-600 hover:bg-red-500/5 dark:text-red-400">
-                      선택한 커뮤니티 삭제
-                    </button>
-                  </form>
+                  <SelectionForm
+                    action={deleteCommunitiesAction}
+                    items={communities.map((community) => ({ id: community.id, label: community.name }))}
+                    fieldName="communityIds"
+                    title="삭제할 커뮤니티 선택"
+                    submitLabel="선택한 커뮤니티 삭제"
+                    dark={dark}
+                    destructive
+                    rowKind="community"
+                  />
                 </ViewportPopover>
               ) : null}
               <ViewportPopover
