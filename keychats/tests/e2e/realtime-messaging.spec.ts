@@ -180,3 +180,72 @@ test('opens a freshly loaded channel at the latest message', async ({ browser })
     await cleanupFixture(fixture)
   }
 })
+
+test('follows new messages only while the reader is at the latest message', async ({ browser }) => {
+  let fixture: Fixture | null = null
+  const firstContext = await browser.newContext({ viewport: { width: 1280, height: 720 } })
+  const secondContext = await browser.newContext({ viewport: { width: 1280, height: 720 } })
+
+  try {
+    fixture = await createFixture()
+    const { error: seedError } = await fixture.admin.from('messages').insert(
+      Array.from({ length: 50 }, (_, index) => ({
+        channel_id: fixture!.channelId,
+        sender_id: fixture!.first.userId,
+        body: `scroll-history-${String(index + 1).padStart(2, '0')} ${'message '.repeat(30)}`,
+      })),
+    )
+    if (seedError) throw seedError
+
+    const firstPage = await openChannel(firstContext, fixture.channelId, fixture.first.loginId)
+    const secondPage = await openChannel(secondContext, fixture.channelId, fixture.second.loginId)
+    const firstScrollArea = firstPage.locator('[data-conversation-message-pane] .overflow-y-auto').first()
+
+    const ownMessage = `own-follow-${Date.now()}`
+    await firstPage.getByLabel('메시지 입력').fill(ownMessage)
+    await firstPage.locator('[data-send-message]').click()
+    await expect(firstPage.getByText(ownMessage, { exact: true })).toHaveCount(1, { timeout: 10_000 })
+    await expect.poll(
+      () => firstScrollArea.evaluate((element) =>
+        Math.abs(element.scrollHeight - element.clientHeight - element.scrollTop) <= 2,
+      ),
+      { timeout: 5_000 },
+    ).toBe(true)
+
+    const remoteMessage = `remote-follow-${Date.now()}`
+    await secondPage.getByLabel('메시지 입력').fill(remoteMessage)
+    await secondPage.locator('[data-send-message]').click()
+    await expect(firstPage.getByText(remoteMessage, { exact: true })).toHaveCount(1, { timeout: 10_000 })
+    await expect.poll(
+      () => firstScrollArea.evaluate((element) =>
+        Math.abs(element.scrollHeight - element.clientHeight - element.scrollTop) <= 2,
+      ),
+      { timeout: 5_000 },
+    ).toBe(true)
+
+    await firstScrollArea.evaluate((element) => {
+      element.scrollTop = 0
+    })
+    await expect.poll(() => firstScrollArea.evaluate((element) => element.scrollTop)).toBeLessThanOrEqual(2)
+
+    const remoteWhileReadingHistory = `remote-stay-${Date.now()}`
+    await secondPage.getByLabel('메시지 입력').fill(remoteWhileReadingHistory)
+    await secondPage.locator('[data-send-message]').click()
+    await expect(firstPage.getByText(remoteWhileReadingHistory, { exact: true })).toHaveCount(1, { timeout: 10_000 })
+
+    await expect.poll(
+      () => firstScrollArea.evaluate((element) => element.scrollTop),
+      { timeout: 5_000 },
+    ).toBeLessThanOrEqual(2)
+    await expect.poll(
+      () => firstScrollArea.evaluate((element) =>
+        element.scrollHeight - element.clientHeight - element.scrollTop,
+      ),
+      { timeout: 5_000 },
+    ).toBeGreaterThan(20)
+  } finally {
+    await firstContext.close()
+    await secondContext.close()
+    await cleanupFixture(fixture)
+  }
+})
