@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 
 import { Sidebar } from '@/components/sidebar'
+import { shouldRefreshForUnknownDmThread } from '@/lib/dms/sidebar-refresh'
 import type { RealtimeMessageRow } from '@/lib/messages/realtime'
 import type { KeychatsTheme } from '@/lib/settings/theme'
 import { createClient } from '@/lib/supabase/client'
@@ -20,6 +21,11 @@ type DirectItem = {
   id: string
   displayName: string
   unreadCount: number
+}
+
+type CommunityItem = {
+  id: string
+  name: string
 }
 
 type AppShellProps = {
@@ -39,6 +45,7 @@ type AppShellProps = {
     userId: string
     displayName: string
   }>
+  communities?: CommunityItem[]
   theme?: KeychatsTheme
   isAdmin?: boolean
   children?: ReactNode
@@ -127,11 +134,13 @@ export function AppShell({
   channels,
   directMessages,
   directCandidates = [],
+  communities = [],
   theme = 'light',
   isAdmin = false,
   children,
 }: AppShellProps) {
   const pathname = usePathname()
+  const router = useRouter()
   const dark = theme === 'dark'
   const initialActiveRoom = activeRoomFromPathname(pathname)
   const [unread, setUnread] = useState<UnreadCounts>(() =>
@@ -147,6 +156,15 @@ export function AppShell({
     activeRoomRef.current = activeRoom
     setUnread((current) => clearActiveRoom(current, activeRoom))
   }, [pathname])
+
+  useEffect(() => {
+    setUnread(
+      clearActiveRoom(
+        initialUnreadCounts(channels, directMessages),
+        activeRoomRef.current,
+      ),
+    )
+  }, [channels, directMessages])
 
   useEffect(() => {
     if (!currentUserId) {
@@ -172,7 +190,14 @@ export function AppShell({
     }
 
     const handleInsert = (message: RealtimeMessageRow) => {
-      if (!active || message.sender_id === currentUserId || message.deleted_at) return
+      if (!active || message.deleted_at) return
+
+      if (shouldRefreshForUnknownDmThread(message.dm_thread_id, knownDmIds)) {
+        router.refresh()
+        return
+      }
+
+      if (message.sender_id === currentUserId) return
 
       const activeRoom = activeRoomRef.current
       if (
@@ -255,7 +280,7 @@ export function AppShell({
       document.removeEventListener('visibilitychange', syncOnVisibility)
       if (realtimeChannel) void client.removeChannel(realtimeChannel)
     }
-  }, [currentUserId, knownChannelIds, knownDmIds])
+  }, [currentUserId, knownChannelIds, knownDmIds, router])
 
   const liveChannels = channels.map((channel) => ({
     ...channel,
@@ -274,6 +299,7 @@ export function AppShell({
       channels={liveChannels}
       directMessages={liveDirectMessages}
       directCandidates={directCandidates}
+      communities={communities}
       theme={theme}
       isAdmin={isAdmin}
       unreadRealtimeStatus={unreadRealtimeStatus}
