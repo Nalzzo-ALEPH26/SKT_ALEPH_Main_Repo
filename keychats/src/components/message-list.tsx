@@ -1,3 +1,7 @@
+'use client'
+
+import { useLayoutEffect, useRef } from 'react'
+
 import { MessageItem, type MessageListItem } from '@/components/message-item'
 
 type MessageListProps = {
@@ -21,16 +25,37 @@ export function MessageList({
   onToggleReaction,
   onTogglePin,
 }: MessageListProps) {
+  const contentRef = useRef<HTMLDivElement>(null)
+  const didInitialScrollRef = useRef(false)
+
+  useLayoutEffect(() => {
+    if (didInitialScrollRef.current) return
+    const scrollArea = contentRef.current?.parentElement
+    if (!scrollArea) return
+
+    scrollArea.scrollTop = scrollArea.scrollHeight
+    didInitialScrollRef.current = true
+  }, [messages.length])
+
   if (messages.length === 0) {
     return (
-      <div className="flex flex-1 items-center justify-center py-16 text-sm text-zinc-500">
+      <div
+        ref={contentRef}
+        data-message-scroll-area
+        className="flex flex-1 items-center justify-center py-16 text-sm text-zinc-500"
+      >
         아직 메시지가 없습니다.
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col divide-y divide-zinc-100 dark:divide-zinc-900" data-message-list>
+    <div
+      ref={contentRef}
+      className="flex flex-col divide-y divide-zinc-100 dark:divide-zinc-900"
+      data-message-list
+      data-message-scroll-area
+    >
       {messages.map((message) => (
         <MessageItem
           key={message.id}

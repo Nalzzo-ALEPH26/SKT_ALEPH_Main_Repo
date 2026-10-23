@@ -145,3 +145,38 @@ test('syncs channel send, reply, edit and soft-delete across two signed-in brows
     await cleanupFixture(fixture)
   }
 })
+
+test('opens a freshly loaded channel at the latest message', async ({ browser }) => {
+  let fixture: Fixture | null = null
+  const context = await browser.newContext({ viewport: { width: 1280, height: 720 } })
+
+  try {
+    fixture = await createFixture()
+    const { error: seedError } = await fixture.admin.from('messages').insert(
+      Array.from({ length: 50 }, (_, index) => ({
+        channel_id: fixture!.channelId,
+        sender_id: fixture!.first.userId,
+        body: `history-${String(index + 1).padStart(2, '0')} ${'message '.repeat(30)}`,
+      })),
+    )
+    if (seedError) throw seedError
+
+    const page = await openChannel(context, fixture.channelId, fixture.first.loginId)
+    const scrollArea = page.locator('[data-conversation-message-pane] .overflow-y-auto').first()
+
+    await expect.poll(
+      () => scrollArea.evaluate((element) => element.scrollHeight > element.clientHeight),
+      { timeout: 5_000 },
+    ).toBe(true)
+
+    await expect.poll(
+      () => scrollArea.evaluate((element) =>
+        Math.abs(element.scrollHeight - element.clientHeight - element.scrollTop) <= 2,
+      ),
+      { timeout: 5_000 },
+    ).toBe(true)
+  } finally {
+    await context.close()
+    await cleanupFixture(fixture)
+  }
+})
