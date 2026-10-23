@@ -2,6 +2,7 @@ import { FeedbackComposer } from '@/components/feedback-composer'
 import { requireActiveUser } from '@/lib/auth/guards'
 import { createAuthGuardAccess } from '@/lib/auth/server-access'
 import { createClient } from '@/lib/supabase/server'
+import { formatSeoulDateTime } from '@/lib/time/format'
 
 import { createFeedbackAction, deleteFeedbackAction } from './actions'
 
@@ -55,7 +56,7 @@ export default async function FeedbackPage() {
                     <span className="font-normal text-zinc-500">@{author?.username ?? 'unknown'}</span>
                   </div>
                   <time className="mt-1 block text-xs text-zinc-400" dateTime={post.created_at as string}>
-                    {new Date(post.created_at as string).toLocaleString('ko-KR')}
+                    {formatSeoulDateTime(post.created_at as string)}
                   </time>
                 </div>
                 {canDelete ? (
