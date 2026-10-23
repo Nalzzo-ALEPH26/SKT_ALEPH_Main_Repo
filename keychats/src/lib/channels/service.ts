@@ -19,6 +19,7 @@ export type ChannelRepository = {
   create: (input: { name: string; createdBy: string }) => Promise<{ id: string }>
   addMember: (channelId: string, userId: string, role: 'owner' | 'member') => Promise<void>
   removeMember: (channelId: string, userId: string) => Promise<void>
+  memberCount: (channelId: string) => Promise<number>
   delete: (channelId: string) => Promise<void>
 }
 
@@ -104,6 +105,18 @@ export async function leaveChannel(
   channelId: string,
 ) {
   const channel = await requireChannel(repository, channelId)
+
+  if (!channel.isDefault) {
+    const memberCount = await repository.memberCount(channelId)
+    if (memberCount <= 1) {
+      if (!actor.isAdmin && channel.createdBy !== actor.userId) {
+        throw new Error('CHANNEL_MANAGE_FORBIDDEN')
+      }
+      await repository.delete(channelId)
+      return
+    }
+  }
+
   if (channel.createdBy === actor.userId && !channel.isDefault) {
     throw new Error('CHANNEL_OWNER_REQUIRED')
   }
