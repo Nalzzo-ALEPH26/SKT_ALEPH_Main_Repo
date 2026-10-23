@@ -32,6 +32,7 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
     { data: dmThreads, error: dmThreadsError },
     { data: hiddenDmThreads, error: hiddenDmThreadsError },
     { data: activeProfiles, error: profilesError },
+    { data: communities, error: communitiesError },
     unread,
   ] = await Promise.all([
     client.from('user_settings').select('theme').eq('user_id', profile.user_id).maybeSingle(),
@@ -48,6 +49,10 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
       .select('user_id,display_name,username')
       .eq('status', 'active')
       .order('display_name'),
+    client
+      .from('communities')
+      .select('id,name')
+      .order('created_at', { ascending: true }),
     loadUnreadCounts(client),
   ])
 
@@ -57,6 +62,7 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
   if (dmThreadsError) throw dmThreadsError
   if (hiddenDmThreadsError) throw hiddenDmThreadsError
   if (profilesError) throw profilesError
+  if (communitiesError) throw communitiesError
 
   let theme: KeychatsTheme = 'light'
   if (settings?.theme) theme = normalizeTheme(settings.theme)
@@ -110,6 +116,10 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
         unreadCount: unread.directMessages[directMessage.id] ?? 0,
       }))}
       directCandidates={direct.directCandidates}
+      communities={(communities ?? []).map((community) => ({
+        id: community.id as string,
+        name: community.name as string,
+      }))}
       theme={theme}
       isAdmin={isAdmin}
     >
