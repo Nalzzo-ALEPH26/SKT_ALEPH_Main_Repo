@@ -120,7 +120,7 @@ export function MessageItem({
         {showSenderInfo ? (
           <div data-message-sender-meta className={`flex flex-wrap items-baseline gap-x-2 gap-y-1 ${isOwn ? 'justify-end' : ''}`}>
             <span className="text-sm font-semibold">{message.sender.displayName}</span>
-            <span className="text-xs text-zinc-500">@{message.sender.username}</span>
+            <span data-identity-font="true" className="text-xs text-zinc-500">@{message.sender.username}</span>
             <time className="text-xs text-zinc-400" dateTime={message.createdAt}>
               {new Date(message.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
             </time>

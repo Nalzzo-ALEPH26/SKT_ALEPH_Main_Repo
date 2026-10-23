@@ -183,7 +183,7 @@ type SelectionFormProps = {
   fieldName: string
   title: string
   submitLabel: string
-  operation?: 'leave' | 'delete'
+  operation?: 'leave' | 'delete' | 'pin' | 'unpin'
   destructive?: boolean
   rowKind?: 'dm' | 'channel' | 'community'
   className?: string
@@ -262,14 +262,12 @@ function SelectionForm({
   )
 }
 
-function UnreadBadge({ count, active = false }: { count: number; active?: boolean }) {
+function UnreadBadge({ count }: { count: number }) {
   if (count <= 0) return null
   return (
     <span
       data-unread-badge
-      className={`min-w-5 rounded-full px-1.5 py-0.5 text-center text-xs font-semibold ${
-        active ? 'bg-[#243b8f] text-[#fff0c9]' : 'bg-[#fff0c9] text-[#243b8f]'
-      }`}
+      className="min-w-5 rounded-full bg-[#fff0c9] px-1.5 py-0.5 text-center text-xs font-semibold text-[#243b8f]"
     >
       {count}
     </span>
@@ -290,12 +288,13 @@ export function Sidebar({
 }: SidebarProps) {
   const pathname = usePathname()
   const muted = 'text-[#fff0c9]/50'
-  const item = 'text-[#fff0c9]/80 hover:bg-[#fff0c9]/10'
-  const activeItem = 'bg-[#fff0c9] text-[#243b8f] font-semibold shadow-sm'
+  const item = 'text-[#fff0c9]/80 hover:bg-[#fff0c9]/10 hover:text-[#fff0c9]'
+  const activeItem = 'bg-[#1d327a] text-[#fff0c9] font-semibold shadow-sm'
   const smallControl = 'rounded-md px-1.5 py-1 text-[11px] tracking-normal text-[#fff0c9]/65 hover:bg-[#fff0c9]/10 hover:text-[#fff0c9]'
   const manageableLeaveChannels = channels.filter((channel) => channel.canLeave)
   const manageableDeleteChannels = channels.filter((channel) => channel.canDelete)
   const orderedCommunities = sortSidebarCommunities(communities)
+  const pinnedCommunities = orderedCommunities.filter((community) => Boolean(community.pinnedAt))
   const linkClass = (href: string) =>
     `block rounded-lg px-2.5 py-2 text-sm transition ${isSidebarHrefActive(pathname, href) ? activeItem : item}`
   const rowLinkClass = (href: string) =>
@@ -350,11 +349,10 @@ export function Sidebar({
           <div className="space-y-1">
             {channels.map((channel) => {
               const href = `/channel/${channel.id}`
-              const active = isSidebarHrefActive(pathname, href)
               return (
-                <Link key={channel.id} href={href} data-sidebar-active={active ? 'true' : 'false'} className={rowLinkClass(href)}>
+                <Link key={channel.id} href={href} data-sidebar-active={isSidebarHrefActive(pathname, href) ? 'true' : 'false'} className={rowLinkClass(href)}>
                   <span>#{channel.name}</span>
-                  <UnreadBadge count={channel.unreadCount} active={active} />
+                  <UnreadBadge count={channel.unreadCount} />
                 </Link>
               )
             })}
@@ -368,7 +366,7 @@ export function Sidebar({
               maxLength={6}
               placeholder="100000 · General"
               aria-label="채널 입장 코드"
-              className="min-w-0 flex-1 rounded-lg border border-[#fff0c9]/25 bg-[#fff0c9]/10 px-2 py-1.5 text-xs text-[#fff0c9] outline-none placeholder:text-[#fff0c9]/35"
+              className="min-w-0 flex-1 rounded-lg border border-[#fff0c9]/25 bg-[#1d327a] px-2 py-1.5 text-xs text-[#fff0c9] outline-none placeholder:text-[#fff0c9]/35"
             />
             <button type="submit" className="rounded-lg border border-[#fff0c9]/25 px-2 py-1.5 text-xs font-semibold hover:bg-[#fff0c9]/10">
               입장
@@ -411,11 +409,10 @@ export function Sidebar({
           <div className="space-y-1">
             {directMessages.map((direct) => {
               const href = `/dm/${direct.id}`
-              const active = isSidebarHrefActive(pathname, href)
               return (
-                <Link key={direct.id} href={href} data-sidebar-active={active ? 'true' : 'false'} className={rowLinkClass(href)}>
+                <Link key={direct.id} href={href} data-sidebar-active={isSidebarHrefActive(pathname, href) ? 'true' : 'false'} className={rowLinkClass(href)}>
                   <span className="min-w-0 truncate">{direct.displayName}</span>
-                  <UnreadBadge count={direct.unreadCount} active={active} />
+                  <UnreadBadge count={direct.unreadCount} />
                 </Link>
               )
             })}
@@ -427,15 +424,38 @@ export function Sidebar({
             <span>COMMUNITY</span>
             <div className="flex items-center gap-1.5">
               {isAdmin && orderedCommunities.length > 0 ? (
-                <ViewportPopover label="커뮤니티 관리" marker="community-management" width={256} triggerClassName={smallControl}>
+                <ViewportPopover label="커뮤니티 관리" marker="community-management" width={280} triggerClassName={smallControl}>
+                  <SelectionForm
+                    action={deleteCommunitiesAction}
+                    items={orderedCommunities.map((community) => ({ id: community.id, label: community.name }))}
+                    fieldName="communityIds"
+                    title="상단 고정할 커뮤니티 선택"
+                    submitLabel="선택한 커뮤니티 상단 고정"
+                    operation="pin"
+                    rowKind="community"
+                  />
+                  {pinnedCommunities.length > 0 ? (
+                    <SelectionForm
+                      action={deleteCommunitiesAction}
+                      items={pinnedCommunities.map((community) => ({ id: community.id, label: community.name }))}
+                      fieldName="communityIds"
+                      title="고정 해제할 커뮤니티 선택"
+                      submitLabel="선택한 커뮤니티 고정 해제"
+                      operation="unpin"
+                      rowKind="community"
+                      className="mt-3 border-t border-[#fff0c9]/20 pt-3"
+                    />
+                  ) : null}
                   <SelectionForm
                     action={deleteCommunitiesAction}
                     items={orderedCommunities.map((community) => ({ id: community.id, label: community.name }))}
                     fieldName="communityIds"
                     title="삭제할 커뮤니티 선택"
                     submitLabel="선택한 커뮤니티 삭제"
+                    operation="delete"
                     destructive
                     rowKind="community"
+                    className="mt-3 border-t border-[#fff0c9]/20 pt-3"
                   />
                 </ViewportPopover>
               ) : null}
@@ -454,7 +474,7 @@ export function Sidebar({
                       required
                       maxLength={40}
                       placeholder="예: 자유게시판"
-                      className="w-full rounded-lg border border-[#fff0c9]/25 bg-[#fff0c9]/10 px-2.5 py-2 text-sm font-normal text-[#fff0c9] outline-none placeholder:text-[#fff0c9]/35"
+                      className="w-full rounded-lg border border-[#fff0c9]/25 bg-[#1d327a] px-2.5 py-2 text-sm font-normal text-[#fff0c9] outline-none placeholder:text-[#fff0c9]/35"
                     />
                   </label>
                   <button type="submit" className="w-full rounded-lg border border-[#fff0c9]/25 px-2 py-1.5 text-xs font-semibold tracking-normal hover:bg-[#fff0c9]/10">
@@ -476,7 +496,7 @@ export function Sidebar({
                   <span className="flex items-center gap-2">
                     <span className="min-w-0 truncate">{community.name}</span>
                     {community.pinnedAt ? (
-                      <span data-community-pinned className={`shrink-0 text-[10px] ${active ? 'text-[#243b8f]/65' : 'text-[#fff0c9]/55'}`}>
+                      <span data-community-pinned className={`shrink-0 text-[10px] ${active ? 'text-[#fff0c9]/80' : 'text-[#fff0c9]/55'}`}>
                         고정
                       </span>
                     ) : null}
@@ -502,7 +522,7 @@ export function Sidebar({
         data-sidebar-active={isSidebarHrefActive(pathname, '/settings') ? 'true' : 'false'}
         className={`mt-4 flex items-center gap-3 rounded-xl border p-3 transition ${
           isSidebarHrefActive(pathname, '/settings')
-            ? 'border-[#fff0c9] bg-[#fff0c9] text-[#243b8f]'
+            ? 'border-[#fff0c9]/30 bg-[#1d327a] text-[#fff0c9]'
             : 'border-[#fff0c9]/20 bg-[#fff0c9]/10 text-[#fff0c9] hover:bg-[#fff0c9]/15'
         }`}
       >

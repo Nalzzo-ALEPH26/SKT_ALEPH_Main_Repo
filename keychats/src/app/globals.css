@@ -7,6 +7,7 @@
   --foreground: #17191d;
   --surface: #ffffff;
   --border: #e4e7ec;
+  --font-identity: Arial, Helvetica, sans-serif;
 }
 
 * {
@@ -19,39 +20,61 @@ body {
   min-height: 100%;
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-squeeze), "Arial Narrow", Arial, Helvetica, sans-serif;
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
 }
 
 a {
   color: inherit;
 }
 
-[data-keychats-workspace][data-theme="light"] aside {
-  background: #fff0c9 !important;
-  color: #243b8f !important;
-  border-color: rgb(36 59 143 / 18%) !important;
+:where(
+  input[name="loginId"],
+  input[name="username"],
+  input[autocomplete="username"],
+  [data-identity-font="true"]
+) {
+  font-family: var(--font-identity) !important;
 }
 
-[data-keychats-workspace][data-theme="light"] aside :is(a, button, summary, label, p, span, div) {
-  color: #243b8f;
-}
-
-[data-keychats-workspace][data-theme="light"] aside [data-unread-badge] {
-  background: #243b8f !important;
-  color: #fff0c9 !important;
-}
-
-[data-keychats-workspace][data-theme="dark"] aside {
+[data-sidebar-root] {
   background: #243b8f !important;
   color: #fff0c9 !important;
   border-color: rgb(255 240 201 / 22%) !important;
 }
 
-[data-keychats-workspace][data-theme="dark"] aside :is(a, button, summary, label, p, span, div) {
-  color: #fff0c9;
+[data-sidebar-root] [data-sidebar-active="true"] {
+  background: #1d327a !important;
+  color: #fff0c9 !important;
 }
 
-[data-keychats-workspace][data-theme="dark"] aside [data-unread-badge] {
+[data-sidebar-root] [data-unread-badge] {
   background: #fff0c9 !important;
   color: #243b8f !important;
+}
+
+[data-sidebar-popover],
+[data-channel-create-popover] {
+  background: #243b8f !important;
+  color: #fff0c9 !important;
+  border-color: rgb(255 240 201 / 22%) !important;
+}
+
+[data-sidebar-popover] input:not([type="checkbox"]),
+[data-channel-create-popover] input:not([type="checkbox"]) {
+  background: #1d327a !important;
+  color: #fff0c9 !important;
+  border-color: rgb(255 240 201 / 25%) !important;
+}
+
+[data-sidebar-popover] [data-selected="true"] {
+  background: #fff0c9 !important;
+  color: #243b8f !important;
+  border-color: #fff0c9 !important;
 }

@@ -12,6 +12,13 @@ function requiredText(formData: FormData, key: string) {
   return value
 }
 
+function selectedCommunityIds(formData: FormData) {
+  return formData
+    .getAll('communityIds')
+    .map((value) => String(value).trim())
+    .filter(Boolean)
+}
+
 export async function createCommunityAction(formData: FormData) {
   const name = requiredText(formData, 'communityName')
   if (name.length > 40) throw new Error('COMMUNITY_NAME_INVALID')
@@ -27,12 +34,13 @@ export async function createCommunityAction(formData: FormData) {
 }
 
 export async function deleteCommunitiesAction(formData: FormData) {
-  const communityIds = formData
-    .getAll('communityIds')
-    .map((value) => String(value).trim())
-    .filter(Boolean)
-
+  const communityIds = selectedCommunityIds(formData)
   if (communityIds.length === 0) throw new Error('COMMUNITY_IDS_REQUIRED')
+
+  const operation = String(formData.get('operation') ?? 'delete').trim()
+  if (operation !== 'delete' && operation !== 'pin' && operation !== 'unpin') {
+    throw new Error('COMMUNITY_MANAGEMENT_OPERATION_INVALID')
+  }
 
   const client = await createClient()
   const { claims } = await requireActiveUser(createAuthGuardAccess(client))
@@ -40,7 +48,27 @@ export async function deleteCommunitiesAction(formData: FormData) {
     throw new AuthGuardError('ADMIN_REQUIRED')
   }
 
-  const { error } = await client.from('communities').delete().in('id', communityIds)
-  if (error) throw error
+  if (operation === 'delete') {
+    const { error } = await client.from('communities').delete().in('id', communityIds)
+    if (error) throw error
+  } else {
+    const { error: deleteError } = await client
+      .from('community_pins')
+      .delete()
+      .in('community_id', communityIds)
+    if (deleteError) throw deleteError
+
+    if (operation === 'pin') {
+      const { error: insertError } = await client.from('community_pins').insert(
+        communityIds.map((communityId) => ({
+          community_id: communityId,
+          pinned_by: claims.sub,
+        })),
+      )
+      if (insertError) throw insertError
+    }
+  }
+
   revalidatePath('/')
+  revalidatePath('/', 'layout')
 }

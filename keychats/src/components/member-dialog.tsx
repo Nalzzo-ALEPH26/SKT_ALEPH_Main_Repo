@@ -42,7 +42,7 @@ export function MemberDialog({
             {candidates.length > 0 ? (
               <form action={addAction} className="flex gap-2">
                 <input type="hidden" name="channelId" value={channelId} />
-                <select name="addUserId" className="min-w-0 flex-1 rounded-lg border border-zinc-300 bg-transparent px-3 py-2 text-sm dark:border-zinc-700">
+                <select name="addUserId" data-identity-font="true" className="min-w-0 flex-1 rounded-lg border border-zinc-300 bg-transparent px-3 py-2 text-sm dark:border-zinc-700">
                   {candidates.map((profile) => (
                     <option key={profile.userId} value={profile.userId}>
                       {profile.displayName} (@{profile.username})
@@ -56,7 +56,7 @@ export function MemberDialog({
             <div className="space-y-2">
               {members.map((profile) => (
                 <div key={profile.userId} className="flex items-center justify-between gap-3 text-sm">
-                  <span>{profile.displayName} <span className="text-zinc-500">@{profile.username}</span></span>
+                  <span>{profile.displayName} <span data-identity-font="true" className="text-zinc-500">@{profile.username}</span></span>
                   <form action={removeAction}>
                     <input type="hidden" name="channelId" value={channelId} />
                     <input type="hidden" name="removeUserId" value={profile.userId} />

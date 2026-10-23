@@ -97,6 +97,7 @@ export function ChannelDialog({
     }
   }
 
+  const sidebar = variant === 'sidebar'
   const form = (
     <form onSubmit={handleSubmit} className="space-y-4">
       <label className="block space-y-1 text-sm">
@@ -107,7 +108,9 @@ export function ChannelDialog({
           maxLength={80}
           placeholder="예: 개발"
           disabled={busy}
-          className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-black outline-none focus:border-zinc-500 disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+          className={sidebar
+            ? 'w-full rounded-lg border border-[#fff0c9]/25 bg-[#1d327a] px-3 py-2 text-[#fff0c9] outline-none placeholder:text-[#fff0c9]/35 disabled:opacity-60'
+            : 'w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-black outline-none focus:border-zinc-500 disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white'}
         />
       </label>
       {candidates.length > 0 ? (
@@ -117,23 +120,25 @@ export function ChannelDialog({
             <label key={profile.userId} className="flex items-center gap-2 text-sm">
               <input type="checkbox" name="memberIds" value={profile.userId} />
               <span>{profile.displayName}</span>
-              <span className="text-zinc-500">@{profile.username}</span>
+              <span data-identity-font="true" className={sidebar ? 'text-[#fff0c9]/60' : 'text-zinc-500'}>@{profile.username}</span>
             </label>
           ))}
         </fieldset>
       ) : null}
-      {error ? <p role="alert" className="text-sm text-red-600 dark:text-red-400">{error}</p> : null}
+      {error ? <p role="alert" className={sidebar ? 'text-sm text-red-200' : 'text-sm text-red-600 dark:text-red-400'}>{error}</p> : null}
       <button
         type="submit"
         disabled={busy || !action}
-        className="rounded-lg bg-zinc-950 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50 dark:bg-white dark:text-zinc-950"
+        className={sidebar
+          ? 'rounded-lg bg-[#fff0c9] px-3 py-2 text-sm font-semibold text-[#243b8f] disabled:opacity-50'
+          : 'rounded-lg bg-zinc-950 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50 dark:bg-white dark:text-zinc-950'}
       >
         {busy ? '만드는 중…' : '만들기'}
       </button>
     </form>
   )
 
-  if (variant === 'sidebar') {
+  if (sidebar) {
     return (
       <>
         <button
@@ -153,7 +158,7 @@ export function ChannelDialog({
               <div
                 ref={popoverRef}
                 data-channel-create-popover={true}
-                className="fixed z-[80] w-72 max-w-[calc(100vw-16px)] rounded-xl border border-black/10 bg-white p-4 text-black shadow-xl dark:border-white/10 dark:bg-[#202020] dark:text-white"
+                className="fixed z-[80] w-72 max-w-[calc(100vw-16px)] rounded-xl border border-[#fff0c9]/20 bg-[#243b8f] p-4 text-[#fff0c9] shadow-xl"
                 style={{ left: position.left, top: position.top }}
               >
                 <div className="mb-3 flex items-center justify-between gap-3 text-sm font-semibold">
