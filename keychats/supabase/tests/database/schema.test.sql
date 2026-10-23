@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(23);
+select plan(25);
 
 select has_table('public', 'profiles', 'profiles table exists');
 select has_table('public', 'invites', 'invites table exists');
@@ -16,10 +16,12 @@ select has_table('public', 'message_pins', 'message_pins table exists');
 select has_table('public', 'read_states', 'read_states table exists');
 select has_table('public', 'user_settings', 'user_settings table exists');
 select has_table('public', 'url_previews', 'url_previews table exists');
+select has_table('public', 'communities', 'communities table exists');
+select has_table('public', 'community_posts', 'community posts table exists');
 
 select ok(
   (
-    select count(*) = 13 and bool_and(c.relrowsecurity)
+    select count(*) = 15 and bool_and(c.relrowsecurity)
     from pg_class c
     join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'public'
@@ -27,7 +29,7 @@ select ok(
       and c.relname = any(array[
         'profiles', 'invites', 'channels', 'channel_members', 'dm_threads',
         'dm_hidden_threads', 'messages', 'attachments', 'message_reactions', 'message_pins',
-        'read_states', 'user_settings', 'url_previews'
+        'read_states', 'user_settings', 'url_previews', 'communities', 'community_posts'
       ])
   ),
   'RLS is enabled on every exposed Keychats table'
