@@ -96,6 +96,15 @@ export function createSupabaseChannelRepository(admin: SupabaseClient): ChannelR
       assertNoError(error, 'CHANNEL_MEMBER_REMOVE_FAILED')
     },
 
+    async memberCount(channelId) {
+      const { count, error } = await admin
+        .from('channel_members')
+        .select('user_id', { count: 'exact', head: true })
+        .eq('channel_id', channelId)
+      assertNoError(error, 'CHANNEL_MEMBER_LOOKUP_FAILED')
+      return count ?? 0
+    },
+
     async delete(channelId) {
       const { error } = await admin.from('channels').delete().eq('id', channelId)
       assertNoError(error, 'CHANNEL_DELETE_FAILED')
