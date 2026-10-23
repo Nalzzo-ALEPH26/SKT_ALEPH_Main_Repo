@@ -50,12 +50,16 @@ type SidebarProps = {
   directCandidates?: DirectCandidate[]
   theme?: KeychatsTheme
   isAdmin?: boolean
+  unreadRealtimeStatus?: string
 }
 
 function UnreadBadge({ count }: { count: number }) {
   if (count <= 0) return null
   return (
-    <span className="min-w-5 rounded-full bg-black px-1.5 py-0.5 text-center text-xs font-semibold text-white dark:bg-white dark:text-black">
+    <span
+      data-unread-badge
+      className="min-w-5 rounded-full bg-black px-1.5 py-0.5 text-center text-xs font-semibold text-white dark:bg-white dark:text-black"
+    >
       {count}
     </span>
   )
@@ -70,6 +74,7 @@ export function Sidebar({
   directCandidates = [],
   theme = 'light',
   isAdmin = false,
+  unreadRealtimeStatus = 'connecting',
 }: SidebarProps) {
   const dark = theme === 'dark'
   const muted = dark ? 'text-white/45' : 'text-black/40'
@@ -80,6 +85,7 @@ export function Sidebar({
 
   return (
     <aside
+      data-unread-realtime-status={unreadRealtimeStatus}
       className={`flex h-full w-full flex-col border-r p-4 md:w-72 ${
         dark ? 'border-white/10 bg-[#181818] text-white' : 'border-black/10 bg-[#f7f7f5] text-black'
       }`}
