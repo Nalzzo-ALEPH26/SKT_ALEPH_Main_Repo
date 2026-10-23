@@ -56,6 +56,17 @@ describe('shared conversation pane', () => {
     expect(html).toContain('dark:text-white')
   })
 
+  it('marks the message scroller for initial latest-message positioning', () => {
+    const html = renderToStaticMarkup(
+      createElement(ChannelMessagePane, {
+        channelId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        ...common,
+      }),
+    )
+
+    expect(html).toContain('data-message-scroll-area="true"')
+  })
+
   it('renders the DM marker through the same conversation composer and list', () => {
     const html = renderToStaticMarkup(
       createElement(DmMessagePane, {
