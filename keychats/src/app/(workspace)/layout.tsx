@@ -37,27 +37,13 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
     unread,
   ] = await Promise.all([
     client.from('user_settings').select('theme').eq('user_id', profile.user_id).maybeSingle(),
-    client
-      .from('channels')
-      .select('id,name,created_by,is_default')
-      .order('is_default', { ascending: false })
-      .order('name'),
+    client.from('channels').select('id,name,created_by,is_default').order('is_default', { ascending: false }).order('name'),
     client.from('channel_members').select('channel_id,user_id'),
     client.from('dm_threads').select('id,user_low,user_high').order('created_at', { ascending: false }),
     client.from('dm_hidden_threads').select('dm_thread_id').eq('user_id', profile.user_id),
-    client
-      .from('profiles')
-      .select('user_id,display_name,username')
-      .eq('status', 'active')
-      .order('display_name'),
-    client
-      .from('communities')
-      .select('id,name,created_at')
-      .order('created_at', { ascending: true }),
-    client
-      .from('community_pins')
-      .select('community_id,pinned_at')
-      .order('pinned_at', { ascending: false }),
+    client.from('profiles').select('user_id,display_name,username').eq('status', 'active').order('display_name'),
+    client.from('communities').select('id,name,created_at,is_notice').order('created_at', { ascending: true }),
+    client.from('community_pins').select('community_id,pinned_at').order('pinned_at', { ascending: false }),
     loadUnreadCounts(client),
   ])
 
@@ -73,44 +59,21 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
   let theme: KeychatsTheme = 'light'
   if (settings?.theme) theme = normalizeTheme(settings.theme)
 
-  const directProfiles = (activeProfiles ?? []).map((candidate) => ({
-    userId: candidate.user_id as string,
-    displayName: candidate.display_name as string,
-  }))
-  const hiddenThreadIds = new Set(
-    (hiddenDmThreads ?? []).map((row) => row.dm_thread_id as string),
-  )
-  const direct = buildDirectSidebarData(
-    profile.user_id,
-    directProfiles,
-    (dmThreads ?? []).map((thread) => ({
-      id: thread.id as string,
-      userLow: thread.user_low as string,
-      userHigh: thread.user_high as string,
-    })),
-    hiddenThreadIds,
-  )
-  const memberChannelIds = new Set(
-    (channelMemberships ?? [])
-      .filter((membership) => membership.user_id === profile.user_id)
-      .map((membership) => membership.channel_id as string),
-  )
+  const directProfiles = (activeProfiles ?? []).map((candidate) => ({ userId: candidate.user_id as string, displayName: candidate.display_name as string }))
+  const hiddenThreadIds = new Set((hiddenDmThreads ?? []).map((row) => row.dm_thread_id as string))
+  const direct = buildDirectSidebarData(profile.user_id, directProfiles, (dmThreads ?? []).map((thread) => ({ id: thread.id as string, userLow: thread.user_low as string, userHigh: thread.user_high as string })), hiddenThreadIds)
+
+  const memberChannelIds = new Set((channelMemberships ?? []).filter((membership) => membership.user_id === profile.user_id).map((membership) => membership.channel_id as string))
   const channelMemberCounts = new Map<string, number>()
   for (const membership of channelMemberships ?? []) {
     const channelId = membership.channel_id as string
     channelMemberCounts.set(channelId, (channelMemberCounts.get(channelId) ?? 0) + 1)
   }
 
-  const communityPinTime = new Map(
-    (communityPins ?? []).map((pin) => [
-      pin.community_id as string,
-      new Date(pin.pinned_at as string).getTime(),
-    ]),
-  )
-  const communityPinValue = new Map(
-    (communityPins ?? []).map((pin) => [pin.community_id as string, pin.pinned_at as string]),
-  )
+  const communityPinTime = new Map((communityPins ?? []).map((pin) => [pin.community_id as string, new Date(pin.pinned_at as string).getTime()]))
+  const communityPinValue = new Map((communityPins ?? []).map((pin) => [pin.community_id as string, pin.pinned_at as string]))
   const sortedCommunities = [...(communities ?? [])].sort((left, right) => {
+    if (Boolean(left.is_notice) !== Boolean(right.is_notice)) return left.is_notice ? -1 : 1
     const leftPin = communityPinTime.get(left.id as string)
     const rightPin = communityPinTime.get(right.id as string)
     if (leftPin && rightPin) return rightPin - leftPin
@@ -123,11 +86,7 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
     <AppShell
       profile={{ displayName: profile.display_name, avatarPath: profile.avatar_path }}
       currentUserId={profile.user_id}
-      channelProfiles={(activeProfiles ?? []).map((candidate) => ({
-        userId: candidate.user_id as string,
-        displayName: candidate.display_name as string,
-        username: candidate.username as string,
-      }))}
+      channelProfiles={(activeProfiles ?? []).map((candidate) => ({ userId: candidate.user_id as string, displayName: candidate.display_name as string, username: candidate.username as string }))}
       channels={(channels ?? []).map((channel) => {
         const id = channel.id as string
         const name = channel.name as string
@@ -143,15 +102,13 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
           canDelete: isAdmin && !isDefault && name.trim().toLowerCase() !== 'general',
         }
       })}
-      directMessages={direct.directMessages.map((directMessage) => ({
-        ...directMessage,
-        unreadCount: unread.directMessages[directMessage.id] ?? 0,
-      }))}
+      directMessages={direct.directMessages.map((directMessage) => ({ ...directMessage, unreadCount: unread.directMessages[directMessage.id] ?? 0 }))}
       directCandidates={direct.directCandidates}
       communities={sortedCommunities.map((community) => ({
         id: community.id as string,
         name: community.name as string,
         pinnedAt: communityPinValue.get(community.id as string) ?? null,
+        isNotice: Boolean(community.is_notice),
       }))}
       theme={theme}
       isAdmin={isAdmin}

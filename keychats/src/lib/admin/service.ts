@@ -17,6 +17,7 @@ export type AdminRepository = {
   updatePassword: (userId: string, password: string) => Promise<void>
   banUser: (userId: string) => Promise<void>
   deleteUser: (userId: string) => Promise<void>
+  markDeleted: (userId: string) => Promise<void>
 }
 
 type RandomBytesFactory = () => Buffer
@@ -73,7 +74,9 @@ export async function expelManagedUser(repository: AdminRepository, userId: stri
 export async function deleteManagedUser(repository: AdminRepository, userId: string) {
   await requireRemovableTarget(repository, userId)
 
-  // Revoke database access before soft-deleting the Auth login. Historical profile/messages stay intact.
+  // Revoke app access first, soft-delete Auth to preserve historical references,
+  // then hide the retained profile from the active admin roster.
   await repository.setStatus(userId, 'expelled')
   await repository.deleteUser(userId)
+  await repository.markDeleted(userId)
 }

@@ -7,12 +7,9 @@
   --foreground: #17191d;
   --surface: #ffffff;
   --border: #e4e7ec;
-  --font-identity: Arial, Helvetica, sans-serif;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 html,
 body {
@@ -26,22 +23,9 @@ body {
 button,
 input,
 textarea,
-select {
-  font-family: inherit;
-}
+select { font-family: inherit; }
 
-a {
-  color: inherit;
-}
-
-:where(
-  input[name="loginId"],
-  input[name="username"],
-  input[autocomplete="username"],
-  [data-identity-font="true"]
-) {
-  font-family: var(--font-identity) !important;
-}
+a { color: inherit; }
 
 [data-sidebar-root] {
   background: #243b8f !important;
@@ -57,6 +41,19 @@ a {
 [data-sidebar-root] [data-unread-badge] {
   background: #fff0c9 !important;
   color: #243b8f !important;
+}
+
+/* The legacy feedback route remains only as a compatibility redirect. */
+[data-sidebar-root] a[href$="/feedback"] { display: none !important; }
+
+/* Match the channel + trigger to the community + trigger. */
+[data-sidebar-root] [data-channel-create-trigger] {
+  opacity: 1 !important;
+  color: rgb(255 240 201 / 65%) !important;
+}
+[data-sidebar-root] [data-channel-create-trigger]:hover {
+  background: rgb(255 240 201 / 10%) !important;
+  color: #fff0c9 !important;
 }
 
 [data-sidebar-popover],
@@ -77,4 +74,16 @@ a {
   background: #fff0c9 !important;
   color: #243b8f !important;
   border-color: #fff0c9 !important;
+}
+
+/* Other people's messages get a true black/white outline opposite the page theme. */
+[data-own-message="false"] > div.order-2 > div[class*="whitespace-pre-wrap"] {
+  width: fit-content;
+  border: 1px solid #000;
+  border-radius: 1rem;
+  padding: 0.5rem 0.75rem;
+}
+
+[data-theme="dark"] [data-own-message="false"] > div.order-2 > div[class*="whitespace-pre-wrap"] {
+  border-color: #fff;
 }

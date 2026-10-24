@@ -7,6 +7,22 @@ import { createAuthGuardAccess } from '@/lib/auth/server-access'
 import { normalizeTheme } from '@/lib/settings/theme'
 import { createClient } from '@/lib/supabase/server'
 
+export async function updateDisplayNameAction(formData: FormData) {
+  const displayName = String(formData.get('displayName') ?? '').trim()
+  if (displayName.length < 1 || displayName.length > 40) throw new Error('DISPLAY_NAME_INVALID')
+
+  const client = await createClient()
+  const { claims } = await requireActiveUser(createAuthGuardAccess(client))
+  const { error } = await client
+    .from('profiles')
+    .update({ display_name: displayName, updated_at: new Date().toISOString() })
+    .eq('user_id', claims.sub)
+  if (error) throw error
+
+  revalidatePath('/settings')
+  revalidatePath('/', 'layout')
+}
+
 export async function updateThemeAction(formData: FormData) {
   const theme = normalizeTheme(formData.get('theme'))
   const client = await createClient()

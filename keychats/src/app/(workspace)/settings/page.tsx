@@ -6,7 +6,7 @@ import { createAuthGuardAccess } from '@/lib/auth/server-access'
 import { normalizeTheme } from '@/lib/settings/theme'
 import { createClient } from '@/lib/supabase/server'
 
-import { updateThemeAction } from './actions'
+import { updateDisplayNameAction, updateThemeAction } from './actions'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,6 +28,24 @@ export default async function SettingsPage() {
       <p className="mt-2 text-sm opacity-55">{profile.display_name}</p>
 
       <section className="mt-8 rounded-2xl border border-current/10 p-5">
+        <h2 className="text-sm font-semibold">닉네임</h2>
+        <p className="mt-1 text-sm opacity-55">채팅과 커뮤니티에 표시되는 이름입니다.</p>
+        <form action={updateDisplayNameAction} className="mt-4 flex flex-wrap gap-2">
+          <input
+            name="displayName"
+            defaultValue={profile.display_name}
+            required
+            maxLength={40}
+            aria-label="닉네임"
+            className="min-w-0 flex-1 rounded-xl border border-current/15 bg-transparent px-3 py-2 text-sm outline-none"
+          />
+          <button type="submit" className="rounded-xl bg-black px-4 py-2 text-sm font-semibold text-white dark:bg-white dark:text-black">
+            저장
+          </button>
+        </form>
+      </section>
+
+      <section className="mt-4 rounded-2xl border border-current/10 p-5">
         <h2 className="text-sm font-semibold">프로필 사진</h2>
         <div className="mt-4">
           <AvatarUploader

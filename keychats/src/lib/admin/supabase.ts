@@ -10,6 +10,7 @@ export function createSupabaseAdminRepository(client: SupabaseClient): AdminRepo
       const { data, error } = await client
         .from('profiles')
         .select('user_id,username,display_name,status,created_at')
+        .is('deleted_at', null)
         .order('created_at', { ascending: true })
 
       if (error) throw error
@@ -29,6 +30,7 @@ export function createSupabaseAdminRepository(client: SupabaseClient): AdminRepo
         .from('profiles')
         .select('user_id,username,display_name,status,created_at')
         .eq('user_id', userId)
+        .is('deleted_at', null)
         .maybeSingle()
 
       if (error) throw error
@@ -65,6 +67,15 @@ export function createSupabaseAdminRepository(client: SupabaseClient): AdminRepo
 
     async deleteUser(userId) {
       const { error } = await client.auth.admin.deleteUser(userId, true)
+      if (error) throw error
+    },
+
+    async markDeleted(userId) {
+      const now = new Date().toISOString()
+      const { error } = await client
+        .from('profiles')
+        .update({ deleted_at: now, updated_at: now })
+        .eq('user_id', userId)
       if (error) throw error
     },
   }

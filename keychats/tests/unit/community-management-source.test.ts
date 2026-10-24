@@ -5,44 +5,58 @@ function source(relativePath: string) {
   return readFileSync(new URL(relativePath, import.meta.url), 'utf8')
 }
 
-describe('community management presentation', () => {
-  it('keeps community pin management in the sidebar and out of each board page', () => {
-    const sidebar = source('../../src/components/sidebar.tsx')
-    const communityPage = source('../../src/app/(workspace)/community/[communityId]/page.tsx')
-    const communityActions = source('../../src/app/(workspace)/community/community-actions.ts')
-
-    expect(sidebar).toContain('선택한 커뮤니티 상단 고정')
-    expect(sidebar).toContain('operation="pin"')
-    expect(sidebar).toContain('operation="unpin"')
-    expect(communityActions).toContain("operation !== 'delete' && operation !== 'pin' && operation !== 'unpin'")
-    expect(communityActions).toContain(".from('community_pins')")
-    expect(communityPage).not.toContain('setCommunityPinnedAction')
-    expect(communityPage).not.toContain(".from('community_pins')")
-  })
-
-  it('keeps the sidebar fixed to the requested blue and cream palette and preserves creator comment pin controls', () => {
-    const sidebar = source('../../src/components/sidebar.tsx')
+describe('community and visual presentation', () => {
+  it('treats the old feedback route as compatibility-only and marks notice communities as special', () => {
+    const feedbackPage = source('../../src/app/(workspace)/feedback/page.tsx')
+    const workspaceLayout = source('../../src/app/(workspace)/layout.tsx')
+    const presentation = source('../../src/lib/sidebar/presentation.ts')
     const globals = source('../../src/app/globals.css')
-    const communityPage = source('../../src/app/(workspace)/community/[communityId]/page.tsx')
 
-    expect(sidebar).toContain('bg-[#243b8f]')
-    expect(sidebar).toContain('text-[#fff0c9]')
-    expect(globals).toContain('background: #243b8f !important')
-    expect(globals).toContain('color: #fff0c9 !important')
-    expect(communityPage).toContain('const canPinComments = isAdmin || community.created_by === claims.sub')
-    expect(communityPage).toContain('댓글 상단 고정')
+    expect(feedbackPage).toContain(".eq('name', '피드백')")
+    expect(feedbackPage).toContain('redirect(community ? `/community/${community.id}` : \'/\')')
+    expect(workspaceLayout).toContain('is_notice')
+    expect(workspaceLayout).toContain('isNotice: Boolean(community.is_notice)')
+    expect(presentation).toContain('isNotice?: boolean')
+    expect(globals).toContain('a[href$="/feedback"]')
   })
 
-  it('applies the squeeze-style Latin font globally while exempting identifiers', () => {
+  it('lets a board creator moderate both posts and comments', () => {
+    const communityPage = source('../../src/app/(workspace)/community/[communityId]/page.tsx')
+    const actions = source('../../src/app/(workspace)/community/[communityId]/actions.ts')
+
+    expect(communityPage).toContain('const canPinPosts = isAdmin || isCreator')
+    expect(communityPage).toContain('const canPinComments = isAdmin || isCreator')
+    expect(communityPage).toContain("{canPinPosts ? (")
+    expect(actions).toContain('requireCommunityModerator')
+    expect(actions).toContain(".from('community_post_pins')")
+  })
+
+  it('uses the global Fjalla stack without identifier-specific font overrides', () => {
     const layout = source('../../src/app/layout.tsx')
     const globals = source('../../src/app/globals.css')
-    const messageItem = source('../../src/components/message-item.tsx')
 
     expect(layout).toContain('Fjalla_One')
     expect(layout).toContain("variable: '--font-squeeze'")
     expect(globals).toContain('font-family: var(--font-squeeze)')
-    expect(globals).toContain('[data-identity-font="true"]')
-    expect(globals).toContain('input[name="loginId"]')
-    expect(messageItem).toContain('data-identity-font="true"')
+    expect(globals).not.toContain('--font-identity')
+    expect(globals).not.toContain('[data-identity-font="true"]')
+  })
+
+  it('matches sidebar plus controls and outlines other-user chat bubbles by theme', () => {
+    const globals = source('../../src/app/globals.css')
+    expect(globals).toContain('[data-channel-create-trigger]')
+    expect(globals).toContain('color: rgb(255 240 201 / 65%) !important')
+    expect(globals).toContain('[data-own-message="false"]')
+    expect(globals).toContain('border: 1px solid #000')
+    expect(globals).toContain('border-color: #fff')
+  })
+
+  it('adds a nickname form to settings', () => {
+    const settingsPage = source('../../src/app/(workspace)/settings/page.tsx')
+    const settingsActions = source('../../src/app/(workspace)/settings/actions.ts')
+    expect(settingsPage).toContain('name="displayName"')
+    expect(settingsPage).toContain('updateDisplayNameAction')
+    expect(settingsActions).toContain(".update({ display_name: displayName")
+    expect(settingsActions).toContain("revalidatePath('/', 'layout')")
   })
 })

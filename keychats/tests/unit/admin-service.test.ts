@@ -15,17 +15,12 @@ const memberId = '22222222-2222-2222-2222-222222222222'
 function repository(username = 'member') {
   const repo: AdminRepository = {
     listUsers: vi.fn(async () => []),
-    getUser: vi.fn(async (userId) => ({
-      userId,
-      username,
-      displayName: username,
-      status: 'active' as const,
-      createdAt: '2026-10-21T00:00:00.000Z',
-    })),
+    getUser: vi.fn(async (userId) => ({ userId, username, displayName: username, status: 'active' as const, createdAt: '2026-10-21T00:00:00.000Z' })),
     setStatus: vi.fn(async () => undefined),
     updatePassword: vi.fn(async () => undefined),
     banUser: vi.fn(async () => undefined),
     deleteUser: vi.fn(async () => undefined),
+    markDeleted: vi.fn(async () => undefined),
   }
   return repo
 }
@@ -43,42 +38,38 @@ describe('admin account controls', () => {
   it('updates the Auth password without storing it in profile state', async () => {
     const repo = repository()
     const password = await resetManagedUserPassword(repo, memberId, () => Buffer.alloc(18, 9))
-
     expect(repo.updatePassword).toHaveBeenCalledWith(memberId, password)
     expect(repo.setStatus).not.toHaveBeenCalled()
   })
 
   it('blocks temporary password reset for the sole cxu1344 admin', async () => {
     const repo = repository('cxu1344')
-    await expect(
-      resetManagedUserPassword(repo, adminId, () => Buffer.alloc(18, 9)),
-    ).rejects.toThrow('SOLE_ADMIN_PROTECTED')
+    await expect(resetManagedUserPassword(repo, adminId, () => Buffer.alloc(18, 9))).rejects.toThrow('SOLE_ADMIN_PROTECTED')
     expect(repo.updatePassword).not.toHaveBeenCalled()
   })
 
   it('disables database access before banning future Auth sessions', async () => {
     const repo = repository()
     await disableManagedUser(repo, memberId)
-
     expect(repo.setStatus).toHaveBeenCalledWith(memberId, 'disabled')
     expect(repo.banUser).toHaveBeenCalledWith(memberId)
-    expect(vi.mocked(repo.setStatus).mock.invocationCallOrder[0]).toBeLessThan(
-      vi.mocked(repo.banUser).mock.invocationCallOrder[0],
-    )
+    expect(vi.mocked(repo.setStatus).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(repo.banUser).mock.invocationCallOrder[0])
   })
 
   it('marks expelled users without deleting their historical profile/messages', async () => {
     const repo = repository()
     await expelManagedUser(repo, memberId)
-
     expect(repo.setStatus).toHaveBeenCalledWith(memberId, 'expelled')
     expect(repo.banUser).toHaveBeenCalledWith(memberId)
   })
 
-  it('lets an admin permanently delete a non-admin login account', async () => {
+  it('soft-deletes login before hiding the retained historical profile', async () => {
     const repo = repository()
     await deleteManagedUser(repo, memberId)
+    expect(repo.setStatus).toHaveBeenCalledWith(memberId, 'expelled')
     expect(repo.deleteUser).toHaveBeenCalledWith(memberId)
+    expect(repo.markDeleted).toHaveBeenCalledWith(memberId)
+    expect(vi.mocked(repo.deleteUser).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(repo.markDeleted).mock.invocationCallOrder[0])
   })
 
   it.each([
@@ -91,5 +82,6 @@ describe('admin account controls', () => {
     expect(repo.setStatus).not.toHaveBeenCalled()
     expect(repo.banUser).not.toHaveBeenCalled()
     expect(repo.deleteUser).not.toHaveBeenCalled()
+    expect(repo.markDeleted).not.toHaveBeenCalled()
   })
 })

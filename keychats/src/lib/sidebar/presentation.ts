@@ -2,6 +2,7 @@ export type SidebarCommunity = {
   id: string
   name: string
   pinnedAt?: string | null
+  isNotice?: boolean
 }
 
 function pinnedTimestamp(value: string | null | undefined) {
@@ -12,6 +13,7 @@ function pinnedTimestamp(value: string | null | undefined) {
 
 export function sortSidebarCommunities(communities: SidebarCommunity[]) {
   return [...communities].sort((left, right) => {
+    if (Boolean(left.isNotice) !== Boolean(right.isNotice)) return left.isNotice ? -1 : 1
     const leftPin = pinnedTimestamp(left.pinnedAt)
     const rightPin = pinnedTimestamp(right.pinnedAt)
     if (leftPin !== null && rightPin !== null) return rightPin - leftPin
