@@ -1,0 +1,89 @@
+@import "tailwindcss";
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+:root {
+  color-scheme: light;
+  --background: #f5f6f8;
+  --foreground: #17191d;
+  --surface: #ffffff;
+  --border: #e4e7ec;
+}
+
+* { box-sizing: border-box; }
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-squeeze), "Arial Narrow", Arial, Helvetica, sans-serif;
+}
+
+button,
+input,
+textarea,
+select { font-family: inherit; }
+
+a { color: inherit; }
+
+[data-sidebar-root] {
+  background: #243b8f !important;
+  color: #fff0c9 !important;
+  border-color: rgb(255 240 201 / 22%) !important;
+}
+
+[data-sidebar-root] [data-sidebar-active="true"] {
+  background: #1d327a !important;
+  color: #fff0c9 !important;
+}
+
+[data-sidebar-root] [data-unread-badge] {
+  background: #fff0c9 !important;
+  color: #243b8f !important;
+}
+
+/* The legacy feedback route remains only as a compatibility redirect. */
+[data-sidebar-root] a[href$="/feedback"] { display: none !important; }
+
+/* Match the channel + trigger to the community + trigger. */
+[data-sidebar-root] [data-channel-create-trigger] {
+  opacity: 1 !important;
+  color: rgb(255 240 201 / 65%) !important;
+}
+[data-sidebar-root] [data-channel-create-trigger]:hover {
+  background: rgb(255 240 201 / 10%) !important;
+  color: #fff0c9 !important;
+}
+
+[data-sidebar-popover],
+[data-channel-create-popover] {
+  background: #243b8f !important;
+  color: #fff0c9 !important;
+  border-color: rgb(255 240 201 / 22%) !important;
+}
+
+[data-sidebar-popover] input:not([type="checkbox"]),
+[data-channel-create-popover] input:not([type="checkbox"]) {
+  background: #1d327a !important;
+  color: #fff0c9 !important;
+  border-color: rgb(255 240 201 / 25%) !important;
+}
+
+[data-sidebar-popover] [data-selected="true"] {
+  background: #fff0c9 !important;
+  color: #243b8f !important;
+  border-color: #fff0c9 !important;
+}
+
+/* Other people's messages get a true black/white outline opposite the page theme. */
+[data-own-message="false"] > div.order-2 > div[class*="whitespace-pre-wrap"] {
+  width: fit-content;
+  border: 1px solid #000;
+  border-radius: 1rem;
+  padding: 0.5rem 0.75rem;
+}
+
+[data-theme="dark"] [data-own-message="false"] > div.order-2 > div[class*="whitespace-pre-wrap"] {
+  border-color: #fff;
+}
