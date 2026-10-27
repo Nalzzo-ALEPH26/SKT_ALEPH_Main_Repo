@@ -12,6 +12,20 @@ describe('Keychats base path', () => {
     expect(rootPage).toContain('data-keychats-shell')
   })
 
+  it('redirects the bare production hostname root into the configured base path', () => {
+    const vercelConfig = JSON.parse(
+      readFileSync(resolve(process.cwd(), 'vercel.json'), 'utf8'),
+    ) as {
+      redirects?: Array<{ source: string; destination: string; permanent?: boolean }>
+    }
+
+    expect(vercelConfig.redirects).toContainEqual({
+      source: '/',
+      destination: '/chats',
+      permanent: false,
+    })
+  })
+
   it('keeps server redirects relative to the configured base path', () => {
     const loginActions = readFileSync(resolve(process.cwd(), 'src/app/login/actions.ts'), 'utf8')
     const inviteActions = readFileSync(
